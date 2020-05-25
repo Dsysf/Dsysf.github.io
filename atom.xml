@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-  <title>Hexo</title>
+  <title>D</title>
   
   
   <link href="/atom.xml" rel="self"/>
@@ -10,7 +10,7 @@
   <id>http://yoursite.com/</id>
   
   <author>
-    <name>John Doe</name>
+    <name>Edsion Shen</name>
     
   </author>
   
@@ -40,21 +40,6 @@
     
     
       <category term="VulnHub" scheme="http://yoursite.com/tags/VulnHub/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>article title</title>
-    <link href="http://yoursite.com/2020/05/25/article-title/"/>
-    <id>http://yoursite.com/2020/05/25/article-title/</id>
-    <published>2020-05-25T03:45:44.000Z</published>
-    <updated>2020-05-25T03:45:44.712Z</updated>
-    
-    <summary type="html">
-    
-    </summary>
-    
-    
     
   </entry>
   
