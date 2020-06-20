@@ -1,122 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>BurpSuite——Intruder四种模式详解</title>
-    <url>/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/</url>
-    <content><![CDATA[<h2 id="一、Sniper（狙击手）"><a href="#一、Sniper（狙击手）" class="headerlink" title="一、Sniper（狙击手）"></a>一、Sniper（狙击手）</h2><p>Sniper模式只能使用一组 payload 集合，一次只使用一个 payload 位置；假如标记了两个位置 “A” 和 “B” ，payload 集合内有“1”和“2”两个值，那么它攻击会形成以下组合：</p>
-<table>
-<thead>
-<tr>
-<th align="center">攻击序列</th>
-<th align="center">位置A</th>
-<th align="center">位置B</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center">1</td>
-<td align="center">1</td>
-<td align="center">不替换</td>
-</tr>
-<tr>
-<td align="center">2</td>
-<td align="center">2</td>
-<td align="center">不替换</td>
-</tr>
-<tr>
-<td align="center">3</td>
-<td align="center">不替换</td>
-<td align="center">1</td>
-</tr>
-<tr>
-<td align="center">4</td>
-<td align="center">不替换</td>
-<td align="center">2</td>
-</tr>
-</tbody></table>
-<p>适用场景：竞争条件测试（选择Null payloads），密码、验证码暴力破解，重放攻击等场景</p>
-<h2 id="二、Battering-ram（攻城锤）"><a href="#二、Battering-ram（攻城锤）" class="headerlink" title="二、Battering ram（攻城锤）"></a>二、Battering ram（攻城锤）</h2><p>同样只能使用一组 payload 集合，不同的地方在于每次攻击都是替换所有payload标记位置；如果添加了两个参数的话，就一起进行爆破，两个参数爆破时候的值肯定就是一样的了：</p>
-<table>
-<thead>
-<tr>
-<th align="center">攻击序列</th>
-<th align="center">位置A</th>
-<th align="center">位置B</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center">1</td>
-<td align="center">1</td>
-<td align="center">1</td>
-</tr>
-<tr>
-<td align="center">2</td>
-<td align="center">2</td>
-<td align="center">2</td>
-</tr>
-</tbody></table>
-<p>适用场景：暴力破解</p>
-<h2 id="三、Pitchfork（草叉）"><a href="#三、Pitchfork（草叉）" class="headerlink" title="三、Pitchfork（草叉）"></a>三、Pitchfork（草叉）</h2><p>草叉模式允许使用多组payload组合，如果只添加了一个参数的话，会报错；在每个标记位置上遍历各自对应的payload组合，假设有两个位置“A”和“B”，payload组合1的值为“1”和“2”，payload组合2的值为“3”和“4”，那么它攻击会形成以下组合：</p>
-<table>
-<thead>
-<tr>
-<th align="center">攻击序列</th>
-<th align="center">位置A</th>
-<th align="center">位置B</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center">1</td>
-<td align="center">1</td>
-<td align="center">3</td>
-</tr>
-<tr>
-<td align="center">2</td>
-<td align="center">2</td>
-<td align="center">4</td>
-</tr>
-</tbody></table>
-<p>注：如果两个payload行数不一致的话，取最小值进行测试。所以爆破的次数取两个中最小的为准。</p>
-<p>适用场景：恶意注册、撞裤</p>
-<h2 id="四、Cluster-bomb（集束炸弹）"><a href="#四、Cluster-bomb（集束炸弹）" class="headerlink" title="四、Cluster bomb（集束炸弹）"></a>四、Cluster bomb（集束炸弹）</h2><p>集束炸弹也允许使用多组payload组合，跟草叉模式不同的地方在于，集束炸弹模式会对payload组进行笛卡尔积，那么它攻击会形成以下组合：</p>
-<table>
-<thead>
-<tr>
-<th align="center">攻击序列</th>
-<th align="center">位置A</th>
-<th align="center">位置B</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center">1</td>
-<td align="center">1</td>
-<td align="center">3</td>
-</tr>
-<tr>
-<td align="center">2</td>
-<td align="center">1</td>
-<td align="center">4</td>
-</tr>
-<tr>
-<td align="center">1</td>
-<td align="center">2</td>
-<td align="center">3</td>
-</tr>
-<tr>
-<td align="center">2</td>
-<td align="center">2</td>
-<td align="center">4</td>
-</tr>
-</tbody></table>
-<p>适用场景：账号、密码暴力破解</p>
-]]></content>
-      <categories>
-        <category>工具</category>
-      </categories>
-      <tags>
-        <tag>BurpSuite</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>JS逆向系列一</title>
     <url>/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/</url>
     <content><![CDATA[<h3 id="谷歌学术镜像"><a href="#谷歌学术镜像" class="headerlink" title="谷歌学术镜像"></a>谷歌学术镜像</h3><p>目标网址：<a href="https://ac.scmor.com/" target="_blank" rel="noopener">https://ac.scmor.com/</a></p>
@@ -265,6 +149,122 @@
       </categories>
       <tags>
         <tag>JS逆向系列</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>BurpSuite——Intruder四种模式详解</title>
+    <url>/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/</url>
+    <content><![CDATA[<h2 id="一、Sniper（狙击手）"><a href="#一、Sniper（狙击手）" class="headerlink" title="一、Sniper（狙击手）"></a>一、Sniper（狙击手）</h2><p>Sniper模式只能使用一组 payload 集合，一次只使用一个 payload 位置；假如标记了两个位置 “A” 和 “B” ，payload 集合内有“1”和“2”两个值，那么它攻击会形成以下组合：</p>
+<table>
+<thead>
+<tr>
+<th align="center">攻击序列</th>
+<th align="center">位置A</th>
+<th align="center">位置B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">1</td>
+<td align="center">1</td>
+<td align="center">不替换</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">2</td>
+<td align="center">不替换</td>
+</tr>
+<tr>
+<td align="center">3</td>
+<td align="center">不替换</td>
+<td align="center">1</td>
+</tr>
+<tr>
+<td align="center">4</td>
+<td align="center">不替换</td>
+<td align="center">2</td>
+</tr>
+</tbody></table>
+<p>适用场景：竞争条件测试（选择Null payloads），密码、验证码暴力破解，重放攻击等场景</p>
+<h2 id="二、Battering-ram（攻城锤）"><a href="#二、Battering-ram（攻城锤）" class="headerlink" title="二、Battering ram（攻城锤）"></a>二、Battering ram（攻城锤）</h2><p>同样只能使用一组 payload 集合，不同的地方在于每次攻击都是替换所有payload标记位置；如果添加了两个参数的话，就一起进行爆破，两个参数爆破时候的值肯定就是一样的了：</p>
+<table>
+<thead>
+<tr>
+<th align="center">攻击序列</th>
+<th align="center">位置A</th>
+<th align="center">位置B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">1</td>
+<td align="center">1</td>
+<td align="center">1</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">2</td>
+<td align="center">2</td>
+</tr>
+</tbody></table>
+<p>适用场景：暴力破解</p>
+<h2 id="三、Pitchfork（草叉）"><a href="#三、Pitchfork（草叉）" class="headerlink" title="三、Pitchfork（草叉）"></a>三、Pitchfork（草叉）</h2><p>草叉模式允许使用多组payload组合，如果只添加了一个参数的话，会报错；在每个标记位置上遍历各自对应的payload组合，假设有两个位置“A”和“B”，payload组合1的值为“1”和“2”，payload组合2的值为“3”和“4”，那么它攻击会形成以下组合：</p>
+<table>
+<thead>
+<tr>
+<th align="center">攻击序列</th>
+<th align="center">位置A</th>
+<th align="center">位置B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">1</td>
+<td align="center">1</td>
+<td align="center">3</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">2</td>
+<td align="center">4</td>
+</tr>
+</tbody></table>
+<p>注：如果两个payload行数不一致的话，取最小值进行测试。所以爆破的次数取两个中最小的为准。</p>
+<p>适用场景：恶意注册、撞裤</p>
+<h2 id="四、Cluster-bomb（集束炸弹）"><a href="#四、Cluster-bomb（集束炸弹）" class="headerlink" title="四、Cluster bomb（集束炸弹）"></a>四、Cluster bomb（集束炸弹）</h2><p>集束炸弹也允许使用多组payload组合，跟草叉模式不同的地方在于，集束炸弹模式会对payload组进行笛卡尔积，那么它攻击会形成以下组合：</p>
+<table>
+<thead>
+<tr>
+<th align="center">攻击序列</th>
+<th align="center">位置A</th>
+<th align="center">位置B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">1</td>
+<td align="center">1</td>
+<td align="center">3</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">1</td>
+<td align="center">4</td>
+</tr>
+<tr>
+<td align="center">1</td>
+<td align="center">2</td>
+<td align="center">3</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">2</td>
+<td align="center">4</td>
+</tr>
+</tbody></table>
+<p>适用场景：账号、密码暴力破解</p>
+]]></content>
+      <categories>
+        <category>工具</category>
+      </categories>
+      <tags>
+        <tag>BurpSuite</tag>
       </tags>
   </entry>
   <entry>
