@@ -1,6 +1,122 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>BurpSuite——Intruder四种模式详解</title>
+    <url>/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/</url>
+    <content><![CDATA[<h2 id="一、Sniper（狙击手）"><a href="#一、Sniper（狙击手）" class="headerlink" title="一、Sniper（狙击手）"></a>一、Sniper（狙击手）</h2><p>Sniper模式只能使用一组 payload 集合，一次只使用一个 payload 位置；假如标记了两个位置 “A” 和 “B” ，payload 集合内有“1”和“2”两个值，那么它攻击会形成以下组合：</p>
+<table>
+<thead>
+<tr>
+<th align="center">攻击序列</th>
+<th align="center">位置A</th>
+<th align="center">位置B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">1</td>
+<td align="center">1</td>
+<td align="center">不替换</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">2</td>
+<td align="center">不替换</td>
+</tr>
+<tr>
+<td align="center">3</td>
+<td align="center">不替换</td>
+<td align="center">1</td>
+</tr>
+<tr>
+<td align="center">4</td>
+<td align="center">不替换</td>
+<td align="center">2</td>
+</tr>
+</tbody></table>
+<p>适用场景：竞争条件测试（选择Null payloads），密码、验证码暴力破解，重放攻击等场景</p>
+<h2 id="二、Battering-ram（攻城锤）"><a href="#二、Battering-ram（攻城锤）" class="headerlink" title="二、Battering ram（攻城锤）"></a>二、Battering ram（攻城锤）</h2><p>同样只能使用一组 payload 集合，不同的地方在于每次攻击都是替换所有payload标记位置；如果添加了两个参数的话，就一起进行爆破，两个参数爆破时候的值肯定就是一样的了：</p>
+<table>
+<thead>
+<tr>
+<th align="center">攻击序列</th>
+<th align="center">位置A</th>
+<th align="center">位置B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">1</td>
+<td align="center">1</td>
+<td align="center">1</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">2</td>
+<td align="center">2</td>
+</tr>
+</tbody></table>
+<p>适用场景：暴力破解</p>
+<h2 id="三、Pitchfork（草叉）"><a href="#三、Pitchfork（草叉）" class="headerlink" title="三、Pitchfork（草叉）"></a>三、Pitchfork（草叉）</h2><p>草叉模式允许使用多组payload组合，如果只添加了一个参数的话，会报错；在每个标记位置上遍历各自对应的payload组合，假设有两个位置“A”和“B”，payload组合1的值为“1”和“2”，payload组合2的值为“3”和“4”，那么它攻击会形成以下组合：</p>
+<table>
+<thead>
+<tr>
+<th align="center">攻击序列</th>
+<th align="center">位置A</th>
+<th align="center">位置B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">1</td>
+<td align="center">1</td>
+<td align="center">3</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">2</td>
+<td align="center">4</td>
+</tr>
+</tbody></table>
+<p>注：如果两个payload行数不一致的话，取最小值进行测试。所以爆破的次数取两个中最小的为准。</p>
+<p>适用场景：恶意注册、撞裤</p>
+<h2 id="四、Cluster-bomb（集束炸弹）"><a href="#四、Cluster-bomb（集束炸弹）" class="headerlink" title="四、Cluster bomb（集束炸弹）"></a>四、Cluster bomb（集束炸弹）</h2><p>集束炸弹也允许使用多组payload组合，跟草叉模式不同的地方在于，集束炸弹模式会对payload组进行笛卡尔积，那么它攻击会形成以下组合：</p>
+<table>
+<thead>
+<tr>
+<th align="center">攻击序列</th>
+<th align="center">位置A</th>
+<th align="center">位置B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">1</td>
+<td align="center">1</td>
+<td align="center">3</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">1</td>
+<td align="center">4</td>
+</tr>
+<tr>
+<td align="center">1</td>
+<td align="center">2</td>
+<td align="center">3</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td align="center">2</td>
+<td align="center">4</td>
+</tr>
+</tbody></table>
+<p>适用场景：账号、密码暴力破解</p>
+]]></content>
+      <categories>
+        <category>工具</category>
+      </categories>
+      <tags>
+        <tag>BurpSuite</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>JS逆向系列一</title>
     <url>/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/</url>
     <content><![CDATA[<h3 id="谷歌学术镜像"><a href="#谷歌学术镜像" class="headerlink" title="谷歌学术镜像"></a>谷歌学术镜像</h3><p>目标网址：<a href="https://ac.scmor.com/" target="_blank" rel="noopener">https://ac.scmor.com/</a></p>
@@ -72,6 +188,77 @@
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601194144.png" alt=""></p>
 <p>接下来，只剩下需要加密的值，它如何产生的，观察发现由<code>a + &quot;\n&quot; + e + &quot;\n&quot; + f + &quot;\n&quot; + p + &quot;\n&quot; + s</code>组成，<code>a</code>、<code>s</code>都清楚了，<code>e</code>发现是<code>POST</code>，<code>p</code>是路径<code>/mroute.html?method=beibei.h5.login</code>，这两个也是固定值，只剩下<code>f</code>是MD5加密后的值，逆向<code>f</code>的产生过程，发现是由”用户名+路径+登陆id”产生而来，如：<code>username=12341234123&amp;scene=h5_login&amp;rams_device_id=2654748010</code><br>所以现在只需要将这个值MD5加密后传入即可，同样也能用Python实现</p>
 <p>最终完成的效果<br><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601195839.png" alt=""></p>
+]]></content>
+      <categories>
+        <category>JS逆向</category>
+      </categories>
+      <tags>
+        <tag>JS逆向系列</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>JS逆向系列之谷歌翻译</title>
+    <url>/2020/06/17/JS%E9%80%86%E5%90%91%E4%B9%8B%E8%B0%B7%E6%AD%8C%E7%BF%BB%E8%AF%91/</url>
+    <content><![CDATA[<h3 id="一、逆向谷歌翻译"><a href="#一、逆向谷歌翻译" class="headerlink" title="一、逆向谷歌翻译"></a>一、逆向谷歌翻译</h3><h4 id="分析过程"><a href="#分析过程" class="headerlink" title="分析过程"></a>分析过程</h4><ul>
+<li>首次分析</li>
+</ul>
+<p>首先找到谷歌翻译的Ajax请求接口</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529141646.png" alt=""></p>
+<p>以get方式发送的Ajax请求，多次尝试，发现请求参数中，<code>tk</code>和<code>q</code>，是不断变化的，其中<code>q</code>是待翻译的内容，<code>tk</code>是根据<code>q</code>进行js加密算法生成的，所以我们要分析<code>tk</code>的产生。</p>
+<ul>
+<li>通过断点逆向<code>tk</code>的加密算法</li>
+</ul>
+<p>加密算法应该在translate_m_zh-CN.js文件里</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529142909.png" alt=""></p>
+<p>打个断点，请求翻译接口的URL时停止，发现在send(a)中停止了，根据Call Stack的调用关系，一步步分析，最上面的就是send函数</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529143414.png" alt=""></p>
+<p>依次往下点击每一个调用的函数，当到了QE函数的时候，发现了<code>tk</code>参数来自b，b又明显来自c</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529143742.png" alt=""></p>
+<p>于是我们顺藤摸瓜，发现c是由PE(d)产生的，PE又是来自pu(a)函数，我们跳转到pu函数的位置，似乎已经有了答案</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144207.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144416.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144520.png" alt=""></p>
+<ul>
+<li>分析生成<code>tk</code>的JS代码</li>
+</ul>
+<p>如下是我们刚获取的JS代码</p>
+<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> mu = <span class="function"><span class="keyword">function</span>(<span class="params">a</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> a</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">  , nu = <span class="function"><span class="keyword">function</span>(<span class="params">a, b</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> c = <span class="number">0</span>; c &lt; b.length - <span class="number">2</span>; c += <span class="number">3</span>) &#123;</span><br><span class="line">        <span class="keyword">var</span> d = b.charAt(c + <span class="number">2</span>);</span><br><span class="line">        d = <span class="string">"a"</span> &lt;= d ? d.charCodeAt(<span class="number">0</span>) - <span class="number">87</span> : <span class="built_in">Number</span>(d);</span><br><span class="line">        d = <span class="string">"+"</span> == b.charAt(c + <span class="number">1</span>) ? a &gt;&gt;&gt; d : a &lt;&lt; d;</span><br><span class="line">        a = <span class="string">"+"</span> == b.charAt(c) ? a + d &amp; <span class="number">4294967295</span> : a ^ d</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> a</span><br><span class="line">&#125;</span><br><span class="line">  , ou = <span class="literal">null</span></span><br><span class="line">  , pu = <span class="function"><span class="keyword">function</span>(<span class="params">a</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="literal">null</span> !== ou)</span><br><span class="line">        <span class="keyword">var</span> b = ou;</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">        b = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">84</span>));</span><br><span class="line">        <span class="keyword">var</span> c = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">75</span>));</span><br><span class="line">        b = [b(), b()];</span><br><span class="line">        b[<span class="number">1</span>] = c();</span><br><span class="line">        b = (ou = <span class="built_in">window</span>[b.join(c())] || <span class="string">""</span>) || <span class="string">""</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">var</span> d = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">116</span>));</span><br><span class="line">    c = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">107</span>));</span><br><span class="line">    d = [d(), d()];</span><br><span class="line">    d[<span class="number">1</span>] = c();</span><br><span class="line">    c = <span class="string">"&amp;"</span> + d.join(<span class="string">""</span>) + <span class="string">"="</span>;</span><br><span class="line">    d = b.split(<span class="string">"."</span>);</span><br><span class="line">    b = <span class="built_in">Number</span>(d[<span class="number">0</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> e = [], f = <span class="number">0</span>, g = <span class="number">0</span>; g &lt; a.length; g++) &#123;</span><br><span class="line">        <span class="keyword">var</span> h = a.charCodeAt(g);</span><br><span class="line">        <span class="number">128</span> &gt; h ? e[f++] = h : (<span class="number">2048</span> &gt; h ? e[f++] = h &gt;&gt; <span class="number">6</span> | <span class="number">192</span> : (<span class="number">55296</span> == (h &amp; <span class="number">64512</span>) &amp;&amp; g + <span class="number">1</span> &lt; a.length &amp;&amp; <span class="number">56320</span> == (a.charCodeAt(g + <span class="number">1</span>) &amp; <span class="number">64512</span>) ? (h = <span class="number">65536</span> + ((h &amp; <span class="number">1023</span>) &lt;&lt; <span class="number">10</span>) + (a.charCodeAt(++g) &amp; <span class="number">1023</span>),</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">18</span> | <span class="number">240</span>,</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">12</span> &amp; <span class="number">63</span> | <span class="number">128</span>) : e[f++] = h &gt;&gt; <span class="number">12</span> | <span class="number">224</span>,</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">6</span> &amp; <span class="number">63</span> | <span class="number">128</span>),</span><br><span class="line">        e[f++] = h &amp; <span class="number">63</span> | <span class="number">128</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    a = b;</span><br><span class="line">    <span class="keyword">for</span> (f = <span class="number">0</span>; f &lt; e.length; f++)</span><br><span class="line">        a += e[f],</span><br><span class="line">        a = nu(a, <span class="string">"+-a^+6"</span>);</span><br><span class="line">    a = nu(a, <span class="string">"+-3^+b+-f"</span>);</span><br><span class="line">    a ^= <span class="built_in">Number</span>(d[<span class="number">1</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="number">0</span> &gt; a &amp;&amp; (a = (a &amp; <span class="number">2147483647</span>) + <span class="number">2147483648</span>);</span><br><span class="line">    a %= <span class="number">1E6</span>;</span><br><span class="line">    <span class="keyword">return</span> c + (a.toString() + <span class="string">"."</span> + (a ^ b))</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>发现做了很多不必要的操作、甚至多此一举，目的是用于混淆<br>如：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">var mu &#x3D; function(a) &#123;</span><br><span class="line">    return function() &#123;</span><br><span class="line">        return a</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>还用了<code>.fromCharCode()</code>函数，把数字转换为字母，明显多此一举的操作。但是，通过分析，发现<code>tk</code>生成需要另一样东西，就是<code>tkk</code>这个参数，来源于网页源代码上，寻找一番，还是发现了，多次尝试，发现这个值是固定的</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529145556.png" alt=""></p>
+<h4 id="具体实现"><a href="#具体实现" class="headerlink" title="具体实现"></a>具体实现</h4><p>说明：js文件做了精炼，把不必要的值去掉了，实行的效果是英译中，不同语言的翻译修改请求的参数即可</p>
+<ul>
+<li>Python脚本</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> json</span><br><span class="line"><span class="keyword">import</span> execjs</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_tk</span><span class="params">(q)</span>:</span></span><br><span class="line">    <span class="keyword">with</span> open(<span class="string">'google_tk.js'</span>, <span class="string">'r'</span>, encoding=<span class="string">'utf-8'</span>) <span class="keyword">as</span> f:</span><br><span class="line">        js = f.read()</span><br><span class="line">    j = execjs.compile(js)</span><br><span class="line">    tk = j.call(<span class="string">'pu'</span>, q)</span><br><span class="line">    <span class="keyword">return</span> tk</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">translate_google</span><span class="params">()</span>:</span></span><br><span class="line">    q = input(<span class="string">"请输入你要翻译的内容："</span>)</span><br><span class="line">    headers = &#123;</span><br><span class="line">        <span class="string">"user-agent"</span>: <span class="string">"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36"</span>,</span><br><span class="line">        <span class="string">"referer"</span>: <span class="string">"https://translate.google.cn/"</span></span><br><span class="line">    &#125;</span><br><span class="line">    url = <span class="string">"https://translate.google.cn/translate_a/single?client=webapp&amp;sl=en&amp;tl=zh-CN&amp;hl=zh-CN&amp;dt=at&amp;dt=bd&amp;dt=ex&amp;dt=ld&amp;dt=md&amp;dt=qca&amp;dt=rw&amp;dt=rm&amp;dt=sos&amp;dt=ss&amp;dt=t&amp;otf=2&amp;ssel=0&amp;tsel=0&amp;kc=3&amp;tk="</span> + get_tk(</span><br><span class="line">        q) + <span class="string">"&amp;q="</span> + q</span><br><span class="line">    res = requests.get(url, headers=headers)</span><br><span class="line">    data = res.content.decode()</span><br><span class="line">    json_data = json.loads(data)</span><br><span class="line">    print(json_data[<span class="number">0</span>][<span class="number">0</span>][<span class="number">0</span>])</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:</span><br><span class="line">    translate_google()</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>tk.js</li>
+</ul>
+<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line"><span class="comment">//tkk = '441865.2154418832';</span></span><br><span class="line"><span class="keyword">var</span> nu = <span class="function"><span class="keyword">function</span> (<span class="params">a, b</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> c = <span class="number">0</span>; c &lt; b.length - <span class="number">2</span>; c += <span class="number">3</span>) &#123;</span><br><span class="line">        <span class="keyword">var</span> d = b.charAt(c + <span class="number">2</span>);</span><br><span class="line">        d = <span class="string">"a"</span> &lt;= d ? d.charCodeAt(<span class="number">0</span>) - <span class="number">87</span> : <span class="built_in">Number</span>(d);</span><br><span class="line">        d = <span class="string">"+"</span> == b.charAt(c + <span class="number">1</span>) ? a &gt;&gt;&gt; d : a &lt;&lt; d;</span><br><span class="line">        a = <span class="string">"+"</span> == b.charAt(c) ? a + d &amp; <span class="number">4294967295</span> : a ^ d</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> a</span><br><span class="line">&#125;,</span><br><span class="line"></span><br><span class="line">pu = <span class="function"><span class="keyword">function</span> (<span class="params">a</span>) </span>&#123;</span><br><span class="line">    tkk=<span class="string">'441865.2154418832'</span>;</span><br><span class="line">    <span class="keyword">var</span> d = tkk.split(<span class="string">"."</span>);</span><br><span class="line">    <span class="keyword">var</span> b = <span class="built_in">Number</span>(d[<span class="number">0</span>]);</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> e = [], f = <span class="number">0</span>, g = <span class="number">0</span>; g &lt; a.length; g++) &#123;</span><br><span class="line">        <span class="keyword">var</span> h = a.charCodeAt(g);</span><br><span class="line">        <span class="number">128</span> &gt; h ? e[f++] = h :</span><br><span class="line">            (<span class="number">2048</span> &gt; h ? e[f++] = h &gt;&gt; <span class="number">6</span> | <span class="number">192</span> :</span><br><span class="line">                    (<span class="number">55296</span> == (h &amp; <span class="number">64512</span>) &amp;&amp; g + <span class="number">1</span> &lt; a.length &amp;&amp; <span class="number">56320</span> == (a.charCodeAt(g + <span class="number">1</span>) &amp; <span class="number">64512</span>) ? (h = <span class="number">65536</span> + ((h &amp; <span class="number">1023</span>) &lt;&lt; <span class="number">10</span>) + (a.charCodeAt(++g) &amp; <span class="number">1023</span>), e[f++] = h &gt;&gt; <span class="number">18</span> | <span class="number">240</span>, e[f++] = h &gt;&gt; <span class="number">12</span> &amp; <span class="number">63</span> | <span class="number">128</span>) :</span><br><span class="line">                        e[f++] = h &gt;&gt; <span class="number">12</span> | <span class="number">224</span>, e[f++] = h &gt;&gt; <span class="number">6</span> &amp; <span class="number">63</span> | <span class="number">128</span>), e[f++] = h &amp; <span class="number">63</span> | <span class="number">128</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    a = b;</span><br><span class="line">    <span class="keyword">for</span> (f = <span class="number">0</span>; f &lt; e.length; f++)</span><br><span class="line">        a += e[f],</span><br><span class="line">        a = nu(a, <span class="string">"+-a^+6"</span>);</span><br><span class="line">    a = nu(a, <span class="string">"+-3^+b+-f"</span>);</span><br><span class="line">    a ^= <span class="built_in">Number</span>(d[<span class="number">1</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="number">0</span> &gt; a &amp;&amp; (a = (a &amp; <span class="number">2147483647</span>) + <span class="number">2147483648</span>);</span><br><span class="line">    a %= <span class="number">1E6</span>;</span><br><span class="line">    <span class="keyword">return</span> (a.toString() + <span class="string">"."</span> + (a ^ b))</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h4 id="运行效果"><a href="#运行效果" class="headerlink" title="运行效果"></a>运行效果</h4><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529150718.png" alt=""></p>
+<h3 id="二、总结常见算法的加密原理"><a href="#二、总结常见算法的加密原理" class="headerlink" title="二、总结常见算法的加密原理"></a>二、总结常见算法的加密原理</h3><ul>
+<li>散列(hash)函数算法：MD5、SHA</li>
+<li>对称加密算法：DES、3DES、AES</li>
+<li>非对称性加密算法：RSA、DSA、ECC<h4 id="散列-hash-函数算法"><a href="#散列-hash-函数算法" class="headerlink" title="散列(hash)函数算法"></a>散列(hash)函数算法</h4></li>
+<li>简介</li>
+</ul>
+<p>Hash也称散列、哈希，对应的英文都是Hash。基本原理就是把任意长度的输入，通过Hash算法变成固定长度的输出。这个映射的规则就是对应的Hash算法，而原始数据映射后的二进制串就是哈希值。活动开发中经常使用的MD5和SHA都是历史悠久的Hash算法。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">echo md5(&quot;这是一个测试文案&quot;);&#x2F;&#x2F; 输出结果：2124968af757ed51e71e6abeac04f98d</span><br></pre></td></tr></table></figure>
+<ul>
+<li>特点</li>
+</ul>
+<p>一、不可逆，与原视数据没有对应关系<br>二、输入数据的微小变化会得到完全不同的hash值，相同的数据会得到相同的值<br>三、hash算法冲突概率比较小，但是根据抽屉原理，一定会存在不同的输入被映射成相同输出的情况</p>
+<h4 id="对称加密算法"><a href="#对称加密算法" class="headerlink" title="对称加密算法"></a>对称加密算法</h4><ul>
+<li>简介</li>
+</ul>
+<p>秘钥：加密解密使用同一个密钥、数据的机密性双向保证、加密效率高、适合加密于大数据大文件、加密强度不高(相对于非对称加密)</p>
+<h4 id="非对称性加密算法"><a href="#非对称性加密算法" class="headerlink" title="非对称性加密算法"></a>非对称性加密算法</h4><ul>
+<li>简介</li>
+</ul>
+<p>秘钥：加密解密使用的不同秘钥、有两个密钥、需要使用密钥生成算法生成两个秘钥、数据的机密性只能单向加密、如果想解决这个问题、双向都需要各自有一对秘钥、加密效率低、加密强度高</p>
 ]]></content>
       <categories>
         <category>JS逆向</category>
@@ -188,193 +375,6 @@
       </categories>
       <tags>
         <tag>VulnHub</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>JS逆向系列之谷歌翻译</title>
-    <url>/2020/06/17/JS%E9%80%86%E5%90%91%E4%B9%8B%E8%B0%B7%E6%AD%8C%E7%BF%BB%E8%AF%91/</url>
-    <content><![CDATA[<h3 id="一、逆向谷歌翻译"><a href="#一、逆向谷歌翻译" class="headerlink" title="一、逆向谷歌翻译"></a>一、逆向谷歌翻译</h3><h4 id="分析过程"><a href="#分析过程" class="headerlink" title="分析过程"></a>分析过程</h4><ul>
-<li>首次分析</li>
-</ul>
-<p>首先找到谷歌翻译的Ajax请求接口</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529141646.png" alt=""></p>
-<p>以get方式发送的Ajax请求，多次尝试，发现请求参数中，<code>tk</code>和<code>q</code>，是不断变化的，其中<code>q</code>是待翻译的内容，<code>tk</code>是根据<code>q</code>进行js加密算法生成的，所以我们要分析<code>tk</code>的产生。</p>
-<ul>
-<li>通过断点逆向<code>tk</code>的加密算法</li>
-</ul>
-<p>加密算法应该在translate_m_zh-CN.js文件里</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529142909.png" alt=""></p>
-<p>打个断点，请求翻译接口的URL时停止，发现在send(a)中停止了，根据Call Stack的调用关系，一步步分析，最上面的就是send函数</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529143414.png" alt=""></p>
-<p>依次往下点击每一个调用的函数，当到了QE函数的时候，发现了<code>tk</code>参数来自b，b又明显来自c</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529143742.png" alt=""></p>
-<p>于是我们顺藤摸瓜，发现c是由PE(d)产生的，PE又是来自pu(a)函数，我们跳转到pu函数的位置，似乎已经有了答案</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144207.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144416.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144520.png" alt=""></p>
-<ul>
-<li>分析生成<code>tk</code>的JS代码</li>
-</ul>
-<p>如下是我们刚获取的JS代码</p>
-<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> mu = <span class="function"><span class="keyword">function</span>(<span class="params">a</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> a</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">  , nu = <span class="function"><span class="keyword">function</span>(<span class="params">a, b</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> c = <span class="number">0</span>; c &lt; b.length - <span class="number">2</span>; c += <span class="number">3</span>) &#123;</span><br><span class="line">        <span class="keyword">var</span> d = b.charAt(c + <span class="number">2</span>);</span><br><span class="line">        d = <span class="string">"a"</span> &lt;= d ? d.charCodeAt(<span class="number">0</span>) - <span class="number">87</span> : <span class="built_in">Number</span>(d);</span><br><span class="line">        d = <span class="string">"+"</span> == b.charAt(c + <span class="number">1</span>) ? a &gt;&gt;&gt; d : a &lt;&lt; d;</span><br><span class="line">        a = <span class="string">"+"</span> == b.charAt(c) ? a + d &amp; <span class="number">4294967295</span> : a ^ d</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> a</span><br><span class="line">&#125;</span><br><span class="line">  , ou = <span class="literal">null</span></span><br><span class="line">  , pu = <span class="function"><span class="keyword">function</span>(<span class="params">a</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="literal">null</span> !== ou)</span><br><span class="line">        <span class="keyword">var</span> b = ou;</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">        b = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">84</span>));</span><br><span class="line">        <span class="keyword">var</span> c = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">75</span>));</span><br><span class="line">        b = [b(), b()];</span><br><span class="line">        b[<span class="number">1</span>] = c();</span><br><span class="line">        b = (ou = <span class="built_in">window</span>[b.join(c())] || <span class="string">""</span>) || <span class="string">""</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">var</span> d = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">116</span>));</span><br><span class="line">    c = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">107</span>));</span><br><span class="line">    d = [d(), d()];</span><br><span class="line">    d[<span class="number">1</span>] = c();</span><br><span class="line">    c = <span class="string">"&amp;"</span> + d.join(<span class="string">""</span>) + <span class="string">"="</span>;</span><br><span class="line">    d = b.split(<span class="string">"."</span>);</span><br><span class="line">    b = <span class="built_in">Number</span>(d[<span class="number">0</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> e = [], f = <span class="number">0</span>, g = <span class="number">0</span>; g &lt; a.length; g++) &#123;</span><br><span class="line">        <span class="keyword">var</span> h = a.charCodeAt(g);</span><br><span class="line">        <span class="number">128</span> &gt; h ? e[f++] = h : (<span class="number">2048</span> &gt; h ? e[f++] = h &gt;&gt; <span class="number">6</span> | <span class="number">192</span> : (<span class="number">55296</span> == (h &amp; <span class="number">64512</span>) &amp;&amp; g + <span class="number">1</span> &lt; a.length &amp;&amp; <span class="number">56320</span> == (a.charCodeAt(g + <span class="number">1</span>) &amp; <span class="number">64512</span>) ? (h = <span class="number">65536</span> + ((h &amp; <span class="number">1023</span>) &lt;&lt; <span class="number">10</span>) + (a.charCodeAt(++g) &amp; <span class="number">1023</span>),</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">18</span> | <span class="number">240</span>,</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">12</span> &amp; <span class="number">63</span> | <span class="number">128</span>) : e[f++] = h &gt;&gt; <span class="number">12</span> | <span class="number">224</span>,</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">6</span> &amp; <span class="number">63</span> | <span class="number">128</span>),</span><br><span class="line">        e[f++] = h &amp; <span class="number">63</span> | <span class="number">128</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    a = b;</span><br><span class="line">    <span class="keyword">for</span> (f = <span class="number">0</span>; f &lt; e.length; f++)</span><br><span class="line">        a += e[f],</span><br><span class="line">        a = nu(a, <span class="string">"+-a^+6"</span>);</span><br><span class="line">    a = nu(a, <span class="string">"+-3^+b+-f"</span>);</span><br><span class="line">    a ^= <span class="built_in">Number</span>(d[<span class="number">1</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="number">0</span> &gt; a &amp;&amp; (a = (a &amp; <span class="number">2147483647</span>) + <span class="number">2147483648</span>);</span><br><span class="line">    a %= <span class="number">1E6</span>;</span><br><span class="line">    <span class="keyword">return</span> c + (a.toString() + <span class="string">"."</span> + (a ^ b))</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-<p>发现做了很多不必要的操作、甚至多此一举，目的是用于混淆<br>如：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">var mu &#x3D; function(a) &#123;</span><br><span class="line">    return function() &#123;</span><br><span class="line">        return a</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>还用了<code>.fromCharCode()</code>函数，把数字转换为字母，明显多此一举的操作。但是，通过分析，发现<code>tk</code>生成需要另一样东西，就是<code>tkk</code>这个参数，来源于网页源代码上，寻找一番，还是发现了，多次尝试，发现这个值是固定的</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529145556.png" alt=""></p>
-<h4 id="具体实现"><a href="#具体实现" class="headerlink" title="具体实现"></a>具体实现</h4><p>说明：js文件做了精炼，把不必要的值去掉了，实行的效果是英译中，不同语言的翻译修改请求的参数即可</p>
-<ul>
-<li>Python脚本</li>
-</ul>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> json</span><br><span class="line"><span class="keyword">import</span> execjs</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_tk</span><span class="params">(q)</span>:</span></span><br><span class="line">    <span class="keyword">with</span> open(<span class="string">'google_tk.js'</span>, <span class="string">'r'</span>, encoding=<span class="string">'utf-8'</span>) <span class="keyword">as</span> f:</span><br><span class="line">        js = f.read()</span><br><span class="line">    j = execjs.compile(js)</span><br><span class="line">    tk = j.call(<span class="string">'pu'</span>, q)</span><br><span class="line">    <span class="keyword">return</span> tk</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">translate_google</span><span class="params">()</span>:</span></span><br><span class="line">    q = input(<span class="string">"请输入你要翻译的内容："</span>)</span><br><span class="line">    headers = &#123;</span><br><span class="line">        <span class="string">"user-agent"</span>: <span class="string">"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36"</span>,</span><br><span class="line">        <span class="string">"referer"</span>: <span class="string">"https://translate.google.cn/"</span></span><br><span class="line">    &#125;</span><br><span class="line">    url = <span class="string">"https://translate.google.cn/translate_a/single?client=webapp&amp;sl=en&amp;tl=zh-CN&amp;hl=zh-CN&amp;dt=at&amp;dt=bd&amp;dt=ex&amp;dt=ld&amp;dt=md&amp;dt=qca&amp;dt=rw&amp;dt=rm&amp;dt=sos&amp;dt=ss&amp;dt=t&amp;otf=2&amp;ssel=0&amp;tsel=0&amp;kc=3&amp;tk="</span> + get_tk(</span><br><span class="line">        q) + <span class="string">"&amp;q="</span> + q</span><br><span class="line">    res = requests.get(url, headers=headers)</span><br><span class="line">    data = res.content.decode()</span><br><span class="line">    json_data = json.loads(data)</span><br><span class="line">    print(json_data[<span class="number">0</span>][<span class="number">0</span>][<span class="number">0</span>])</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:</span><br><span class="line">    translate_google()</span><br></pre></td></tr></table></figure>
-
-<ul>
-<li>tk.js</li>
-</ul>
-<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line"><span class="comment">//tkk = '441865.2154418832';</span></span><br><span class="line"><span class="keyword">var</span> nu = <span class="function"><span class="keyword">function</span> (<span class="params">a, b</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> c = <span class="number">0</span>; c &lt; b.length - <span class="number">2</span>; c += <span class="number">3</span>) &#123;</span><br><span class="line">        <span class="keyword">var</span> d = b.charAt(c + <span class="number">2</span>);</span><br><span class="line">        d = <span class="string">"a"</span> &lt;= d ? d.charCodeAt(<span class="number">0</span>) - <span class="number">87</span> : <span class="built_in">Number</span>(d);</span><br><span class="line">        d = <span class="string">"+"</span> == b.charAt(c + <span class="number">1</span>) ? a &gt;&gt;&gt; d : a &lt;&lt; d;</span><br><span class="line">        a = <span class="string">"+"</span> == b.charAt(c) ? a + d &amp; <span class="number">4294967295</span> : a ^ d</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> a</span><br><span class="line">&#125;,</span><br><span class="line"></span><br><span class="line">pu = <span class="function"><span class="keyword">function</span> (<span class="params">a</span>) </span>&#123;</span><br><span class="line">    tkk=<span class="string">'441865.2154418832'</span>;</span><br><span class="line">    <span class="keyword">var</span> d = tkk.split(<span class="string">"."</span>);</span><br><span class="line">    <span class="keyword">var</span> b = <span class="built_in">Number</span>(d[<span class="number">0</span>]);</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> e = [], f = <span class="number">0</span>, g = <span class="number">0</span>; g &lt; a.length; g++) &#123;</span><br><span class="line">        <span class="keyword">var</span> h = a.charCodeAt(g);</span><br><span class="line">        <span class="number">128</span> &gt; h ? e[f++] = h :</span><br><span class="line">            (<span class="number">2048</span> &gt; h ? e[f++] = h &gt;&gt; <span class="number">6</span> | <span class="number">192</span> :</span><br><span class="line">                    (<span class="number">55296</span> == (h &amp; <span class="number">64512</span>) &amp;&amp; g + <span class="number">1</span> &lt; a.length &amp;&amp; <span class="number">56320</span> == (a.charCodeAt(g + <span class="number">1</span>) &amp; <span class="number">64512</span>) ? (h = <span class="number">65536</span> + ((h &amp; <span class="number">1023</span>) &lt;&lt; <span class="number">10</span>) + (a.charCodeAt(++g) &amp; <span class="number">1023</span>), e[f++] = h &gt;&gt; <span class="number">18</span> | <span class="number">240</span>, e[f++] = h &gt;&gt; <span class="number">12</span> &amp; <span class="number">63</span> | <span class="number">128</span>) :</span><br><span class="line">                        e[f++] = h &gt;&gt; <span class="number">12</span> | <span class="number">224</span>, e[f++] = h &gt;&gt; <span class="number">6</span> &amp; <span class="number">63</span> | <span class="number">128</span>), e[f++] = h &amp; <span class="number">63</span> | <span class="number">128</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    a = b;</span><br><span class="line">    <span class="keyword">for</span> (f = <span class="number">0</span>; f &lt; e.length; f++)</span><br><span class="line">        a += e[f],</span><br><span class="line">        a = nu(a, <span class="string">"+-a^+6"</span>);</span><br><span class="line">    a = nu(a, <span class="string">"+-3^+b+-f"</span>);</span><br><span class="line">    a ^= <span class="built_in">Number</span>(d[<span class="number">1</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="number">0</span> &gt; a &amp;&amp; (a = (a &amp; <span class="number">2147483647</span>) + <span class="number">2147483648</span>);</span><br><span class="line">    a %= <span class="number">1E6</span>;</span><br><span class="line">    <span class="keyword">return</span> (a.toString() + <span class="string">"."</span> + (a ^ b))</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-
-<h4 id="运行效果"><a href="#运行效果" class="headerlink" title="运行效果"></a>运行效果</h4><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529150718.png" alt=""></p>
-<h3 id="二、总结常见算法的加密原理"><a href="#二、总结常见算法的加密原理" class="headerlink" title="二、总结常见算法的加密原理"></a>二、总结常见算法的加密原理</h3><ul>
-<li>散列(hash)函数算法：MD5、SHA</li>
-<li>对称加密算法：DES、3DES、AES</li>
-<li>非对称性加密算法：RSA、DSA、ECC<h4 id="散列-hash-函数算法"><a href="#散列-hash-函数算法" class="headerlink" title="散列(hash)函数算法"></a>散列(hash)函数算法</h4></li>
-<li>简介</li>
-</ul>
-<p>Hash也称散列、哈希，对应的英文都是Hash。基本原理就是把任意长度的输入，通过Hash算法变成固定长度的输出。这个映射的规则就是对应的Hash算法，而原始数据映射后的二进制串就是哈希值。活动开发中经常使用的MD5和SHA都是历史悠久的Hash算法。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">echo md5(&quot;这是一个测试文案&quot;);&#x2F;&#x2F; 输出结果：2124968af757ed51e71e6abeac04f98d</span><br></pre></td></tr></table></figure>
-<ul>
-<li>特点</li>
-</ul>
-<p>一、不可逆，与原视数据没有对应关系<br>二、输入数据的微小变化会得到完全不同的hash值，相同的数据会得到相同的值<br>三、hash算法冲突概率比较小，但是根据抽屉原理，一定会存在不同的输入被映射成相同输出的情况</p>
-<h4 id="对称加密算法"><a href="#对称加密算法" class="headerlink" title="对称加密算法"></a>对称加密算法</h4><ul>
-<li>简介</li>
-</ul>
-<p>秘钥：加密解密使用同一个密钥、数据的机密性双向保证、加密效率高、适合加密于大数据大文件、加密强度不高(相对于非对称加密)</p>
-<h4 id="非对称性加密算法"><a href="#非对称性加密算法" class="headerlink" title="非对称性加密算法"></a>非对称性加密算法</h4><ul>
-<li>简介</li>
-</ul>
-<p>秘钥：加密解密使用的不同秘钥、有两个密钥、需要使用密钥生成算法生成两个秘钥、数据的机密性只能单向加密、如果想解决这个问题、双向都需要各自有一对秘钥、加密效率低、加密强度高</p>
-]]></content>
-      <categories>
-        <category>JS逆向</category>
-      </categories>
-      <tags>
-        <tag>JS逆向系列</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>BurpSuite——Intruder四种模式详解</title>
-    <url>/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/</url>
-    <content><![CDATA[<h2 id="一、Sniper（狙击手）"><a href="#一、Sniper（狙击手）" class="headerlink" title="一、Sniper（狙击手）"></a>一、Sniper（狙击手）</h2><p>Sniper模式只能使用一组 payload 集合，一次只使用一个 payload 位置；假如标记了两个位置 “A” 和 “B” ，payload 集合内有“1”和“2”两个值，那么它攻击会形成以下组合：</p>
-<table>
-<thead>
-<tr>
-<th align="center">攻击序列</th>
-<th align="center">位置A</th>
-<th align="center">位置B</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center">1</td>
-<td align="center">1</td>
-<td align="center">不替换</td>
-</tr>
-<tr>
-<td align="center">2</td>
-<td align="center">2</td>
-<td align="center">不替换</td>
-</tr>
-<tr>
-<td align="center">3</td>
-<td align="center">不替换</td>
-<td align="center">1</td>
-</tr>
-<tr>
-<td align="center">4</td>
-<td align="center">不替换</td>
-<td align="center">2</td>
-</tr>
-</tbody></table>
-<p>适用场景：竞争条件测试（选择Null payloads），密码、验证码暴力破解，重放攻击等场景</p>
-<h2 id="二、Battering-ram（攻城锤）"><a href="#二、Battering-ram（攻城锤）" class="headerlink" title="二、Battering ram（攻城锤）"></a>二、Battering ram（攻城锤）</h2><p>同样只能使用一组 payload 集合，不同的地方在于每次攻击都是替换所有payload标记位置；如果添加了两个参数的话，就一起进行爆破，两个参数爆破时候的值肯定就是一样的了：</p>
-<table>
-<thead>
-<tr>
-<th align="center">攻击序列</th>
-<th align="center">位置A</th>
-<th align="center">位置B</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center">1</td>
-<td align="center">1</td>
-<td align="center">1</td>
-</tr>
-<tr>
-<td align="center">2</td>
-<td align="center">2</td>
-<td align="center">2</td>
-</tr>
-</tbody></table>
-<p>适用场景：暴力破解</p>
-<h2 id="三、Pitchfork（草叉）"><a href="#三、Pitchfork（草叉）" class="headerlink" title="三、Pitchfork（草叉）"></a>三、Pitchfork（草叉）</h2><p>草叉模式允许使用多组payload组合，如果只添加了一个参数的话，会报错；在每个标记位置上遍历各自对应的payload组合，假设有两个位置“A”和“B”，payload组合1的值为“1”和“2”，payload组合2的值为“3”和“4”，那么它攻击会形成以下组合：</p>
-<table>
-<thead>
-<tr>
-<th align="center">攻击序列</th>
-<th align="center">位置A</th>
-<th align="center">位置B</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center">1</td>
-<td align="center">1</td>
-<td align="center">3</td>
-</tr>
-<tr>
-<td align="center">2</td>
-<td align="center">2</td>
-<td align="center">4</td>
-</tr>
-</tbody></table>
-<p>注：如果两个payload行数不一致的话，取最小值进行测试。所以爆破的次数取两个中最小的为准。</p>
-<p>适用场景：恶意注册、撞裤</p>
-<h2 id="四、Cluster-bomb（集束炸弹）"><a href="#四、Cluster-bomb（集束炸弹）" class="headerlink" title="四、Cluster bomb（集束炸弹）"></a>四、Cluster bomb（集束炸弹）</h2><p>集束炸弹也允许使用多组payload组合，跟草叉模式不同的地方在于，集束炸弹模式会对payload组进行笛卡尔积，那么它攻击会形成以下组合：</p>
-<table>
-<thead>
-<tr>
-<th align="center">攻击序列</th>
-<th align="center">位置A</th>
-<th align="center">位置B</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center">1</td>
-<td align="center">1</td>
-<td align="center">3</td>
-</tr>
-<tr>
-<td align="center">2</td>
-<td align="center">1</td>
-<td align="center">4</td>
-</tr>
-<tr>
-<td align="center">1</td>
-<td align="center">2</td>
-<td align="center">3</td>
-</tr>
-<tr>
-<td align="center">2</td>
-<td align="center">2</td>
-<td align="center">4</td>
-</tr>
-</tbody></table>
-<p>适用场景：账号、密码暴力破解</p>
-]]></content>
-      <categories>
-        <category>工具</category>
-      </categories>
-      <tags>
-        <tag>BurpSuite</tag>
       </tags>
   </entry>
 </search>
