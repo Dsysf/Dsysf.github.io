@@ -1,702 +1,428 @@
 <!DOCTYPE html>
-<html lang=zh>
-<head>
-  <meta charset="utf-8">
-  
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, minimal-ui">
-  <meta name="renderer" content="webkit">
-  <meta http-equiv="Cache-Control" content="no-transform" />
-  <meta http-equiv="Cache-Control" content="no-siteapp" />
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="format-detection" content="telephone=no,email=no,adress=no">
-  <!-- Color theme for statusbar -->
-  <meta name="theme-color" content="#000000" />
-  <!-- 强制页面在当前窗口以独立页面显示,防止别人在框架里调用页面 -->
-  <meta http-equiv="window-target" content="_top" />
-  
-  
-  <title>BurpSuite——Intruder四种模式详解 | Hexo</title>
-  <meta name="description" content="一、Sniper（狙击手）Sniper模式只能使用一组 payload 集合，一次只使用一个 payload 位置；假如标记了两个位置 “A” 和 “B” ，payload 集合内有“1”和“2”两个值，那么它攻击会形成以下组合：    攻击序列 位置A 位置B    1 1 不替换   2 2 不替换   3 不替换 1   4 不替换 2   适用场景：竞争条件测试（选择Null payloa">
+<html  lang="zh-Hans" >
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+    <title>BurpSuite——Intruder四种模式详解 | D 先生的博客</title>
+    <meta name="description" content="一、Sniper（狙击手） Sniper模式只能使用一组 payload 集合，一次只使用一个 payload 位置；假如标记了两个位置 “A” 和 “B” ，payload 集合内有“1”和“2”两个值，那么它攻击会形成以下组合：    攻击序列 位置A 位置B     1 1 不替换   2 2 不替换   3 不替换 1   4 不替换 2    适用场景：竞争条件测试（选择Null pay">
 <meta property="og:type" content="article">
 <meta property="og:title" content="BurpSuite——Intruder四种模式详解">
 <meta property="og:url" content="http://yoursite.com/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/index.html">
 <meta property="og:site_name" content="D 先生的博客">
-<meta property="og:description" content="一、Sniper（狙击手）Sniper模式只能使用一组 payload 集合，一次只使用一个 payload 位置；假如标记了两个位置 “A” 和 “B” ，payload 集合内有“1”和“2”两个值，那么它攻击会形成以下组合：    攻击序列 位置A 位置B    1 1 不替换   2 2 不替换   3 不替换 1   4 不替换 2   适用场景：竞争条件测试（选择Null payloa">
+<meta property="og:description" content="一、Sniper（狙击手） Sniper模式只能使用一组 payload 集合，一次只使用一个 payload 位置；假如标记了两个位置 “A” 和 “B” ，payload 集合内有“1”和“2”两个值，那么它攻击会形成以下组合：    攻击序列 位置A 位置B     1 1 不替换   2 2 不替换   3 不替换 1   4 不替换 2    适用场景：竞争条件测试（选择Null pay">
 <meta property="article:published_time" content="2020-06-17T14:57:52.000Z">
 <meta property="article:modified_time" content="2020-06-17T14:59:23.398Z">
 <meta property="article:author" content="Edsion Shen">
 <meta property="article:tag" content="BurpSuite">
 <meta name="twitter:card" content="summary">
-  <!-- Canonical links -->
-  <link rel="canonical" href="http://yoursite.com/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/index.html">
-  
-    <link rel="alternate" href="/atom.xml" title="D 先生的博客" type="application/atom+xml">
-  
-  
-    <link rel="icon" href="/favicon.png" type="image/x-icon">
-  
-  
-<link rel="stylesheet" href="/css/style.css">
 
-  
-  
-  
-  
+    <link rel="alternate" type="application/atom+xml" href="/atom.xml">
+    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+
+    
+<link rel="stylesheet" href="/css/common.min.css">
+
+
+
+    
+    
+    
+    
+        <link href="//cdn.jsdelivr.net/npm/lightgallery.js@1.1.3/dist/css/lightgallery.min.css" rel="stylesheet">
+    
+    
+    
+<link rel="stylesheet" href="/css/iconfont.min.css">
+
+    
 <meta name="generator" content="Hexo 4.2.1"></head>
 
-
-<body class="main-center" itemscope itemtype="http://schema.org/WebPage">
-  <header class="header" itemscope itemtype="http://schema.org/WPHeader">
-  <div class="slimContent">
-    <div class="navbar-header">
-      
-      
-      <div class="profile-block text-center">
-        <a id="avatar" href="https://github.com/cofess" target="_blank">
-          <img class="img-circle img-rotate" src="/images/avatar.jpg" width="200" height="200">
-        </a>
-        <h2 id="name" class="hidden-xs hidden-sm">昵称</h2>
-        <h3 id="title" class="hidden-xs hidden-sm hidden-md">Web Developer &amp; Designer</h3>
-        <small id="location" class="text-muted hidden-xs hidden-sm"><i class="icon icon-map-marker"></i> Shenzhen, China</small>
-      </div>
-      
-      <div class="search" id="search-form-wrap">
-
-    <form class="search-form sidebar-form">
-        <div class="input-group">
-            <input type="text" class="search-form-input form-control" placeholder="Search" />
-            <span class="input-group-btn">
-                <button type="submit" class="search-form-submit btn btn-flat" onclick="return false;"><i class="icon icon-search"></i></button>
+    <body>
+        <header class="header header-fixture">
+    <div class="profile-search-wrap flex sm:block">
+        
+        
+        <div class="profile sm:text-center md:px-1 lg:px-3 sm:pb-4 sm:pt-6">
+            <a id="avatar" role="link" href="https://github.com/fengkx" class="inline-block lg:w-16 lg:h-16 w-8 h-8 m-2" target="_blank" rel="noopener" rel="noreferrer" >
+                <img src="https://www.gravatar.com/avatar/0bc83cb571cd1c50ba6f3e8a78ef1346?s=128" class="rounded-full" alt="avatar">
+            </a>
+            <h2 id="name" class="hidden lg:block">fengkx</h2>
+            <h3 id="title" class="hidden xl:block">Student &amp; Coder</h3>
+            
+            <small id="location" class="hidden lg:block">
+                <i class="iconfont icon-map-icon"></i>
+                Guangzhou, China
+            </small>
+            
+        </div>
+        
+        
+<div class="search flex-1 flex lg:inline-block sm:hidden lg:px-4 lg:mt-2 lg:mb-4 lg:w-full">
+    <form id="search-form" class="my-auto flex-1 lg:border lg:border-solid lg:border-gray-200">
+        <div class="input-group table bg-gray-100 lg:bg-white w-full">
+            <input id="search-input" type="text" placeholder="Search" class="inline-block w-full bg-gray-100 lg:bg-white">
+            <span class="table-cell">
+                <button name="search tigger button" disabled>
+                    <i class="iconfont icon-search m-2"></i>
+                </button>
             </span>
         </div>
     </form>
-    <div class="ins-search">
-  <div class="ins-search-mask"></div>
-  <div class="ins-search-container">
-    <div class="ins-input-wrapper">
-      <input type="text" class="ins-search-input" placeholder="Type something..." x-webkit-speech />
-      <button type="button" class="close ins-close ins-selectable" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
-    </div>
-    <div class="ins-section-wrapper">
-      <div class="ins-section-container"></div>
-    </div>
-  </div>
-</div>
-
-
-</div>
-      <button class="navbar-toggle collapsed" type="button" data-toggle="collapse" data-target="#main-navbar" aria-controls="main-navbar" aria-expanded="false">
-        <span class="sr-only">Toggle navigation</span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
-    </div>
-    <nav id="main-navbar" class="collapse navbar-collapse" itemscope itemtype="http://schema.org/SiteNavigationElement" role="navigation">
-      <ul class="nav navbar-nav main-nav ">
         
-        
-        <li class="menu-item menu-item-home">
-          <a href="/.">
-            
-            <i class="icon icon-home-fill"></i>
-            
-            <span class="menu-title">Home</span>
-          </a>
-        </li>
-        
-        
-        <li class="menu-item menu-item-archives">
-          <a href="/archives">
-            
-            <i class="icon icon-archives-fill"></i>
-            
-            <span class="menu-title">Archives</span>
-          </a>
-        </li>
-        
-        
-        <li class="menu-item menu-item-categories">
-          <a href="/categories">
-            
-            <i class="icon icon-folder"></i>
-            
-            <span class="menu-title">Categories</span>
-          </a>
-        </li>
-        
-        
-        <li class="menu-item menu-item-tags">
-          <a href="/tags">
-            
-            <i class="icon icon-tags"></i>
-            
-            <span class="menu-title">Tags</span>
-          </a>
-        </li>
-        
-        
-        <li class="menu-item menu-item-repository">
-          <a href="/repository">
-            
-            <i class="icon icon-project"></i>
-            
-            <span class="menu-title">Repository</span>
-          </a>
-        </li>
-        
-        
-        <li class="menu-item menu-item-books">
-          <a href="/books">
-            
-            <i class="icon icon-book-fill"></i>
-            
-            <span class="menu-title">Books</span>
-          </a>
-        </li>
-        
-        
-        <li class="menu-item menu-item-links">
-          <a href="/links">
-            
-            <i class="icon icon-friendship"></i>
-            
-            <span class="menu-title">Links</span>
-          </a>
-        </li>
-        
-        
-        <li class="menu-item menu-item-about">
-          <a href="/about">
-            
-            <i class="icon icon-cup-fill"></i>
-            
-            <span class="menu-title">About</span>
-          </a>
-        </li>
-        
-      </ul>
-      
-	
-    <ul class="social-links">
-    	
-        <li><a href="https://github.com/cofess" target="_blank" title="Github" data-toggle=tooltip data-placement=top><i class="icon icon-github"></i></a></li>
-        
-        <li><a href="http://weibo.com/cofess" target="_blank" title="Weibo" data-toggle=tooltip data-placement=top><i class="icon icon-weibo"></i></a></li>
-        
-        <li><a href="https://twitter.com/iwebued" target="_blank" title="Twitter" data-toggle=tooltip data-placement=top><i class="icon icon-twitter"></i></a></li>
-        
-        <li><a href="https://www.behance.net/cofess" target="_blank" title="Behance" data-toggle=tooltip data-placement=top><i class="icon icon-behance"></i></a></li>
-        
-        <li><a href="/atom.xml" target="_blank" title="Rss" data-toggle=tooltip data-placement=top><i class="icon icon-rss"></i></a></li>
-        
-    </ul>
-
-    </nav>
-  </div>
-</header>
-
-  
-    <aside class="sidebar" itemscope itemtype="http://schema.org/WPSideBar">
-  <div class="slimContent">
-    
-      <div class="widget">
-    <h3 class="widget-title">Board</h3>
-    <div class="widget-body">
-        <div id="board">
-            <div class="content">
-                <p>欢迎交流与分享经验!</p>
-            </div>
+<script id="search-teamplate" type="text/html" data-path="/content.json">
+    <div>
+        <div class="search-header bg-gray-400">
+            <input id="actual-search-input" model="keyword" ref="input" class="inline-block w-full h-10 px-2 py-1" placeholder="Search" type="text">
+        </div>
+        <div class="search-result bg-gray-200">
+            {{#each searchPosts}}
+            <a href="/{{ path }}" class="result-item block px-2 pb-3 mb-1 pt-1 hover:bg-indigo-100">
+                <i class="iconfont icon-file"></i>
+                <h1 class="result-title inline font-medium text-lg">{{ title }}</h1>
+                <p class="result-content text-gray-600 text-sm">{{{ text }}}</p>
+            </a>
+            {{/each}}
         </div>
     </div>
+</script>
+
 </div>
 
-    
-      
-  <div class="widget">
-    <h3 class="widget-title">Categories</h3>
-    <div class="widget-body">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/JS%E9%80%86%E5%90%91/">JS逆向</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%B7%A5%E5%85%B7/">工具</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%B8%97%E9%80%8F/">渗透</a><span class="category-list-count">1</span></li></ul>
+
+        <button name="menu toogle button" id="menu-toggle-btn" class="block sm:hidden p-3" role="button" aria-expanded="false">
+            <i class="iconfont icon-hamburger"></i>
+        </button>
     </div>
-  </div>
-
-
-    
-      
-  <div class="widget">
-    <h3 class="widget-title">Tags</h3>
-    <div class="widget-body">
-      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/BurpSuite/" rel="tag">BurpSuite</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JS%E9%80%86%E5%90%91%E7%B3%BB%E5%88%97/" rel="tag">JS逆向系列</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VulnHub/" rel="tag">VulnHub</a><span class="tag-list-count">1</span></li></ul>
-    </div>
-  </div>
-
-
-    
-      
-  <div class="widget">
-    <h3 class="widget-title">Tag Cloud</h3>
-    <div class="widget-body tagcloud">
-      <a href="/tags/BurpSuite/" style="font-size: 13px;">BurpSuite</a> <a href="/tags/JS%E9%80%86%E5%90%91%E7%B3%BB%E5%88%97/" style="font-size: 14px;">JS逆向系列</a> <a href="/tags/VulnHub/" style="font-size: 13px;">VulnHub</a>
-    </div>
-  </div>
-
-    
-      
-  <div class="widget">
-    <h3 class="widget-title">Archive</h3>
-    <div class="widget-body">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">June 2020</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">May 2020</a><span class="archive-list-count">1</span></li></ul>
-    </div>
-  </div>
-
-
-    
-      
-  <div class="widget">
-    <h3 class="widget-title">Recent Posts</h3>
-    <div class="widget-body">
-      <ul class="recent-post-list list-unstyled no-thumbnail">
+    <nav id="menu-nav" class="hidden sm:flex flex-col">
         
-          <li>
-            
-            <div class="item-inner">
-              <p class="item-category">
-                <a class="category-link" href="/categories/%E5%B7%A5%E5%85%B7/">工具</a>
-              </p>
-              <p class="item-title">
-                <a href="/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/" class="title">BurpSuite——Intruder四种模式详解</a>
-              </p>
-              <p class="item-date">
-                <time datetime="2020-06-17T14:57:52.000Z" itemprop="datePublished">2020-06-17</time>
-              </p>
-            </div>
-          </li>
-          
-          <li>
-            
-            <div class="item-inner">
-              <p class="item-category">
-                <a class="category-link" href="/categories/JS%E9%80%86%E5%90%91/">JS逆向</a>
-              </p>
-              <p class="item-title">
-                <a href="/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/" class="title">JS逆向系列一</a>
-              </p>
-              <p class="item-date">
-                <time datetime="2020-06-17T10:16:58.000Z" itemprop="datePublished">2020-06-17</time>
-              </p>
-            </div>
-          </li>
-          
-          <li>
-            
-            <div class="item-inner">
-              <p class="item-category">
-                <a class="category-link" href="/categories/JS%E9%80%86%E5%90%91/">JS逆向</a>
-              </p>
-              <p class="item-title">
-                <a href="/2020/06/17/JS%E9%80%86%E5%90%91%E4%B9%8B%E8%B0%B7%E6%AD%8C%E7%BF%BB%E8%AF%91/" class="title">JS逆向系列之谷歌翻译</a>
-              </p>
-              <p class="item-date">
-                <time datetime="2020-06-17T10:16:58.000Z" itemprop="datePublished">2020-06-17</time>
-              </p>
-            </div>
-          </li>
-          
-          <li>
-            
-            <div class="item-inner">
-              <p class="item-category">
-                <a class="category-link" href="/categories/%E6%B8%97%E9%80%8F/">渗透</a>
-              </p>
-              <p class="item-title">
-                <a href="/2020/05/25/VulnHub%E6%B8%97%E9%80%8F%E4%B9%8BDC-1/" class="title">VulnHub渗透之DC-1</a>
-              </p>
-              <p class="item-date">
-                <time datetime="2020-05-25T04:57:51.000Z" itemprop="datePublished">2020-05-25</time>
-              </p>
-            </div>
-          </li>
-          
-      </ul>
-    </div>
-  </div>
-  
-
-    
-  </div>
-</aside>
-
-  
-  
-<main class="main" role="main">
-  <div class="content">
-  <article id="post-BurpSuite——Intruder四种模式详解" class="article article-type-post" itemscope itemtype="http://schema.org/BlogPosting">
-    
-    <div class="article-header">
-      
         
-  
-    <h1 class="article-title" itemprop="name">
-      BurpSuite——Intruder四种模式详解
-    </h1>
-  
+            <div class="menu-item menu-home" role="menuitem">
+                <a href="/.">
+                    <i class="iconfont icon-home" aria-hidden="true"></i>
+                    <span class="menu-title">Home</span>
+                </a>
+            </div>
+        
+        
+            <div class="menu-item menu-archives" role="menuitem">
+                <a href="/archives">
+                    <i class="iconfont icon-archive" aria-hidden="true"></i>
+                    <span class="menu-title">Archives</span>
+                </a>
+            </div>
+        
+        
+            <div class="menu-item menu-categories" role="menuitem">
+                <a href="/categories">
+                    <i class="iconfont icon-folder" aria-hidden="true"></i>
+                    <span class="menu-title">Categories</span>
+                </a>
+            </div>
+        
+        
+            <div class="menu-item menu-tags" role="menuitem">
+                <a href="/tags">
+                    <i class="iconfont icon-tag" aria-hidden="true"></i>
+                    <span class="menu-title">Tags</span>
+                </a>
+            </div>
+        
+        
+            <div class="menu-item menu-about" role="menuitem">
+                <a href="/about">
+                    <i class="iconfont icon-cup" aria-hidden="true"></i>
+                    <span class="menu-title">About</span>
+                </a>
+            </div>
+        
+        
+<div class="social-links flex sm:flex-col lg:hidden mt-5">
+    
+        <span class="social-item text-center">
+            <a href="https://github.com/fengkx" target="_blank" rel="noopener">
+                <i class="iconfont social-icon icon-github"></i>
+                <span class="menu-title hidden lg:inline">menu.github</span>
+            </a>
+        </span>
+    
+        <span class="social-item text-center">
+            <a href="https://t.me/fengkx" target="_blank" rel="noopener">
+                <i class="iconfont social-icon icon-telegram"></i>
+                <span class="menu-title hidden lg:inline">menu.telegram</span>
+            </a>
+        </span>
+    
+        <span class="social-item text-center">
+            <a href="https://twitter.com/example" target="_blank" rel="noopener">
+                <i class="iconfont social-icon icon-twitter"></i>
+                <span class="menu-title hidden lg:inline">menu.twitter</span>
+            </a>
+        </span>
+    
+        <span class="social-item text-center">
+            <a href="/atom.xml">
+                <i class="iconfont social-icon icon-rss"></i>
+                <span class="menu-title hidden lg:inline">menu.rss</span>
+            </a>
+        </span>
+    
+</div>
 
-      
-      <div class="article-meta">
-        <span class="article-date">
-    <i class="icon icon-calendar-check"></i>
+
+    </nav>
+</header>
+
+        <section class="main-section">
+            
+    <main class="flex-1 px-4 py-12 md:px-5 lg:px-8 lg:py-4 relative min-h-screen">
+    
+
+    <article class="content article article-archives article-type-list" itemscope="">
+        <header class="article-header">
+            
+    
+        <h1 class="article-title text-lg" itemprop="name">
+            BurpSuite——Intruder四种模式详解
+        </h1>
+    
+
+
+
+            <p class="article-meta mb-3 text-xs">
+                <span class="article-date">
+    <i class="iconfont icon-calendar-check"></i>
 	<a href="/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/" class="article-date">
-	  <time datetime="2020-06-17T14:57:52.000Z" itemprop="datePublished">2020-06-17</time>
+	  <time datetime="2020-06-17T14:57:52.000Z" itemprop="datePublished">Jun 17</time>
 	</a>
 </span>
-        
-  <span class="article-category">
-    <i class="icon icon-folder"></i>
+
+                
+    <span class="article-category">
+    <i class="iconfont icon-folder"></i>
     <a class="article-category-link" href="/categories/%E5%B7%A5%E5%85%B7/">工具</a>
   </span>
 
-        
-  <span class="article-tag">
-    <i class="icon icon-tags"></i>
-	<a class="article-tag-link" href="/tags/BurpSuite/" rel="tag">BurpSuite</a>
+
+                
+    <span class="article-tags">
+    <i class="iconfont icon-tag"></i>
+    <a class="article-tag-link" href="/tags/BurpSuite/" rel="tag">BurpSuite</a>
   </span>
 
 
-        
+                <span class="_partial/post-comment"><i class="icon icon-comment"></i>
+                    <a href="/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/#comments" class="article-comment-link">
+                        Comments
+                    </a>
+                </span>
+                
+    
+        <span class="post-wordcount" itemprop="wordCount">Word Count: 469(words)</span>
+    
+    
+        <span class="post-readcount" itemprop="timeRequired">Read Count: 1(minutes)</span>
+    
 
-        <span class="post-comment"><i class="icon icon-comment"></i> <a href="/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/#comments" class="article-comment-link">Comments</a></span>
-        
-      </div>
-    </div>
-    <div class="article-entry marked-body" itemprop="articleBody">
-      
-        <h2 id="一、Sniper（狙击手）"><a href="#一、Sniper（狙击手）" class="headerlink" title="一、Sniper（狙击手）"></a>一、Sniper（狙击手）</h2><p>Sniper模式只能使用一组 payload 集合，一次只使用一个 payload 位置；假如标记了两个位置 “A” 和 “B” ，payload 集合内有“1”和“2”两个值，那么它攻击会形成以下组合：</p>
+
+            </p>
+        </header>
+        <div class="marked-body article-body">
+            <h2 id="一、Sniper（狙击手）">一、Sniper（狙击手）</h2>
+<p>Sniper模式只能使用一组 payload 集合，一次只使用一个 payload 位置；假如标记了两个位置 “A” 和 “B” ，payload 集合内有“1”和“2”两个值，那么它攻击会形成以下组合：</p>
 <table>
 <thead>
 <tr>
-<th align="center">攻击序列</th>
-<th align="center">位置A</th>
-<th align="center">位置B</th>
+<th style="text-align:center">攻击序列</th>
+<th style="text-align:center">位置A</th>
+<th style="text-align:center">位置B</th>
 </tr>
 </thead>
-<tbody><tr>
-<td align="center">1</td>
-<td align="center">1</td>
-<td align="center">不替换</td>
+<tbody>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">不替换</td>
 </tr>
 <tr>
-<td align="center">2</td>
-<td align="center">2</td>
-<td align="center">不替换</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">不替换</td>
 </tr>
 <tr>
-<td align="center">3</td>
-<td align="center">不替换</td>
-<td align="center">1</td>
+<td style="text-align:center">3</td>
+<td style="text-align:center">不替换</td>
+<td style="text-align:center">1</td>
 </tr>
 <tr>
-<td align="center">4</td>
-<td align="center">不替换</td>
-<td align="center">2</td>
+<td style="text-align:center">4</td>
+<td style="text-align:center">不替换</td>
+<td style="text-align:center">2</td>
 </tr>
-</tbody></table>
+</tbody>
+</table>
 <p>适用场景：竞争条件测试（选择Null payloads），密码、验证码暴力破解，重放攻击等场景</p>
-<h2 id="二、Battering-ram（攻城锤）"><a href="#二、Battering-ram（攻城锤）" class="headerlink" title="二、Battering ram（攻城锤）"></a>二、Battering ram（攻城锤）</h2><p>同样只能使用一组 payload 集合，不同的地方在于每次攻击都是替换所有payload标记位置；如果添加了两个参数的话，就一起进行爆破，两个参数爆破时候的值肯定就是一样的了：</p>
+<h2 id="二、Battering-ram（攻城锤）">二、Battering ram（攻城锤）</h2>
+<p>同样只能使用一组 payload 集合，不同的地方在于每次攻击都是替换所有payload标记位置；如果添加了两个参数的话，就一起进行爆破，两个参数爆破时候的值肯定就是一样的了：</p>
 <table>
 <thead>
 <tr>
-<th align="center">攻击序列</th>
-<th align="center">位置A</th>
-<th align="center">位置B</th>
+<th style="text-align:center">攻击序列</th>
+<th style="text-align:center">位置A</th>
+<th style="text-align:center">位置B</th>
 </tr>
 </thead>
-<tbody><tr>
-<td align="center">1</td>
-<td align="center">1</td>
-<td align="center">1</td>
+<tbody>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
 </tr>
 <tr>
-<td align="center">2</td>
-<td align="center">2</td>
-<td align="center">2</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">2</td>
 </tr>
-</tbody></table>
+</tbody>
+</table>
 <p>适用场景：暴力破解</p>
-<h2 id="三、Pitchfork（草叉）"><a href="#三、Pitchfork（草叉）" class="headerlink" title="三、Pitchfork（草叉）"></a>三、Pitchfork（草叉）</h2><p>草叉模式允许使用多组payload组合，如果只添加了一个参数的话，会报错；在每个标记位置上遍历各自对应的payload组合，假设有两个位置“A”和“B”，payload组合1的值为“1”和“2”，payload组合2的值为“3”和“4”，那么它攻击会形成以下组合：</p>
+<h2 id="三、Pitchfork（草叉）">三、Pitchfork（草叉）</h2>
+<p>草叉模式允许使用多组payload组合，如果只添加了一个参数的话，会报错；在每个标记位置上遍历各自对应的payload组合，假设有两个位置“A”和“B”，payload组合1的值为“1”和“2”，payload组合2的值为“3”和“4”，那么它攻击会形成以下组合：</p>
 <table>
 <thead>
 <tr>
-<th align="center">攻击序列</th>
-<th align="center">位置A</th>
-<th align="center">位置B</th>
+<th style="text-align:center">攻击序列</th>
+<th style="text-align:center">位置A</th>
+<th style="text-align:center">位置B</th>
 </tr>
 </thead>
-<tbody><tr>
-<td align="center">1</td>
-<td align="center">1</td>
-<td align="center">3</td>
+<tbody>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">3</td>
 </tr>
 <tr>
-<td align="center">2</td>
-<td align="center">2</td>
-<td align="center">4</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">4</td>
 </tr>
-</tbody></table>
+</tbody>
+</table>
 <p>注：如果两个payload行数不一致的话，取最小值进行测试。所以爆破的次数取两个中最小的为准。</p>
 <p>适用场景：恶意注册、撞裤</p>
-<h2 id="四、Cluster-bomb（集束炸弹）"><a href="#四、Cluster-bomb（集束炸弹）" class="headerlink" title="四、Cluster bomb（集束炸弹）"></a>四、Cluster bomb（集束炸弹）</h2><p>集束炸弹也允许使用多组payload组合，跟草叉模式不同的地方在于，集束炸弹模式会对payload组进行笛卡尔积，那么它攻击会形成以下组合：</p>
+<h2 id="四、Cluster-bomb（集束炸弹）">四、Cluster bomb（集束炸弹）</h2>
+<p>集束炸弹也允许使用多组payload组合，跟草叉模式不同的地方在于，集束炸弹模式会对payload组进行笛卡尔积，那么它攻击会形成以下组合：</p>
 <table>
 <thead>
 <tr>
-<th align="center">攻击序列</th>
-<th align="center">位置A</th>
-<th align="center">位置B</th>
+<th style="text-align:center">攻击序列</th>
+<th style="text-align:center">位置A</th>
+<th style="text-align:center">位置B</th>
 </tr>
 </thead>
-<tbody><tr>
-<td align="center">1</td>
-<td align="center">1</td>
-<td align="center">3</td>
+<tbody>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">3</td>
 </tr>
 <tr>
-<td align="center">2</td>
-<td align="center">1</td>
-<td align="center">4</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">4</td>
 </tr>
 <tr>
-<td align="center">1</td>
-<td align="center">2</td>
-<td align="center">3</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">3</td>
 </tr>
 <tr>
-<td align="center">2</td>
-<td align="center">2</td>
-<td align="center">4</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">2</td>
+<td style="text-align:center">4</td>
 </tr>
-</tbody></table>
+</tbody>
+</table>
 <p>适用场景：账号、密码暴力破解</p>
 
-      
-    </div>
-    <div class="article-footer">
-      <blockquote class="mt-2x">
-  <ul class="post-copyright list-unstyled">
-    
-    <li class="post-copyright-link hidden-xs">
-      <strong>本文链接：</strong>
-      <a href="http://yoursite.com/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/" title="BurpSuite——Intruder四种模式详解" target="_blank" rel="external">http://yoursite.com/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/</a>
-    </li>
-    
-    <li class="post-copyright-license">
-      <strong>版权声明： </strong> 本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by/4.0/deed.zh" target="_blank" rel="external">CC BY 4.0 CN协议</a> 许可协议。转载请注明出处！
-    </li>
-  </ul>
+        </div>
+        
+<blockquote class="copyright">
+    <p><strong>Link to this article : </strong><a class="permalink" href="http://yoursite.com/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/">http://yoursite.com/2020/06/17/BurpSuite——Intruder四种模式详解/</a></p>
+    <p><strong>This article is available under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)</a> License</strong></p>
 </blockquote>
 
 
-<div class="panel panel-default panel-badger">
-  <div class="panel-body">
-    <figure class="media">
-      <div class="media-left">
-        <a href="https://github.com/cofess" target="_blank" class="img-burn thumb-sm visible-lg">
-          <img src="/images/avatar.jpg" class="img-rounded w-full" alt="">
-        </a>
-      </div>
-      <div class="media-body">
-        <h3 class="media-heading"><a href="https://github.com/cofess" target="_blank"><span class="text-dark">昵称</span><small class="ml-1x">Web Developer &amp; Designer</small></a></h3>
-        <div>个人简介。</div>
-      </div>
-    </figure>
-  </div>
-</div>
+    </article>
+    
+    <section id="comments">
+        
+    </section>
 
 
-    </div>
-  </article>
-  
     
-  <section id="comments">
-  	
-      <div id="vcomments"></div>
-    
-  </section>
-
-
-  
-</div>
-
-  <nav class="bar bar-footer clearfix" data-stick-bottom>
-  <div class="bar-inner">
-  
-  <ul class="pager pull-left">
-    
-    
-    <li class="next">
-      <a href="/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/" title="JS逆向系列一"><span>Older&nbsp;&nbsp;</span><i class="icon icon-angle-right" aria-hidden="true"></i></a>
-    </li>
-    
-    
-  </ul>
-  
-  
-  <!-- Button trigger modal -->
-  <button type="button" class="btn btn-fancy btn-donate pop-onhover bg-gradient-warning" data-toggle="modal" data-target="#donateModal"><span>$</span></button>
-  <!-- <div class="wave-icon wave-icon-danger btn-donate" data-toggle="modal" data-target="#donateModal">
-    <div class="wave-circle"><span class="icon"><i class="icon icon-bill"></i></span></div>
-  </div> -->
-  
-  
-  <div class="bar-right">
-    
-    <div class="share-component" data-sites="weibo,qq,wechat,facebook,twitter" data-mobile-sites="weibo,qq,qzone"></div>
-    
-  </div>
-  </div>
-</nav>
-  
-<!-- Modal -->
-<div class="modal modal-center modal-small modal-xs-full fade" id="donateModal" tabindex="-1" role="dialog">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content donate">
-      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-      <div class="modal-body">
-        <div class="donate-box">
-          <div class="donate-head">
-            <p>Maybe you could buy me a cup of coffee.</p>
-          </div>
-          <div class="tab-content">
-            <div role="tabpanel" class="tab-pane fade active in" id="alipay">
-              <div class="donate-payimg">
-                <img src="/images/donate/alipayimg.png" alt="Scan Qrcode" title="Scan" />
-              </div>
-              <p class="text-muted mv">Scan this qrcode</p>
-              <p class="text-grey">Open alipay app scan this qrcode, buy me a coffee!</p>
-            </div>
-            <div role="tabpanel" class="tab-pane fade" id="wechatpay">
-              <div class="donate-payimg">
-                <img src="/images/donate/wechatpayimg.png" alt="Scan Qrcode" title="Scan" />
-              </div>
-              <p class="text-muted mv">Scan this qrcode</p>
-              <p class="text-grey">Open wechat app scan this qrcode, buy me a coffee!</p>
-            </div>
-          </div>
-          <div class="donate-footer">
-            <ul class="nav nav-tabs nav-justified" role="tablist">
-              <li role="presentation" class="active">
-                <a href="#alipay" id="alipay-tab" role="tab" data-toggle="tab" aria-controls="alipay" aria-expanded="true"><i class="icon icon-alipay"></i> alipay</a>
-              </li>
-              <li role="presentation" class="">
-                <a href="#wechatpay" role="tab" id="wechatpay-tab" data-toggle="tab" aria-controls="wechatpay" aria-expanded="false"><i class="icon icon-wepay"></i> wechat payment</a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-
 
 </main>
 
-  <footer class="footer" itemscope itemtype="http://schema.org/WPFooter">
-	
-	
-    <ul class="social-links">
-    	
-        <li><a href="https://github.com/cofess" target="_blank" title="Github" data-toggle=tooltip data-placement=top><i class="icon icon-github"></i></a></li>
-        
-        <li><a href="http://weibo.com/cofess" target="_blank" title="Weibo" data-toggle=tooltip data-placement=top><i class="icon icon-weibo"></i></a></li>
-        
-        <li><a href="https://twitter.com/iwebued" target="_blank" title="Twitter" data-toggle=tooltip data-placement=top><i class="icon icon-twitter"></i></a></li>
-        
-        <li><a href="https://www.behance.net/cofess" target="_blank" title="Behance" data-toggle=tooltip data-placement=top><i class="icon icon-behance"></i></a></li>
-        
-        <li><a href="/atom.xml" target="_blank" title="Rss" data-toggle=tooltip data-placement=top><i class="icon icon-rss"></i></a></li>
-        
-    </ul>
 
-    <div class="copyright">
-    	
-        <div class="publishby">
-        	Theme by <a href="https://github.com/cofess" target="_blank"> cofess </a>base on <a href="https://github.com/cofess/hexo-theme-pure" target="_blank">pure</a>.
-        </div>
+<aside style="" id="sidebar" class="aside aside-fixture">
+    <div class="toc-sidebar">
+        <nav id="toc" class="article-toc">
+            <h3 class="toc-title">Catalogue</h3>
+            <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、Sniper（狙击手）"><span class="toc-number">1.</span> <span class="toc-text">一、Sniper（狙击手）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、Battering-ram（攻城锤）"><span class="toc-number">2.</span> <span class="toc-text">二、Battering ram（攻城锤）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、Pitchfork（草叉）"><span class="toc-number">3.</span> <span class="toc-text">三、Pitchfork（草叉）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、Cluster-bomb（集束炸弹）"><span class="toc-number">4.</span> <span class="toc-text">四、Cluster bomb（集束炸弹）</span></a></li></ol>
+        </nav>
     </div>
-</footer>
-  <script src="//cdn.jsdelivr.net/npm/jquery@1.12.4/dist/jquery.min.js"></script>
-<script>
-window.jQuery || document.write('<script src="js/jquery.min.js"><\/script>')
-</script>
-
-<script src="/js/plugin.min.js"></script>
-
-
-<script src="/js/application.js"></script>
-
-
-    <script>
-(function (window) {
-    var INSIGHT_CONFIG = {
-        TRANSLATION: {
-            POSTS: 'Posts',
-            PAGES: 'Pages',
-            CATEGORIES: 'Categories',
-            TAGS: 'Tags',
-            UNTITLED: '(Untitled)',
-        },
-        ROOT_URL: '/',
-        CONTENT_URL: '/content.json',
-    };
-    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
-})(window);
-</script>
-
-<script src="/js/insight.js"></script>
+</aside>
 
 
 
 
 
-
-   
-
-
-
-
-   
+        </section>
+        <footer class="hidden lg:block fixed bottom-0 left-0 sm:w-1/12 lg:w-1/6 bg-gray-100 z-40">
     
-  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/valine"></script>
-  <script type="text/javascript">
-  var GUEST = ['nick', 'mail', 'link'];
-  var meta = 'nick,mail,link';
-  meta = meta.split(',').filter(function(item) {
-    return GUEST.indexOf(item) > -1;
-  });
-  new Valine({
-    el: '#vcomments',
-    verify: false,
-    notify: false,
-    appId: '',
-    appKey: '',
-    placeholder: 'Just go go',
-    avatar: 'mm',
-    meta: meta,
-    pageSize: '10' || 10,
-    visitor: false
-  });
-  </script>
+    <div class="footer-social-links">
+        
+            <a href="https://github.com/fengkx" target="_blank" rel="noopener">
+                <i class="iconfont icon-github"></i>
+            </a>
+        
+            <a href="https://t.me/fengkx" target="_blank" rel="noopener">
+                <i class="iconfont icon-telegram"></i>
+            </a>
+        
+            <a href="https://twitter.com/example" target="_blank" rel="noopener">
+                <i class="iconfont icon-twitter"></i>
+            </a>
+        
+            <a href="/atom.xml">
+                <i class="iconfont icon-rss"></i>
+            </a>
+        
+    </div>
+    
+    
+</footer>
 
-     
+        <div id="mask" class="hidden mask fixed inset-0 bg-gray-900 opacity-75 z-40"></div>
+        <div id="search-view-container" class="hidden shadow-xl"></div>
+        
+<script src="/js/dom-event.min.js"></script>
+
+<script src="//cdn.jsdelivr.net/npm/yox@1.0.0-alpha.121/dist/standard/prod/yox.min.js"></script>
+
+
+<script src="/js/search.min.js"></script>
+
+
+
+    <script src="//cdn.jsdelivr.net/npm/lightgallery.js@1.1.3/dist/js/lightgallery.min.js"></script>
+    
+<script src="/js/light-gallery.min.js"></script>
 
 
 
 
 
-
-
-</body>
+    </body>
 </html>

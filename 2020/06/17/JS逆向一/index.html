@@ -1,29 +1,15 @@
 <!DOCTYPE html>
-<html lang=zh>
-<head>
-  <meta charset="utf-8">
-  
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, minimal-ui">
-  <meta name="renderer" content="webkit">
-  <meta http-equiv="Cache-Control" content="no-transform" />
-  <meta http-equiv="Cache-Control" content="no-siteapp" />
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="format-detection" content="telephone=no,email=no,adress=no">
-  <!-- Color theme for statusbar -->
-  <meta name="theme-color" content="#000000" />
-  <!-- 强制页面在当前窗口以独立页面显示,防止别人在框架里调用页面 -->
-  <meta http-equiv="window-target" content="_top" />
-  
-  
-  <title>JS逆向系列一 | Hexo</title>
-  <meta name="description" content="谷歌学术镜像目标网址：https:&#x2F;&#x2F;ac.scmor.com&#x2F;  目的是爬取学术镜像的真实地址，在Elements视图下，观察现在访问a标签，发现启用了onclick事件，调用了visit()函数，函数内的内容，猜测就是加密后的真实URL地址。  全局搜索visit,在 https:&#x2F;&#x2F;ac.scmor.com&#x2F;res&#x2F;?f&#x3D;run&amp;v&#x3D;1590682984 中，找到了visit函数">
+<html  lang="zh-Hans" >
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+    <title>JS逆向系列一 | D 先生的博客</title>
+    <meta name="description" content="谷歌学术镜像 目标网址：https:&#x2F;&#x2F;ac.scmor.com&#x2F;  目的是爬取学术镜像的真实地址，在Elements视图下，观察现在访问a标签，发现启用了onclick事件，调用了visit()函数，函数内的内容，猜测就是加密后的真实URL地址。  全局搜索visit,在 https:&#x2F;&#x2F;ac.scmor.com&#x2F;res&#x2F;?f&#x3D;run&amp;v&#x3D;1590682984 中，找到了visit函数">
 <meta property="og:type" content="article">
 <meta property="og:title" content="JS逆向系列一">
 <meta property="og:url" content="http://yoursite.com/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/index.html">
 <meta property="og:site_name" content="D 先生的博客">
-<meta property="og:description" content="谷歌学术镜像目标网址：https:&#x2F;&#x2F;ac.scmor.com&#x2F;  目的是爬取学术镜像的真实地址，在Elements视图下，观察现在访问a标签，发现启用了onclick事件，调用了visit()函数，函数内的内容，猜测就是加密后的真实URL地址。  全局搜索visit,在 https:&#x2F;&#x2F;ac.scmor.com&#x2F;res&#x2F;?f&#x3D;run&amp;v&#x3D;1590682984 中，找到了visit函数">
+<meta property="og:description" content="谷歌学术镜像 目标网址：https:&#x2F;&#x2F;ac.scmor.com&#x2F;  目的是爬取学术镜像的真实地址，在Elements视图下，观察现在访问a标签，发现启用了onclick事件，调用了visit()函数，函数内的内容，猜测就是加密后的真实URL地址。  全局搜索visit,在 https:&#x2F;&#x2F;ac.scmor.com&#x2F;res&#x2F;?f&#x3D;run&amp;v&#x3D;1590682984 中，找到了visit函数">
 <meta property="og:image" content="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531174729.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531174922.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531175244.png">
@@ -67,350 +53,220 @@
 <meta property="article:tag" content="JS逆向系列">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531174729.png">
-  <!-- Canonical links -->
-  <link rel="canonical" href="http://yoursite.com/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/index.html">
-  
-    <link rel="alternate" href="/atom.xml" title="D 先生的博客" type="application/atom+xml">
-  
-  
-    <link rel="icon" href="/favicon.png" type="image/x-icon">
-  
-  
-<link rel="stylesheet" href="/css/style.css">
 
-  
-  
-  
-  
+    <link rel="alternate" type="application/atom+xml" href="/atom.xml">
+    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+
+    
+<link rel="stylesheet" href="/css/common.min.css">
+
+
+
+    
+    
+    
+    
+        <link href="//cdn.jsdelivr.net/npm/lightgallery.js@1.1.3/dist/css/lightgallery.min.css" rel="stylesheet">
+    
+    
+    
+<link rel="stylesheet" href="/css/iconfont.min.css">
+
+    
 <meta name="generator" content="Hexo 4.2.1"></head>
 
-
-<body class="main-center" itemscope itemtype="http://schema.org/WebPage">
-  <header class="header" itemscope itemtype="http://schema.org/WPHeader">
-  <div class="slimContent">
-    <div class="navbar-header">
-      
-      
-      <div class="profile-block text-center">
-        <a id="avatar" href="https://github.com/cofess" target="_blank">
-          <img class="img-circle img-rotate" src="/images/avatar.jpg" width="200" height="200">
-        </a>
-        <h2 id="name" class="hidden-xs hidden-sm">昵称</h2>
-        <h3 id="title" class="hidden-xs hidden-sm hidden-md">Web Developer &amp; Designer</h3>
-        <small id="location" class="text-muted hidden-xs hidden-sm"><i class="icon icon-map-marker"></i> Shenzhen, China</small>
-      </div>
-      
-      <div class="search" id="search-form-wrap">
-
-    <form class="search-form sidebar-form">
-        <div class="input-group">
-            <input type="text" class="search-form-input form-control" placeholder="Search" />
-            <span class="input-group-btn">
-                <button type="submit" class="search-form-submit btn btn-flat" onclick="return false;"><i class="icon icon-search"></i></button>
+    <body>
+        <header class="header header-fixture">
+    <div class="profile-search-wrap flex sm:block">
+        
+        
+        <div class="profile sm:text-center md:px-1 lg:px-3 sm:pb-4 sm:pt-6">
+            <a id="avatar" role="link" href="https://github.com/fengkx" class="inline-block lg:w-16 lg:h-16 w-8 h-8 m-2" target="_blank" rel="noopener" rel="noreferrer" >
+                <img src="https://www.gravatar.com/avatar/0bc83cb571cd1c50ba6f3e8a78ef1346?s=128" class="rounded-full" alt="avatar">
+            </a>
+            <h2 id="name" class="hidden lg:block">fengkx</h2>
+            <h3 id="title" class="hidden xl:block">Student &amp; Coder</h3>
+            
+            <small id="location" class="hidden lg:block">
+                <i class="iconfont icon-map-icon"></i>
+                Guangzhou, China
+            </small>
+            
+        </div>
+        
+        
+<div class="search flex-1 flex lg:inline-block sm:hidden lg:px-4 lg:mt-2 lg:mb-4 lg:w-full">
+    <form id="search-form" class="my-auto flex-1 lg:border lg:border-solid lg:border-gray-200">
+        <div class="input-group table bg-gray-100 lg:bg-white w-full">
+            <input id="search-input" type="text" placeholder="Search" class="inline-block w-full bg-gray-100 lg:bg-white">
+            <span class="table-cell">
+                <button name="search tigger button" disabled>
+                    <i class="iconfont icon-search m-2"></i>
+                </button>
             </span>
         </div>
     </form>
-    <div class="ins-search">
-  <div class="ins-search-mask"></div>
-  <div class="ins-search-container">
-    <div class="ins-input-wrapper">
-      <input type="text" class="ins-search-input" placeholder="Type something..." x-webkit-speech />
-      <button type="button" class="close ins-close ins-selectable" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
-    </div>
-    <div class="ins-section-wrapper">
-      <div class="ins-section-container"></div>
-    </div>
-  </div>
-</div>
-
-
-</div>
-      <button class="navbar-toggle collapsed" type="button" data-toggle="collapse" data-target="#main-navbar" aria-controls="main-navbar" aria-expanded="false">
-        <span class="sr-only">Toggle navigation</span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
-    </div>
-    <nav id="main-navbar" class="collapse navbar-collapse" itemscope itemtype="http://schema.org/SiteNavigationElement" role="navigation">
-      <ul class="nav navbar-nav main-nav ">
         
-        
-        <li class="menu-item menu-item-home">
-          <a href="/.">
-            
-            <i class="icon icon-home-fill"></i>
-            
-            <span class="menu-title">Home</span>
-          </a>
-        </li>
-        
-        
-        <li class="menu-item menu-item-archives">
-          <a href="/archives">
-            
-            <i class="icon icon-archives-fill"></i>
-            
-            <span class="menu-title">Archives</span>
-          </a>
-        </li>
-        
-        
-        <li class="menu-item menu-item-categories">
-          <a href="/categories">
-            
-            <i class="icon icon-folder"></i>
-            
-            <span class="menu-title">Categories</span>
-          </a>
-        </li>
-        
-        
-        <li class="menu-item menu-item-tags">
-          <a href="/tags">
-            
-            <i class="icon icon-tags"></i>
-            
-            <span class="menu-title">Tags</span>
-          </a>
-        </li>
-        
-        
-        <li class="menu-item menu-item-repository">
-          <a href="/repository">
-            
-            <i class="icon icon-project"></i>
-            
-            <span class="menu-title">Repository</span>
-          </a>
-        </li>
-        
-        
-        <li class="menu-item menu-item-books">
-          <a href="/books">
-            
-            <i class="icon icon-book-fill"></i>
-            
-            <span class="menu-title">Books</span>
-          </a>
-        </li>
-        
-        
-        <li class="menu-item menu-item-links">
-          <a href="/links">
-            
-            <i class="icon icon-friendship"></i>
-            
-            <span class="menu-title">Links</span>
-          </a>
-        </li>
-        
-        
-        <li class="menu-item menu-item-about">
-          <a href="/about">
-            
-            <i class="icon icon-cup-fill"></i>
-            
-            <span class="menu-title">About</span>
-          </a>
-        </li>
-        
-      </ul>
-      
-	
-    <ul class="social-links">
-    	
-        <li><a href="https://github.com/cofess" target="_blank" title="Github" data-toggle=tooltip data-placement=top><i class="icon icon-github"></i></a></li>
-        
-        <li><a href="http://weibo.com/cofess" target="_blank" title="Weibo" data-toggle=tooltip data-placement=top><i class="icon icon-weibo"></i></a></li>
-        
-        <li><a href="https://twitter.com/iwebued" target="_blank" title="Twitter" data-toggle=tooltip data-placement=top><i class="icon icon-twitter"></i></a></li>
-        
-        <li><a href="https://www.behance.net/cofess" target="_blank" title="Behance" data-toggle=tooltip data-placement=top><i class="icon icon-behance"></i></a></li>
-        
-        <li><a href="/atom.xml" target="_blank" title="Rss" data-toggle=tooltip data-placement=top><i class="icon icon-rss"></i></a></li>
-        
-    </ul>
-
-    </nav>
-  </div>
-</header>
-
-  
-    <aside class="sidebar" itemscope itemtype="http://schema.org/WPSideBar">
-  <div class="slimContent">
-    
-      <div class="widget">
-    <h3 class="widget-title">Board</h3>
-    <div class="widget-body">
-        <div id="board">
-            <div class="content">
-                <p>欢迎交流与分享经验!</p>
-            </div>
+<script id="search-teamplate" type="text/html" data-path="/content.json">
+    <div>
+        <div class="search-header bg-gray-400">
+            <input id="actual-search-input" model="keyword" ref="input" class="inline-block w-full h-10 px-2 py-1" placeholder="Search" type="text">
+        </div>
+        <div class="search-result bg-gray-200">
+            {{#each searchPosts}}
+            <a href="/{{ path }}" class="result-item block px-2 pb-3 mb-1 pt-1 hover:bg-indigo-100">
+                <i class="iconfont icon-file"></i>
+                <h1 class="result-title inline font-medium text-lg">{{ title }}</h1>
+                <p class="result-content text-gray-600 text-sm">{{{ text }}}</p>
+            </a>
+            {{/each}}
         </div>
     </div>
+</script>
+
 </div>
 
-    
-      
-  <div class="widget">
-    <h3 class="widget-title">Categories</h3>
-    <div class="widget-body">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/JS%E9%80%86%E5%90%91/">JS逆向</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%B7%A5%E5%85%B7/">工具</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%B8%97%E9%80%8F/">渗透</a><span class="category-list-count">1</span></li></ul>
+
+        <button name="menu toogle button" id="menu-toggle-btn" class="block sm:hidden p-3" role="button" aria-expanded="false">
+            <i class="iconfont icon-hamburger"></i>
+        </button>
     </div>
-  </div>
-
-
-    
-      
-  <div class="widget">
-    <h3 class="widget-title">Tags</h3>
-    <div class="widget-body">
-      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/tags/BurpSuite/" rel="tag">BurpSuite</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/JS%E9%80%86%E5%90%91%E7%B3%BB%E5%88%97/" rel="tag">JS逆向系列</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VulnHub/" rel="tag">VulnHub</a><span class="tag-list-count">1</span></li></ul>
-    </div>
-  </div>
-
-
-    
-      
-  <div class="widget">
-    <h3 class="widget-title">Tag Cloud</h3>
-    <div class="widget-body tagcloud">
-      <a href="/tags/BurpSuite/" style="font-size: 13px;">BurpSuite</a> <a href="/tags/JS%E9%80%86%E5%90%91%E7%B3%BB%E5%88%97/" style="font-size: 14px;">JS逆向系列</a> <a href="/tags/VulnHub/" style="font-size: 13px;">VulnHub</a>
-    </div>
-  </div>
-
-    
-      
-  <div class="widget">
-    <h3 class="widget-title">Archive</h3>
-    <div class="widget-body">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/06/">June 2020</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/05/">May 2020</a><span class="archive-list-count">1</span></li></ul>
-    </div>
-  </div>
-
-
-    
-      
-  <div class="widget">
-    <h3 class="widget-title">Recent Posts</h3>
-    <div class="widget-body">
-      <ul class="recent-post-list list-unstyled no-thumbnail">
+    <nav id="menu-nav" class="hidden sm:flex flex-col">
         
-          <li>
-            
-            <div class="item-inner">
-              <p class="item-category">
-                <a class="category-link" href="/categories/%E5%B7%A5%E5%85%B7/">工具</a>
-              </p>
-              <p class="item-title">
-                <a href="/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/" class="title">BurpSuite——Intruder四种模式详解</a>
-              </p>
-              <p class="item-date">
-                <time datetime="2020-06-17T14:57:52.000Z" itemprop="datePublished">2020-06-17</time>
-              </p>
-            </div>
-          </li>
-          
-          <li>
-            
-            <div class="item-inner">
-              <p class="item-category">
-                <a class="category-link" href="/categories/JS%E9%80%86%E5%90%91/">JS逆向</a>
-              </p>
-              <p class="item-title">
-                <a href="/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/" class="title">JS逆向系列一</a>
-              </p>
-              <p class="item-date">
-                <time datetime="2020-06-17T10:16:58.000Z" itemprop="datePublished">2020-06-17</time>
-              </p>
-            </div>
-          </li>
-          
-          <li>
-            
-            <div class="item-inner">
-              <p class="item-category">
-                <a class="category-link" href="/categories/JS%E9%80%86%E5%90%91/">JS逆向</a>
-              </p>
-              <p class="item-title">
-                <a href="/2020/06/17/JS%E9%80%86%E5%90%91%E4%B9%8B%E8%B0%B7%E6%AD%8C%E7%BF%BB%E8%AF%91/" class="title">JS逆向系列之谷歌翻译</a>
-              </p>
-              <p class="item-date">
-                <time datetime="2020-06-17T10:16:58.000Z" itemprop="datePublished">2020-06-17</time>
-              </p>
-            </div>
-          </li>
-          
-          <li>
-            
-            <div class="item-inner">
-              <p class="item-category">
-                <a class="category-link" href="/categories/%E6%B8%97%E9%80%8F/">渗透</a>
-              </p>
-              <p class="item-title">
-                <a href="/2020/05/25/VulnHub%E6%B8%97%E9%80%8F%E4%B9%8BDC-1/" class="title">VulnHub渗透之DC-1</a>
-              </p>
-              <p class="item-date">
-                <time datetime="2020-05-25T04:57:51.000Z" itemprop="datePublished">2020-05-25</time>
-              </p>
-            </div>
-          </li>
-          
-      </ul>
-    </div>
-  </div>
-  
-
-    
-  </div>
-</aside>
-
-  
-  
-<main class="main" role="main">
-  <div class="content">
-  <article id="post-JS逆向一" class="article article-type-post" itemscope itemtype="http://schema.org/BlogPosting">
-    
-    <div class="article-header">
-      
         
-  
-    <h1 class="article-title" itemprop="name">
-      JS逆向系列一
-    </h1>
-  
+            <div class="menu-item menu-home" role="menuitem">
+                <a href="/.">
+                    <i class="iconfont icon-home" aria-hidden="true"></i>
+                    <span class="menu-title">Home</span>
+                </a>
+            </div>
+        
+        
+            <div class="menu-item menu-archives" role="menuitem">
+                <a href="/archives">
+                    <i class="iconfont icon-archive" aria-hidden="true"></i>
+                    <span class="menu-title">Archives</span>
+                </a>
+            </div>
+        
+        
+            <div class="menu-item menu-categories" role="menuitem">
+                <a href="/categories">
+                    <i class="iconfont icon-folder" aria-hidden="true"></i>
+                    <span class="menu-title">Categories</span>
+                </a>
+            </div>
+        
+        
+            <div class="menu-item menu-tags" role="menuitem">
+                <a href="/tags">
+                    <i class="iconfont icon-tag" aria-hidden="true"></i>
+                    <span class="menu-title">Tags</span>
+                </a>
+            </div>
+        
+        
+            <div class="menu-item menu-about" role="menuitem">
+                <a href="/about">
+                    <i class="iconfont icon-cup" aria-hidden="true"></i>
+                    <span class="menu-title">About</span>
+                </a>
+            </div>
+        
+        
+<div class="social-links flex sm:flex-col lg:hidden mt-5">
+    
+        <span class="social-item text-center">
+            <a href="https://github.com/fengkx" target="_blank" rel="noopener">
+                <i class="iconfont social-icon icon-github"></i>
+                <span class="menu-title hidden lg:inline">menu.github</span>
+            </a>
+        </span>
+    
+        <span class="social-item text-center">
+            <a href="https://t.me/fengkx" target="_blank" rel="noopener">
+                <i class="iconfont social-icon icon-telegram"></i>
+                <span class="menu-title hidden lg:inline">menu.telegram</span>
+            </a>
+        </span>
+    
+        <span class="social-item text-center">
+            <a href="https://twitter.com/example" target="_blank" rel="noopener">
+                <i class="iconfont social-icon icon-twitter"></i>
+                <span class="menu-title hidden lg:inline">menu.twitter</span>
+            </a>
+        </span>
+    
+        <span class="social-item text-center">
+            <a href="/atom.xml">
+                <i class="iconfont social-icon icon-rss"></i>
+                <span class="menu-title hidden lg:inline">menu.rss</span>
+            </a>
+        </span>
+    
+</div>
 
-      
-      <div class="article-meta">
-        <span class="article-date">
-    <i class="icon icon-calendar-check"></i>
+
+    </nav>
+</header>
+
+        <section class="main-section">
+            
+    <main class="flex-1 px-4 py-12 md:px-5 lg:px-8 lg:py-4 relative min-h-screen">
+    
+
+    <article class="content article article-archives article-type-list" itemscope="">
+        <header class="article-header">
+            
+    
+        <h1 class="article-title text-lg" itemprop="name">
+            JS逆向系列一
+        </h1>
+    
+
+
+
+            <p class="article-meta mb-3 text-xs">
+                <span class="article-date">
+    <i class="iconfont icon-calendar-check"></i>
 	<a href="/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/" class="article-date">
-	  <time datetime="2020-06-17T10:16:58.000Z" itemprop="datePublished">2020-06-17</time>
+	  <time datetime="2020-06-17T10:16:58.000Z" itemprop="datePublished">Jun 17</time>
 	</a>
 </span>
-        
-  <span class="article-category">
-    <i class="icon icon-folder"></i>
+
+                
+    <span class="article-category">
+    <i class="iconfont icon-folder"></i>
     <a class="article-category-link" href="/categories/JS%E9%80%86%E5%90%91/">JS逆向</a>
   </span>
 
-        
-  <span class="article-tag">
-    <i class="icon icon-tags"></i>
-	<a class="article-tag-link" href="/tags/JS%E9%80%86%E5%90%91%E7%B3%BB%E5%88%97/" rel="tag">JS逆向系列</a>
+
+                
+    <span class="article-tags">
+    <i class="iconfont icon-tag"></i>
+    <a class="article-tag-link" href="/tags/JS%E9%80%86%E5%90%91%E7%B3%BB%E5%88%97/" rel="tag">JS逆向系列</a>
   </span>
 
 
-        
+                <span class="_partial/post-comment"><i class="icon icon-comment"></i>
+                    <a href="/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/#comments" class="article-comment-link">
+                        Comments
+                    </a>
+                </span>
+                
+    
+        <span class="post-wordcount" itemprop="wordCount">Word Count: 1.3k(words)</span>
+    
+    
+        <span class="post-readcount" itemprop="timeRequired">Read Count: 4(minutes)</span>
+    
 
-        <span class="post-comment"><i class="icon icon-comment"></i> <a href="/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/#comments" class="article-comment-link">Comments</a></span>
-        
-      </div>
-    </div>
-    <div class="article-entry marked-body" itemprop="articleBody">
-      
-        <h3 id="谷歌学术镜像"><a href="#谷歌学术镜像" class="headerlink" title="谷歌学术镜像"></a>谷歌学术镜像</h3><p>目标网址：<a href="https://ac.scmor.com/" target="_blank" rel="noopener">https://ac.scmor.com/</a></p>
+
+            </p>
+        </header>
+        <div class="marked-body article-body">
+            <h3 id="谷歌学术镜像">谷歌学术镜像</h3>
+<p>目标网址：<a href="https://ac.scmor.com/" target="_blank" rel="noopener">https://ac.scmor.com/</a></p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531174729.png" alt=""></p>
 <p>目的是爬取学术镜像的真实地址，在Elements视图下，观察<code>现在访问</code>a标签，发现启用了onclick事件，调用了<code>visit()</code>函数，函数内的内容，猜测就是加密后的真实URL地址。</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531174922.png" alt=""></p>
@@ -419,13 +275,15 @@
 <p>经过观察，猜测<code>strdecode</code>是解密函数，就在上几行的位置，有个可疑参数<code>autour[b]</code>，猜测是URL地址，在Console中测试一下</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531180634.png" alt=""></p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531180730.png" alt=""></p>
-<p>经测试，<code>autour</code>是个数组，里面存放了加密后的真实地址，<code>strdecode</code>也的确是解密函数，现在去拉取<code>strdecode</code>函数具体内容<br>全局搜索，找到了<code>strdecode</code>，经过初步观察，是Base64加密，然后缺啥补啥，将加密函数完整的提取出来</p>
+<p>经测试，<code>autour</code>是个数组，里面存放了加密后的真实地址，<code>strdecode</code>也的确是解密函数，现在去拉取<code>strdecode</code>函数具体内容<br>
+全局搜索，找到了<code>strdecode</code>，经过初步观察，是Base64加密，然后缺啥补啥，将加密函数完整的提取出来</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531181249.png" alt=""></p>
 <p>到此，加密函数也有了，现在需要收集全部的URL，于是，之前的<code>autour</code>数组，也拉下来，现在只需要遍历一下就好了，刚好有个<code>run</code>函数就是For循环遍历<code>autour</code>数组，也拿下来</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531181940.png" alt=""></p>
 <p>稍微修改下细节，就大功告成，效果图如下：</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531182151.png" alt=""></p>
-<h3 id="DNS-COM"><a href="#DNS-COM" class="headerlink" title="DNS.COM"></a>DNS.COM</h3><p>目标网址：<a href="https://www.dns.com/login.html" target="_blank" rel="noopener">https://www.dns.com/login.html</a></p>
+<h3 id="DNS-COM"><a href="http://DNS.COM" target="_blank" rel="noopener">DNS.COM</a></h3>
+<p>目标网址：<a href="https://www.dns.com/login.html" target="_blank" rel="noopener">https://www.dns.com/login.html</a></p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601011619.png" alt=""></p>
 <p>随便输入帐号密码进行测试，发现有个XHR请求，里面的<code>password</code>，<code>email</code>两个请求参数都做了加密，猜测这就是刚才输入的帐号密码</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601011947.png" alt=""></p>
@@ -445,7 +303,8 @@
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601113127.png" alt=""></p>
 <p>效果图如下：</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601113229.png" alt=""></p>
-<h3 id="贝贝网"><a href="#贝贝网" class="headerlink" title="贝贝网"></a>贝贝网</h3><p>目标网址：<a href="https://m.beibei.com/login/login.html" target="_blank" rel="noopener">https://m.beibei.com/login/login.html</a> （需手机端）</p>
+<h3 id="贝贝网">贝贝网</h3>
+<p>目标网址：<a href="https://m.beibei.com/login/login.html" target="_blank" rel="noopener">https://m.beibei.com/login/login.html</a> （需手机端）</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601154549.png" alt=""></p>
 <p>输入帐号密码及验证码进行测试，发现一个XHR请求，类型为POST，提交的表单数据中的用户名密码都为明文，但问题在于请求参数中的<code>_abr_</code>一直在变化，猜测它为加密参数</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601155448.png" alt=""></p>
@@ -454,7 +313,8 @@
 <p>但是发现断点的位置没有我们要的内容，于是在call Stack中往下找调用栈，call Stack内的方法调用栈的规则是从上到下由最新调用处依次往下排列。在<code>e.ajax</code>中发现了包含有<code>_abr_</code>的内容，但是这里是要发送出去了，没有它的产生过程，于是继续往下找，终于找到了<code>_abr_=</code></p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601163002.png" alt=""></p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601163301.png" alt=""></p>
-<p>记录<code>_abr_</code>的值为：”013e01885f35c08258b6ce21d500874ed5bb3143a05ed4b7b1”<br>发现<code>_abr_</code>其实是由<code>m(e.type, e.uri.pathname, e.query, e.form)</code>函数生成，于是为了了解它的生成过程，在函数前打上断点，重新发送登陆请求</p>
+<p>记录<code>_abr_</code>的值为：“013e01885f35c08258b6ce21d500874ed5bb3143a05ed4b7b1”<br>
+发现<code>_abr_</code>其实是由<code>m(e.type, e.uri.pathname, e.query, e.form)</code>函数生成，于是为了了解它的生成过程，在函数前打上断点，重新发送登陆请求</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601165214.png" alt=""></p>
 <p>单步跟踪，发现了关键函数<code>MD5</code></p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601165852.png" alt=""></p>
@@ -467,7 +327,9 @@
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601185857.png" alt=""></p>
 <p>经过长时间的单步跟踪，总算来到了一开始的函数返回值部分</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601174129.png" alt=""></p>
-<p>现在，我们开始分析，HMAC算法可以使用Python第三方库实现，先尝试一下。加密内容有了，密钥也有了（加密目标值可以用<code>JSON.stringify()</code>提取）<br>加密目标值：”01\nPOST\nb7da15fd7cdc2b8c73958ee82e7424aa\n/mroute.html?method=beibei.user.token.get\n1591002077”<br>密钥：”ytU7vwqIx2UXQNsi”</p>
+<p>现在，我们开始分析，HMAC算法可以使用Python第三方库实现，先尝试一下。加密内容有了，密钥也有了（加密目标值可以用<code>JSON.stringify()</code>提取）<br>
+加密目标值：“01\nPOST\nb7da15fd7cdc2b8c73958ee82e7424aa\n/mroute.html?method=beibei.user.token.get\n1591002077”<br>
+密钥：“ytU7vwqIx2UXQNsi”</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601190441.png" alt=""></p>
 <p>Python测试效果如下</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601191001.png" alt=""></p>
@@ -477,232 +339,89 @@
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601191707.png" alt=""></p>
 <p>提取出<code>h</code>的算法，测试了一下，成功</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601194144.png" alt=""></p>
-<p>接下来，只剩下需要加密的值，它如何产生的，观察发现由<code>a + &quot;\n&quot; + e + &quot;\n&quot; + f + &quot;\n&quot; + p + &quot;\n&quot; + s</code>组成，<code>a</code>、<code>s</code>都清楚了，<code>e</code>发现是<code>POST</code>，<code>p</code>是路径<code>/mroute.html?method=beibei.h5.login</code>，这两个也是固定值，只剩下<code>f</code>是MD5加密后的值，逆向<code>f</code>的产生过程，发现是由”用户名+路径+登陆id”产生而来，如：<code>username=12341234123&amp;scene=h5_login&amp;rams_device_id=2654748010</code><br>所以现在只需要将这个值MD5加密后传入即可，同样也能用Python实现</p>
-<p>最终完成的效果<br><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601195839.png" alt=""></p>
+<p>接下来，只剩下需要加密的值，它如何产生的，观察发现由<code>a + &quot;\n&quot; + e + &quot;\n&quot; + f + &quot;\n&quot; + p + &quot;\n&quot; + s</code>组成，<code>a</code>、<code>s</code>都清楚了，<code>e</code>发现是<code>POST</code>，<code>p</code>是路径<code>/mroute.html?method=beibei.h5.login</code>，这两个也是固定值，只剩下<code>f</code>是MD5加密后的值，逆向<code>f</code>的产生过程，发现是由&quot;用户名+路径+登陆id&quot;产生而来，如：<code>username=12341234123&amp;scene=h5_login&amp;rams_device_id=2654748010</code><br>
+所以现在只需要将这个值MD5加密后传入即可，同样也能用Python实现</p>
+<p>最终完成的效果<br>
+<img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601195839.png" alt=""></p>
 
-      
-    </div>
-    <div class="article-footer">
-      <blockquote class="mt-2x">
-  <ul class="post-copyright list-unstyled">
-    
-    <li class="post-copyright-link hidden-xs">
-      <strong>本文链接：</strong>
-      <a href="http://yoursite.com/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/" title="JS逆向系列一" target="_blank" rel="external">http://yoursite.com/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/</a>
-    </li>
-    
-    <li class="post-copyright-license">
-      <strong>版权声明： </strong> 本博客所有文章除特别声明外，均采用 <a href="http://creativecommons.org/licenses/by/4.0/deed.zh" target="_blank" rel="external">CC BY 4.0 CN协议</a> 许可协议。转载请注明出处！
-    </li>
-  </ul>
+        </div>
+        
+<blockquote class="copyright">
+    <p><strong>Link to this article : </strong><a class="permalink" href="http://yoursite.com/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/">http://yoursite.com/2020/06/17/JS逆向一/</a></p>
+    <p><strong>This article is available under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)</a> License</strong></p>
 </blockquote>
 
 
-<div class="panel panel-default panel-badger">
-  <div class="panel-body">
-    <figure class="media">
-      <div class="media-left">
-        <a href="https://github.com/cofess" target="_blank" class="img-burn thumb-sm visible-lg">
-          <img src="/images/avatar.jpg" class="img-rounded w-full" alt="">
-        </a>
-      </div>
-      <div class="media-body">
-        <h3 class="media-heading"><a href="https://github.com/cofess" target="_blank"><span class="text-dark">昵称</span><small class="ml-1x">Web Developer &amp; Designer</small></a></h3>
-        <div>个人简介。</div>
-      </div>
-    </figure>
-  </div>
-</div>
+    </article>
+    
+    <section id="comments">
+        
+    </section>
 
 
-    </div>
-  </article>
-  
     
-  <section id="comments">
-  	
-      <div id="vcomments"></div>
-    
-  </section>
-
-
-  
-</div>
-
-  <nav class="bar bar-footer clearfix" data-stick-bottom>
-  <div class="bar-inner">
-  
-  <ul class="pager pull-left">
-    
-    <li class="prev">
-      <a href="/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/" title="BurpSuite——Intruder四种模式详解"><i class="icon icon-angle-left" aria-hidden="true"></i><span>&nbsp;&nbsp;Newer</span></a>
-    </li>
-    
-    
-    <li class="next">
-      <a href="/2020/06/17/JS%E9%80%86%E5%90%91%E4%B9%8B%E8%B0%B7%E6%AD%8C%E7%BF%BB%E8%AF%91/" title="JS逆向系列之谷歌翻译"><span>Older&nbsp;&nbsp;</span><i class="icon icon-angle-right" aria-hidden="true"></i></a>
-    </li>
-    
-    
-  </ul>
-  
-  
-  <!-- Button trigger modal -->
-  <button type="button" class="btn btn-fancy btn-donate pop-onhover bg-gradient-warning" data-toggle="modal" data-target="#donateModal"><span>$</span></button>
-  <!-- <div class="wave-icon wave-icon-danger btn-donate" data-toggle="modal" data-target="#donateModal">
-    <div class="wave-circle"><span class="icon"><i class="icon icon-bill"></i></span></div>
-  </div> -->
-  
-  
-  <div class="bar-right">
-    
-    <div class="share-component" data-sites="weibo,qq,wechat,facebook,twitter" data-mobile-sites="weibo,qq,qzone"></div>
-    
-  </div>
-  </div>
-</nav>
-  
-<!-- Modal -->
-<div class="modal modal-center modal-small modal-xs-full fade" id="donateModal" tabindex="-1" role="dialog">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content donate">
-      <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-      <div class="modal-body">
-        <div class="donate-box">
-          <div class="donate-head">
-            <p>Maybe you could buy me a cup of coffee.</p>
-          </div>
-          <div class="tab-content">
-            <div role="tabpanel" class="tab-pane fade active in" id="alipay">
-              <div class="donate-payimg">
-                <img src="/images/donate/alipayimg.png" alt="Scan Qrcode" title="Scan" />
-              </div>
-              <p class="text-muted mv">Scan this qrcode</p>
-              <p class="text-grey">Open alipay app scan this qrcode, buy me a coffee!</p>
-            </div>
-            <div role="tabpanel" class="tab-pane fade" id="wechatpay">
-              <div class="donate-payimg">
-                <img src="/images/donate/wechatpayimg.png" alt="Scan Qrcode" title="Scan" />
-              </div>
-              <p class="text-muted mv">Scan this qrcode</p>
-              <p class="text-grey">Open wechat app scan this qrcode, buy me a coffee!</p>
-            </div>
-          </div>
-          <div class="donate-footer">
-            <ul class="nav nav-tabs nav-justified" role="tablist">
-              <li role="presentation" class="active">
-                <a href="#alipay" id="alipay-tab" role="tab" data-toggle="tab" aria-controls="alipay" aria-expanded="true"><i class="icon icon-alipay"></i> alipay</a>
-              </li>
-              <li role="presentation" class="">
-                <a href="#wechatpay" role="tab" id="wechatpay-tab" data-toggle="tab" aria-controls="wechatpay" aria-expanded="false"><i class="icon icon-wepay"></i> wechat payment</a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-
 
 </main>
 
-  <footer class="footer" itemscope itemtype="http://schema.org/WPFooter">
-	
-	
-    <ul class="social-links">
-    	
-        <li><a href="https://github.com/cofess" target="_blank" title="Github" data-toggle=tooltip data-placement=top><i class="icon icon-github"></i></a></li>
-        
-        <li><a href="http://weibo.com/cofess" target="_blank" title="Weibo" data-toggle=tooltip data-placement=top><i class="icon icon-weibo"></i></a></li>
-        
-        <li><a href="https://twitter.com/iwebued" target="_blank" title="Twitter" data-toggle=tooltip data-placement=top><i class="icon icon-twitter"></i></a></li>
-        
-        <li><a href="https://www.behance.net/cofess" target="_blank" title="Behance" data-toggle=tooltip data-placement=top><i class="icon icon-behance"></i></a></li>
-        
-        <li><a href="/atom.xml" target="_blank" title="Rss" data-toggle=tooltip data-placement=top><i class="icon icon-rss"></i></a></li>
-        
-    </ul>
 
-    <div class="copyright">
-    	
-        <div class="publishby">
-        	Theme by <a href="https://github.com/cofess" target="_blank"> cofess </a>base on <a href="https://github.com/cofess/hexo-theme-pure" target="_blank">pure</a>.
-        </div>
+<aside style="" id="sidebar" class="aside aside-fixture">
+    <div class="toc-sidebar">
+        <nav id="toc" class="article-toc">
+            <h3 class="toc-title">Catalogue</h3>
+            <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#谷歌学术镜像"><span class="toc-number">1.</span> <span class="toc-text">谷歌学术镜像</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#DNS-COM"><span class="toc-number">2.</span> <span class="toc-text">DNS.COM</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#贝贝网"><span class="toc-number">3.</span> <span class="toc-text">贝贝网</span></a></li></ol>
+        </nav>
     </div>
-</footer>
-  <script src="//cdn.jsdelivr.net/npm/jquery@1.12.4/dist/jquery.min.js"></script>
-<script>
-window.jQuery || document.write('<script src="js/jquery.min.js"><\/script>')
-</script>
-
-<script src="/js/plugin.min.js"></script>
-
-
-<script src="/js/application.js"></script>
-
-
-    <script>
-(function (window) {
-    var INSIGHT_CONFIG = {
-        TRANSLATION: {
-            POSTS: 'Posts',
-            PAGES: 'Pages',
-            CATEGORIES: 'Categories',
-            TAGS: 'Tags',
-            UNTITLED: '(Untitled)',
-        },
-        ROOT_URL: '/',
-        CONTENT_URL: '/content.json',
-    };
-    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
-})(window);
-</script>
-
-<script src="/js/insight.js"></script>
+</aside>
 
 
 
 
 
-
-   
-
-
-
-
-   
+        </section>
+        <footer class="hidden lg:block fixed bottom-0 left-0 sm:w-1/12 lg:w-1/6 bg-gray-100 z-40">
     
-  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/valine"></script>
-  <script type="text/javascript">
-  var GUEST = ['nick', 'mail', 'link'];
-  var meta = 'nick,mail,link';
-  meta = meta.split(',').filter(function(item) {
-    return GUEST.indexOf(item) > -1;
-  });
-  new Valine({
-    el: '#vcomments',
-    verify: false,
-    notify: false,
-    appId: '',
-    appKey: '',
-    placeholder: 'Just go go',
-    avatar: 'mm',
-    meta: meta,
-    pageSize: '10' || 10,
-    visitor: false
-  });
-  </script>
+    <div class="footer-social-links">
+        
+            <a href="https://github.com/fengkx" target="_blank" rel="noopener">
+                <i class="iconfont icon-github"></i>
+            </a>
+        
+            <a href="https://t.me/fengkx" target="_blank" rel="noopener">
+                <i class="iconfont icon-telegram"></i>
+            </a>
+        
+            <a href="https://twitter.com/example" target="_blank" rel="noopener">
+                <i class="iconfont icon-twitter"></i>
+            </a>
+        
+            <a href="/atom.xml">
+                <i class="iconfont icon-rss"></i>
+            </a>
+        
+    </div>
+    
+    
+</footer>
 
-     
+        <div id="mask" class="hidden mask fixed inset-0 bg-gray-900 opacity-75 z-40"></div>
+        <div id="search-view-container" class="hidden shadow-xl"></div>
+        
+<script src="/js/dom-event.min.js"></script>
+
+<script src="//cdn.jsdelivr.net/npm/yox@1.0.0-alpha.121/dist/standard/prod/yox.min.js"></script>
+
+
+<script src="/js/search.min.js"></script>
+
+
+
+    <script src="//cdn.jsdelivr.net/npm/lightgallery.js@1.1.3/dist/js/lightgallery.min.js"></script>
+    
+<script src="/js/light-gallery.min.js"></script>
 
 
 
 
 
-
-
-</body>
+    </body>
 </html>
