@@ -129,6 +129,95 @@
       </tags>
   </entry>
   <entry>
+    <title>JS逆向系列一</title>
+    <url>/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/</url>
+    <content><![CDATA[<h3 id="谷歌学术镜像">谷歌学术镜像</h3>
+<p>目标网址：<a href="https://ac.scmor.com/" target="_blank" rel="noopener">https://ac.scmor.com/</a></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531174729.png" alt=""></p>
+<p>目的是爬取学术镜像的真实地址，在Elements视图下，观察<code>现在访问</code>a标签，发现启用了onclick事件，调用了<code>visit()</code>函数，函数内的内容，猜测就是加密后的真实URL地址。</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531174922.png" alt=""></p>
+<p>全局搜索<code>visit</code>,在 <a href="https://ac.scmor.com/res/?f=run&amp;v=1590682984" target="_blank" rel="noopener">https://ac.scmor.com/res/?f=run&amp;v=1590682984</a> 中，找到了<code>visit</code>函数</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531175244.png" alt=""></p>
+<p>经过观察，猜测<code>strdecode</code>是解密函数，就在上几行的位置，有个可疑参数<code>autour[b]</code>，猜测是URL地址，在Console中测试一下</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531180634.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531180730.png" alt=""></p>
+<p>经测试，<code>autour</code>是个数组，里面存放了加密后的真实地址，<code>strdecode</code>也的确是解密函数，现在去拉取<code>strdecode</code>函数具体内容<br>
+全局搜索，找到了<code>strdecode</code>，经过初步观察，是Base64加密，然后缺啥补啥，将加密函数完整的提取出来</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531181249.png" alt=""></p>
+<p>到此，加密函数也有了，现在需要收集全部的URL，于是，之前的<code>autour</code>数组，也拉下来，现在只需要遍历一下就好了，刚好有个<code>run</code>函数就是For循环遍历<code>autour</code>数组，也拿下来</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531181940.png" alt=""></p>
+<p>稍微修改下细节，就大功告成，效果图如下：</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531182151.png" alt=""></p>
+<h3 id="DNS-COM"><a href="http://DNS.COM" target="_blank" rel="noopener">DNS.COM</a></h3>
+<p>目标网址：<a href="https://www.dns.com/login.html" target="_blank" rel="noopener">https://www.dns.com/login.html</a></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601011619.png" alt=""></p>
+<p>随便输入帐号密码进行测试，发现有个XHR请求，里面的<code>password</code>，<code>email</code>两个请求参数都做了加密，猜测这就是刚才输入的帐号密码</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601011947.png" alt=""></p>
+<p>全局搜索 <code>password</code>,通过在后面加上 : 或者 = 可以缩小范围，排除多余项，找到了<code>password:</code>的位置，现在其实已经很明显是AES加密了，但还是测试一下吧</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601012327.png" alt=""></p>
+<p>打断点，重新登陆，果然进入debugger状态了。</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601012821.png" alt=""></p>
+<p>然后在console中测试下<code>aes()</code>函数以及它的参数到底是什么，经验证，发现<code>aes()</code>正是一个加密函数，加密后的内容和一开始看到的相吻合</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601013000.png" alt=""></p>
+<p>现在查看<code>aes</code>函数具体的内容，发现了又有<code>k</code>和<code>iv</code>，并且有个CryptoJS对象</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601095717.png" alt=""></p>
+<p>全局搜索CryptoJS，发现了<code>crypto-js.js</code>文件，明显这是CryptoJS加密库</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601100429.png" alt=""></p>
+<p>并且发现还用了<code>$(selector).action()</code>的jQuery语法，所以还需要载入jQuery库</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601112445.png" alt=""></p>
+<p>从网上下载单独的CryptoJS库文件引入，从 网页中获取jQuery链接，并载入 jQuery，然后将<code>aes</code>函数也拉下来</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601113127.png" alt=""></p>
+<p>效果图如下：</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601113229.png" alt=""></p>
+<h3 id="贝贝网">贝贝网</h3>
+<p>目标网址：<a href="https://m.beibei.com/login/login.html" target="_blank" rel="noopener">https://m.beibei.com/login/login.html</a> （需手机端）</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601154549.png" alt=""></p>
+<p>输入帐号密码及验证码进行测试，发现一个XHR请求，类型为POST，提交的表单数据中的用户名密码都为明文，但问题在于请求参数中的<code>_abr_</code>一直在变化，猜测它为加密参数</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601155448.png" alt=""></p>
+<p>全局搜索<code>_abr_</code>无果，只能打请求断点，成功断住</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601160354.png" alt=""></p>
+<p>但是发现断点的位置没有我们要的内容，于是在call Stack中往下找调用栈，call Stack内的方法调用栈的规则是从上到下由最新调用处依次往下排列。在<code>e.ajax</code>中发现了包含有<code>_abr_</code>的内容，但是这里是要发送出去了，没有它的产生过程，于是继续往下找，终于找到了<code>_abr_=</code></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601163002.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601163301.png" alt=""></p>
+<p>记录<code>_abr_</code>的值为：“013e01885f35c08258b6ce21d500874ed5bb3143a05ed4b7b1”<br>
+发现<code>_abr_</code>其实是由<code>m(e.type, e.uri.pathname, e.query, e.form)</code>函数生成，于是为了了解它的生成过程，在函数前打上断点，重新发送登陆请求</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601165214.png" alt=""></p>
+<p>单步跟踪，发现了关键函数<code>MD5</code></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601165852.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601170350.png" alt=""></p>
+<p>继续单步跟踪，又发现了一个关键函数<code>HMAC</code></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601171039.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601171405.png" alt=""></p>
+<p>网上查找资料了解这个加密算法，发现HMAC算法，需要一个信息摘要算法以及一个密钥，在下方又找到关键函数<code>HmacSHA1</code>，于是推测使用了SHA-1算法</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601171755.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601185857.png" alt=""></p>
+<p>经过长时间的单步跟踪，总算来到了一开始的函数返回值部分</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601174129.png" alt=""></p>
+<p>现在，我们开始分析，HMAC算法可以使用Python第三方库实现，先尝试一下。加密内容有了，密钥也有了（加密目标值可以用<code>JSON.stringify()</code>提取）<br>
+加密目标值：“01\nPOST\nb7da15fd7cdc2b8c73958ee82e7424aa\n/mroute.html?method=beibei.user.token.get\n1591002077”<br>
+密钥：“ytU7vwqIx2UXQNsi”</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601190441.png" alt=""></p>
+<p>Python测试效果如下</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601191001.png" alt=""></p>
+<p>但是发现，与<code>_abr</code>的值相较，少了一些内容，回过头观察，发现<code>_abr</code>的值由<code>a+m+h</code>组成，<code>a</code>经测试是固定值<code>01</code>，<code>m</code>就是经过HMAC加密后的值，<code>h</code>会变动且暂时还不清楚</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601191307.png" alt=""></p>
+<p>对<code>h</code>进行分析，发现是由<code>s</code>的值使用<code>toString(16)</code>函数变化而来，而<code>s</code>则是时间戳(<code>new Date</code>)变化而来</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601191707.png" alt=""></p>
+<p>提取出<code>h</code>的算法，测试了一下，成功</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601194144.png" alt=""></p>
+<p>接下来，只剩下需要加密的值，它如何产生的，观察发现由<code>a + &quot;\n&quot; + e + &quot;\n&quot; + f + &quot;\n&quot; + p + &quot;\n&quot; + s</code>组成，<code>a</code>、<code>s</code>都清楚了，<code>e</code>发现是<code>POST</code>，<code>p</code>是路径<code>/mroute.html?method=beibei.h5.login</code>，这两个也是固定值，只剩下<code>f</code>是MD5加密后的值，逆向<code>f</code>的产生过程，发现是由&quot;用户名+路径+登陆id&quot;产生而来，如：<code>username=12341234123&amp;scene=h5_login&amp;rams_device_id=2654748010</code><br>
+所以现在只需要将这个值MD5加密后传入即可，同样也能用Python实现</p>
+<p>最终完成的效果<br>
+<img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601195839.png" alt=""></p>
+]]></content>
+      <categories>
+        <category>JS逆向</category>
+      </categories>
+      <tags>
+        <tag>JS逆向系列</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>JS逆向系列之谷歌翻译</title>
     <url>/2020/06/17/JS%E9%80%86%E5%90%91%E4%B9%8B%E8%B0%B7%E6%AD%8C%E7%BF%BB%E8%AF%91/</url>
     <content><![CDATA[<h3 id="一、逆向谷歌翻译">一、逆向谷歌翻译</h3>
@@ -255,13 +344,12 @@ linux下：修改my.cnf 在[mysqld]内加入secure_file_priv =<br>
 <li>拥有足够的权限<code>dba/root</code></li>
 </ol>
 <p>首先判断当前是否为dba权限</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200621224320.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200622133450.png" alt=""></p>
 <p>开始写入shell</p>
 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sqlmap.py -r &quot;路径&quot; --os-shell</span><br></pre></td></tr></table></figure>
-<p>选择shell脚本类型，接着输入路径，写入成功就进入一个交互式的shell命令行，还会返回一个上传文件的路径，也就是写入了2个shell，一个用来执行命令，另一个用来上传，其中上传shell的文件名为tmpujhum.php，出现admin admin这样的文字，这是sqlmap用来确认是否成功写进shell的标志</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200621225522.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200621230430.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200621230652.png" alt=""></p>
+<p>选择shell脚本类型，接着输入路径，写入成功就进入一个交互式的shell命令行，还会返回一个上传文件的路径，也就是写入了2个shell，一个用来执行命令，另一个用来上传，其中上传shell的文件名为tmpugppx.php，出现admin admin这样的文字，这是sqlmap用来确认是否成功写进shell的标志</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200622133910.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200622134053.png" alt=""></p>
 <h3 id="文件读写">文件读写</h3>
 <p>读文件需要知道路径</p>
 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sqlmap.py -u &quot;http:&#x2F;&#x2F;xxxxxx&#x2F;sqli&#x2F;?id&#x3D;1&amp;Submit&#x3D;Submit&quot; --cookie&#x3D;&quot;PHPSESSID&#x3D;q3bm4gupu58dqptm0lve1o12u4; security&#x3D;low&quot; --file-read&#x3D;&#x2F;opt&#x2F;lampp&#x2F;htdocs&#x2F;php.ini</span><br></pre></td></tr></table></figure>
@@ -419,92 +507,76 @@ Cadmus Computer Systems 表示Virtualbox虚拟机<br>
       </tags>
   </entry>
   <entry>
-    <title>JS逆向系列一</title>
-    <url>/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/</url>
-    <content><![CDATA[<h3 id="谷歌学术镜像">谷歌学术镜像</h3>
-<p>目标网址：<a href="https://ac.scmor.com/" target="_blank" rel="noopener">https://ac.scmor.com/</a></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531174729.png" alt=""></p>
-<p>目的是爬取学术镜像的真实地址，在Elements视图下，观察<code>现在访问</code>a标签，发现启用了onclick事件，调用了<code>visit()</code>函数，函数内的内容，猜测就是加密后的真实URL地址。</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531174922.png" alt=""></p>
-<p>全局搜索<code>visit</code>,在 <a href="https://ac.scmor.com/res/?f=run&amp;v=1590682984" target="_blank" rel="noopener">https://ac.scmor.com/res/?f=run&amp;v=1590682984</a> 中，找到了<code>visit</code>函数</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531175244.png" alt=""></p>
-<p>经过观察，猜测<code>strdecode</code>是解密函数，就在上几行的位置，有个可疑参数<code>autour[b]</code>，猜测是URL地址，在Console中测试一下</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531180634.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531180730.png" alt=""></p>
-<p>经测试，<code>autour</code>是个数组，里面存放了加密后的真实地址，<code>strdecode</code>也的确是解密函数，现在去拉取<code>strdecode</code>函数具体内容<br>
-全局搜索，找到了<code>strdecode</code>，经过初步观察，是Base64加密，然后缺啥补啥，将加密函数完整的提取出来</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531181249.png" alt=""></p>
-<p>到此，加密函数也有了，现在需要收集全部的URL，于是，之前的<code>autour</code>数组，也拉下来，现在只需要遍历一下就好了，刚好有个<code>run</code>函数就是For循环遍历<code>autour</code>数组，也拿下来</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531181940.png" alt=""></p>
-<p>稍微修改下细节，就大功告成，效果图如下：</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531182151.png" alt=""></p>
-<h3 id="DNS-COM"><a href="http://DNS.COM" target="_blank" rel="noopener">DNS.COM</a></h3>
-<p>目标网址：<a href="https://www.dns.com/login.html" target="_blank" rel="noopener">https://www.dns.com/login.html</a></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601011619.png" alt=""></p>
-<p>随便输入帐号密码进行测试，发现有个XHR请求，里面的<code>password</code>，<code>email</code>两个请求参数都做了加密，猜测这就是刚才输入的帐号密码</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601011947.png" alt=""></p>
-<p>全局搜索 <code>password</code>,通过在后面加上 : 或者 = 可以缩小范围，排除多余项，找到了<code>password:</code>的位置，现在其实已经很明显是AES加密了，但还是测试一下吧</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601012327.png" alt=""></p>
-<p>打断点，重新登陆，果然进入debugger状态了。</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601012821.png" alt=""></p>
-<p>然后在console中测试下<code>aes()</code>函数以及它的参数到底是什么，经验证，发现<code>aes()</code>正是一个加密函数，加密后的内容和一开始看到的相吻合</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601013000.png" alt=""></p>
-<p>现在查看<code>aes</code>函数具体的内容，发现了又有<code>k</code>和<code>iv</code>，并且有个CryptoJS对象</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601095717.png" alt=""></p>
-<p>全局搜索CryptoJS，发现了<code>crypto-js.js</code>文件，明显这是CryptoJS加密库</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601100429.png" alt=""></p>
-<p>并且发现还用了<code>$(selector).action()</code>的jQuery语法，所以还需要载入jQuery库</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601112445.png" alt=""></p>
-<p>从网上下载单独的CryptoJS库文件引入，从 网页中获取jQuery链接，并载入 jQuery，然后将<code>aes</code>函数也拉下来</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601113127.png" alt=""></p>
-<p>效果图如下：</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601113229.png" alt=""></p>
-<h3 id="贝贝网">贝贝网</h3>
-<p>目标网址：<a href="https://m.beibei.com/login/login.html" target="_blank" rel="noopener">https://m.beibei.com/login/login.html</a> （需手机端）</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601154549.png" alt=""></p>
-<p>输入帐号密码及验证码进行测试，发现一个XHR请求，类型为POST，提交的表单数据中的用户名密码都为明文，但问题在于请求参数中的<code>_abr_</code>一直在变化，猜测它为加密参数</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601155448.png" alt=""></p>
-<p>全局搜索<code>_abr_</code>无果，只能打请求断点，成功断住</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601160354.png" alt=""></p>
-<p>但是发现断点的位置没有我们要的内容，于是在call Stack中往下找调用栈，call Stack内的方法调用栈的规则是从上到下由最新调用处依次往下排列。在<code>e.ajax</code>中发现了包含有<code>_abr_</code>的内容，但是这里是要发送出去了，没有它的产生过程，于是继续往下找，终于找到了<code>_abr_=</code></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601163002.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601163301.png" alt=""></p>
-<p>记录<code>_abr_</code>的值为：“013e01885f35c08258b6ce21d500874ed5bb3143a05ed4b7b1”<br>
-发现<code>_abr_</code>其实是由<code>m(e.type, e.uri.pathname, e.query, e.form)</code>函数生成，于是为了了解它的生成过程，在函数前打上断点，重新发送登陆请求</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601165214.png" alt=""></p>
-<p>单步跟踪，发现了关键函数<code>MD5</code></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601165852.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601170350.png" alt=""></p>
-<p>继续单步跟踪，又发现了一个关键函数<code>HMAC</code></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601171039.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601171405.png" alt=""></p>
-<p>网上查找资料了解这个加密算法，发现HMAC算法，需要一个信息摘要算法以及一个密钥，在下方又找到关键函数<code>HmacSHA1</code>，于是推测使用了SHA-1算法</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601171755.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601185857.png" alt=""></p>
-<p>经过长时间的单步跟踪，总算来到了一开始的函数返回值部分</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601174129.png" alt=""></p>
-<p>现在，我们开始分析，HMAC算法可以使用Python第三方库实现，先尝试一下。加密内容有了，密钥也有了（加密目标值可以用<code>JSON.stringify()</code>提取）<br>
-加密目标值：“01\nPOST\nb7da15fd7cdc2b8c73958ee82e7424aa\n/mroute.html?method=beibei.user.token.get\n1591002077”<br>
-密钥：“ytU7vwqIx2UXQNsi”</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601190441.png" alt=""></p>
-<p>Python测试效果如下</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601191001.png" alt=""></p>
-<p>但是发现，与<code>_abr</code>的值相较，少了一些内容，回过头观察，发现<code>_abr</code>的值由<code>a+m+h</code>组成，<code>a</code>经测试是固定值<code>01</code>，<code>m</code>就是经过HMAC加密后的值，<code>h</code>会变动且暂时还不清楚</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601191307.png" alt=""></p>
-<p>对<code>h</code>进行分析，发现是由<code>s</code>的值使用<code>toString(16)</code>函数变化而来，而<code>s</code>则是时间戳(<code>new Date</code>)变化而来</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601191707.png" alt=""></p>
-<p>提取出<code>h</code>的算法，测试了一下，成功</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601194144.png" alt=""></p>
-<p>接下来，只剩下需要加密的值，它如何产生的，观察发现由<code>a + &quot;\n&quot; + e + &quot;\n&quot; + f + &quot;\n&quot; + p + &quot;\n&quot; + s</code>组成，<code>a</code>、<code>s</code>都清楚了，<code>e</code>发现是<code>POST</code>，<code>p</code>是路径<code>/mroute.html?method=beibei.h5.login</code>，这两个也是固定值，只剩下<code>f</code>是MD5加密后的值，逆向<code>f</code>的产生过程，发现是由&quot;用户名+路径+登陆id&quot;产生而来，如：<code>username=12341234123&amp;scene=h5_login&amp;rams_device_id=2654748010</code><br>
-所以现在只需要将这个值MD5加密后传入即可，同样也能用Python实现</p>
-<p>最终完成的效果<br>
-<img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601195839.png" alt=""></p>
+    <title>SqlMap代理池</title>
+    <url>/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/</url>
+    <content><![CDATA[<h2 id="本地代理转发">本地代理转发</h2>
+<p>借用前人的成果，实现的效果是启用本地<code>127.0.0.1:9999</code>服务，将<code>ips.txt</code>内的代理转发给本地客户端<br>
+<strong><a href="http://ips.py" target="_blank" rel="noopener">ips.py</a></strong>：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python</span></span><br><span class="line"><span class="comment"># -*- coding: utf-8 -*-</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> socket</span><br><span class="line"><span class="keyword">from</span> socket <span class="keyword">import</span> error</span><br><span class="line"><span class="keyword">import</span> threading</span><br><span class="line"><span class="keyword">import</span> random</span><br><span class="line"><span class="keyword">import</span> time</span><br><span class="line"></span><br><span class="line">localtime = time.asctime(time.localtime(time.time()))</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ProxyServerTest</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, proxyip)</span>:</span></span><br><span class="line">        <span class="comment"># 本地socket服务</span></span><br><span class="line">        self.ser = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">        self.proxyip = proxyip</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            <span class="comment"># 本地服务IP和端口</span></span><br><span class="line">            self.ser.bind((<span class="string">'127.0.0.1'</span>, <span class="number">9999</span>))</span><br><span class="line">            <span class="comment"># 最大连接数</span></span><br><span class="line">            self.ser.listen(<span class="number">5</span>)</span><br><span class="line">        <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">            print(<span class="string">"[-]The local service : "</span> + str(e))</span><br><span class="line">            <span class="keyword">return</span> <span class="string">"[-]The local service : "</span> + str(e)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                <span class="comment"># 接收客户端数据</span></span><br><span class="line">                client, addr = self.ser.accept()</span><br><span class="line">                print(<span class="string">'[*]accept %s connect'</span> % (addr,))</span><br><span class="line">                data = client.recv(<span class="number">1024</span>)</span><br><span class="line">                <span class="keyword">if</span> <span class="keyword">not</span> data:</span><br><span class="line">                    <span class="keyword">break</span></span><br><span class="line">                print(<span class="string">'[*'</span> + localtime + <span class="string">']: Accept data...'</span>)</span><br><span class="line">            <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">                print(<span class="string">"[-]Local receiving client : "</span> + str(e))</span><br><span class="line">                <span class="keyword">return</span> <span class="string">"[-]Local receiving client : "</span> + str(e)</span><br><span class="line"></span><br><span class="line">            <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">                <span class="comment"># 目标代理服务器，将客户端接收数据转发给代理服务器</span></span><br><span class="line">                mbsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">                iplen = len(self.proxyip)</span><br><span class="line">                proxyip = self.proxyip[random.randint(<span class="number">0</span>, iplen - <span class="number">1</span>)]</span><br><span class="line">                print(<span class="string">"[!]Now proxy ip:"</span> + str(proxyip))</span><br><span class="line">                prip = proxyip[<span class="number">0</span>]</span><br><span class="line">                prpo = proxyip[<span class="number">1</span></span><br><span class="line">                <span class="keyword">try</span>:</span><br><span class="line">                    mbsocket.settimeout(<span class="number">3</span>)</span><br><span class="line">                    mbsocket.connect((prip, prpo))</span><br><span class="line">                <span class="keyword">except</span>:</span><br><span class="line">                    print(<span class="string">"[-]RE_Connect..."</span>)</span><br><span class="line">                    <span class="keyword">continue</span></span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line"></span><br><span class="line">            <span class="comment">#                   except :</span></span><br><span class="line">            <span class="comment">#                       print("[-]Connect failed,change proxy ip now...")</span></span><br><span class="line">            <span class="comment">#                      pass</span></span><br><span class="line"></span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                mbsocket.send(data)</span><br><span class="line">            <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">                print(<span class="string">"[-]Sent to the proxy server : "</span> + str(e))</span><br><span class="line">                <span class="keyword">return</span> <span class="string">"[-]Sent to the proxy server : "</span> + str(e)</span><br><span class="line">                               </span><br><span class="line">            <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">                <span class="keyword">try</span>:</span><br><span class="line">                    <span class="comment"># 从代理服务器接收数据，然后转发回客户端</span></span><br><span class="line">                    data_1 = mbsocket.recv(<span class="number">1024</span>)</span><br><span class="line">                    <span class="keyword">if</span> <span class="keyword">not</span> data_1:</span><br><span class="line">                        <span class="keyword">break</span></span><br><span class="line">                    print(<span class="string">'[*'</span> + localtime + <span class="string">']: Send data...'</span>)</span><br><span class="line">                    client.send(data_1)</span><br><span class="line">                <span class="keyword">except</span> socket.timeout <span class="keyword">as</span> e:</span><br><span class="line">                    print(proxyip)</span><br><span class="line">                    print(<span class="string">"[-]Back to the client : "</span> + str(e))</span><br><span class="line">                    <span class="keyword">continue</span></span><br><span class="line"></span><br><span class="line">            <span class="comment"># 关闭连接</span></span><br><span class="line"></span><br><span class="line">            client.close()</span><br><span class="line">            mbsocket.close()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">Loadips</span><span class="params">()</span>:</span></span><br><span class="line">    print(<span class="string">"[*]Loading proxy ips.."</span>)</span><br><span class="line">    ip_list = []</span><br><span class="line">    ip = [<span class="string">'ip'</span>, <span class="string">'port'</span>]</span><br><span class="line">    <span class="keyword">with</span> open(<span class="string">"ips.txt"</span>) <span class="keyword">as</span> ips:</span><br><span class="line">        lines = ips.readlines()</span><br><span class="line">                               </span><br><span class="line">    <span class="keyword">for</span> line <span class="keyword">in</span> lines:</span><br><span class="line">        ip[<span class="number">0</span>], ip[<span class="number">1</span>] = line.strip().split(<span class="string">":"</span>)</span><br><span class="line">        ip[<span class="number">1</span>] = eval(ip[<span class="number">1</span>])</span><br><span class="line">        nip = tuple(ip)</span><br><span class="line">        ip_list.append(nip)</span><br><span class="line">    <span class="keyword">return</span> ip_list</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></span><br><span class="line">    print(<span class="string">'''*Atuhor : V@1n3R.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">*Blog :http://www.Lz1y.cn</span></span><br><span class="line"><span class="string">*date: 2017.7.17</span></span><br><span class="line"><span class="string">*http://www.Lz1y.cn/wordpress/?p=643</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                         __     __    _       _____ ____    </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                         \ \   / /_ _/ |_ __ |___ /|  _ \   </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                          \ \ / / _` | | '_ \  |_ \| |_) |  </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                           \ V / (_| | | | | |___) |  _ &lt; _ </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                            \_/ \__,_|_|_| |_|____/|_| \_(_) </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    '''</span>)</span><br><span class="line"></span><br><span class="line">    ip_list = Loadips()</span><br><span class="line">    <span class="comment">#   ip_list = [('118.89.148.92',8088)]</span></span><br><span class="line">    <span class="comment">#   ip_list = tuple(ip_list)</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        pst = ProxyServerTest(ip_list)</span><br><span class="line">        <span class="comment"># 多线程</span></span><br><span class="line">        t = threading.Thread(target=pst.run, name=<span class="string">'LoopThread'</span>)</span><br><span class="line">        print(<span class="string">'[*]Waiting for connection...'</span>)</span><br><span class="line">        <span class="comment"># 关闭多线程</span></span><br><span class="line">        t.start()</span><br><span class="line">        t.join()</span><br><span class="line">    <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">        print(<span class="string">"[-]main : "</span> + str(e))</span><br><span class="line">        <span class="keyword">return</span> <span class="string">"[-]main : "</span> + str(e)</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">'__main__'</span>:</span><br><span class="line">    main()</span><br></pre></td></tr></table></figure>
+<h2 id="获取代理池">获取代理池</h2>
+<p>获取代理池使用了GIthub上的项目：<a href="https://github.com/jhao104/proxy_pool" target="_blank" rel="noopener">https://github.com/jhao104/proxy_pool</a> ，并利用REDIS存储获取到的代理地址</p>
+<h3 id="启动项目">启动项目</h3>
+<p>在<code>cli</code>目录下通过<code>ProxyPool.py</code>启动</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"># 首先启动调度程序</span><br><span class="line">&gt;&gt;&gt;python proxyPool.py schedule</span><br><span class="line"></span><br><span class="line"># 然后启动webApi服务</span><br><span class="line">&gt;&gt;&gt;python proxyPool.py webserver</span><br></pre></td></tr></table></figure>
+<h3 id="Api">Api</h3>
+<p>启动过几分钟后就能看到抓取到的代理IP，可以直接到数据库中查看，也可以通过api访问http://127.0.0.1:5010 查看。</p>
+<table>
+<thead>
+<tr>
+<th>api</th>
+<th>method</th>
+<th>Description</th>
+<th>arg</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>/</td>
+<td>GET</td>
+<td>api介绍</td>
+<td>None</td>
+</tr>
+<tr>
+<td>/get</td>
+<td>GET</td>
+<td>随机获取一个代理</td>
+<td>None</td>
+</tr>
+<tr>
+<td>/get_all</td>
+<td>GET</td>
+<td>获取所有代理</td>
+<td>None</td>
+</tr>
+<tr>
+<td>/get_status</td>
+<td>GET</td>
+<td>查看代理数量</td>
+<td>None</td>
+</tr>
+<tr>
+<td>/delete</td>
+<td>GET</td>
+<td>删除代理</td>
+<td>proxy=host:ip</td>
+</tr>
+</tbody>
+</table>
+<h3 id="保存代理">保存代理</h3>
+<p>自己编写了个小脚本将<code>ProxyPool.py</code>获取到的代理保存在<code>ips.txt</code>中<br>
+<strong>get_proxy.py</strong>：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">import requests</span><br><span class="line"></span><br><span class="line">def get_proxy():</span><br><span class="line">    return requests.get(&quot;http:&#x2F;&#x2F;127.0.0.1:5010&#x2F;get_all&#x2F;&quot;).json()</span><br><span class="line"></span><br><span class="line">def delete_proxy(proxy):</span><br><span class="line">    requests.get(&quot;http:&#x2F;&#x2F;127.0.0.1:5010&#x2F;delete&#x2F;?proxy&#x3D;&#123;&#125;&quot;.format(proxy))</span><br><span class="line"></span><br><span class="line">res &#x3D; requests.get(&quot;http:&#x2F;&#x2F;127.0.0.1:5010&#x2F;get_status&quot;).json()</span><br><span class="line">count &#x3D; res.get(&quot;useful_proxy&quot;)</span><br><span class="line">print(&quot;目前代理池中共计：%s个代理.&quot; % count)</span><br><span class="line"></span><br><span class="line">f &#x3D; open(&quot;ips.txt&quot;, &quot;w&quot;)</span><br><span class="line">for i in range(count):</span><br><span class="line">    b &#x3D; get_proxy()[i][&quot;proxy&quot;]</span><br><span class="line">f.write(b + &quot;\n&quot;)</span><br><span class="line">f.close()</span><br></pre></td></tr></table></figure>
+<h2 id="SqlMap使用代理池">SqlMap使用代理池</h2>
+<blockquote>
+<p>sqlmap加上代理 “–proxy=http://127.0.0.1:9999” 即可使用</p>
+<p>使用之前建议先检测一下代理的有效性：<a href="http://h.jiguangdaili.com/check/" target="_blank" rel="noopener">http://h.jiguangdaili.com/check/</a></p>
+</blockquote>
 ]]></content>
       <categories>
-        <category>JS逆向</category>
+        <category>工具</category>
       </categories>
       <tags>
-        <tag>JS逆向系列</tag>
+        <tag>Sqlmap</tag>
       </tags>
   </entry>
 </search>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html  lang="zh-Hans" >
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+    <title>SqlMap代理池 | Edsion blog</title>
+    <meta name="description" content="本地代理转发 借用前人的成果，实现的效果是启用本地127.0.0.1:9999服务，将ips.txt内的代理转发给本地客户端 ips.py： 123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SqlMap代理池">
+<meta property="og:url" content="http://yoursite.com/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/index.html">
+<meta property="og:site_name" content="Edsion blog">
+<meta property="og:description" content="本地代理转发 借用前人的成果，实现的效果是启用本地127.0.0.1:9999服务，将ips.txt内的代理转发给本地客户端 ips.py： 123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869">
+<meta property="article:published_time" content="2020-06-22T07:16:21.000Z">
+<meta property="article:modified_time" content="2020-06-22T07:16:29.288Z">
+<meta property="article:author" content="Edsion Shen">
+<meta property="article:tag" content="Sqlmap">
+<meta name="twitter:card" content="summary">
+
+    <link rel="alternate" type="application/atom+xml" href="/atom.xml">
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+
+    
+<link rel="stylesheet" href="/css/common.min.css">
+
+
+
+    
+    
+    
+    
+        <link href="//cdn.jsdelivr.net/npm/lightgallery.js@1.1.3/dist/css/lightgallery.min.css" rel="stylesheet">
+    
+    
+    
+<link rel="stylesheet" href="/css/iconfont.min.css">
+
+    
+<meta name="generator" content="Hexo 4.2.1"></head>
+
+    <body>
+        <header class="header header-fixture">
+    <div class="profile-search-wrap flex sm:block">
+        
+        
+        <div class="profile sm:text-center md:px-1 lg:px-3 sm:pb-4 sm:pt-6">
+            <a id="avatar" role="link" href="https://github.com/Dsysf" class="inline-block lg:w-16 lg:h-16 w-8 h-8 m-2" target="_blank" rel="noopener" rel="noreferrer" >
+                <img src="/images/blue.svg" class="rounded-full" alt="avatar">
+            </a>
+            <h2 id="name" class="hidden lg:block">Edsion</h2>
+            <h3 id="title" class="hidden xl:block"></h3>
+            
+            <small id="location" class="hidden lg:block">
+                <i class="iconfont icon-map-icon"></i>
+                Place of exile, China
+            </small>
+            
+        </div>
+        
+        
+<div class="search flex-1 flex lg:inline-block sm:hidden lg:px-4 lg:mt-2 lg:mb-4 lg:w-full">
+    <form id="search-form" class="my-auto flex-1 lg:border lg:border-solid lg:border-gray-200">
+        <div class="input-group table bg-gray-100 lg:bg-white w-full">
+            <input id="search-input" type="text" placeholder="Search" class="inline-block w-full bg-gray-100 lg:bg-white">
+            <span class="table-cell">
+                <button name="search tigger button" disabled>
+                    <i class="iconfont icon-search m-2"></i>
+                </button>
+            </span>
+        </div>
+    </form>
+        
+<script id="search-teamplate" type="text/html" data-path="/content.json">
+    <div>
+        <div class="search-header bg-gray-400">
+            <input id="actual-search-input" model="keyword" ref="input" class="inline-block w-full h-10 px-2 py-1" placeholder="Search" type="text">
+        </div>
+        <div class="search-result bg-gray-200">
+            {{#each searchPosts}}
+            <a href="/{{ path }}" class="result-item block px-2 pb-3 mb-1 pt-1 hover:bg-indigo-100">
+                <i class="iconfont icon-file"></i>
+                <h1 class="result-title inline font-medium text-lg">{{ title }}</h1>
+                <p class="result-content text-gray-600 text-sm">{{{ text }}}</p>
+            </a>
+            {{/each}}
+        </div>
+    </div>
+</script>
+
+</div>
+
+
+        <button name="menu toogle button" id="menu-toggle-btn" class="block sm:hidden p-3" role="button" aria-expanded="false">
+            <i class="iconfont icon-hamburger"></i>
+        </button>
+    </div>
+    <nav id="menu-nav" class="hidden sm:flex flex-col">
+        
+        
+            <div class="menu-item menu-home" role="menuitem">
+                <a href="/.">
+                    <i class="iconfont icon-home" aria-hidden="true"></i>
+                    <span class="menu-title">Home</span>
+                </a>
+            </div>
+        
+        
+            <div class="menu-item menu-archives" role="menuitem">
+                <a href="/archives">
+                    <i class="iconfont icon-archive" aria-hidden="true"></i>
+                    <span class="menu-title">Archives</span>
+                </a>
+            </div>
+        
+        
+            <div class="menu-item menu-categories" role="menuitem">
+                <a href="/categories">
+                    <i class="iconfont icon-folder" aria-hidden="true"></i>
+                    <span class="menu-title">Categories</span>
+                </a>
+            </div>
+        
+        
+            <div class="menu-item menu-tags" role="menuitem">
+                <a href="/tags">
+                    <i class="iconfont icon-tag" aria-hidden="true"></i>
+                    <span class="menu-title">Tags</span>
+                </a>
+            </div>
+        
+        
+<div class="social-links flex sm:flex-col lg:hidden mt-5">
+    
+        <span class="social-item text-center">
+            <a href="https://github.com/Dsysf" target="_blank" rel="noopener">
+                <i class="iconfont social-icon icon-github"></i>
+                <span class="menu-title hidden lg:inline">menu.github</span>
+            </a>
+        </span>
+    
+        <span class="social-item text-center">
+            <a href="/atom.xml">
+                <i class="iconfont social-icon icon-rss"></i>
+                <span class="menu-title hidden lg:inline">menu.rss</span>
+            </a>
+        </span>
+    
+</div>
+
+
+    </nav>
+</header>
+
+        <section class="main-section">
+            
+    <main class="flex-1 px-4 py-12 md:px-5 lg:px-8 lg:py-4 relative min-h-screen">
+    
+
+    <article class="content article article-archives article-type-list" itemscope="">
+        <header class="article-header">
+            
+    
+        <h1 class="article-title text-lg" itemprop="name">
+            SqlMap代理池
+        </h1>
+    
+
+
+
+            <p class="article-meta mb-3 text-xs">
+                <span class="article-date">
+    <i class="iconfont icon-calendar-check"></i>
+	<a href="/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/" class="article-date">
+	  <time datetime="2020-06-22T07:16:21.000Z" itemprop="datePublished">Jun 22</time>
+	</a>
+</span>
+
+                
+    <span class="article-category">
+    <i class="iconfont icon-folder"></i>
+    <a class="article-category-link" href="/categories/%E5%B7%A5%E5%85%B7/">工具</a>
+  </span>
+
+
+                
+    <span class="article-tags">
+    <i class="iconfont icon-tag"></i>
+    <a class="article-tag-link" href="/tags/Sqlmap/" rel="tag">Sqlmap</a>
+  </span>
+
+
+                <span class="_partial/post-comment"><i class="icon icon-comment"></i>
+                    <a href="/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/#comments" class="article-comment-link">
+                        Comments
+                    </a>
+                </span>
+                
+    
+        <span class="post-wordcount" itemprop="wordCount">Word Count: 855(words)</span>
+    
+    
+        <span class="post-readcount" itemprop="timeRequired">Read Count: 4(minutes)</span>
+    
+
+
+            </p>
+        </header>
+        <div class="marked-body article-body">
+            <h2 id="本地代理转发">本地代理转发</h2>
+<p>借用前人的成果，实现的效果是启用本地<code>127.0.0.1:9999</code>服务，将<code>ips.txt</code>内的代理转发给本地客户端<br>
+<strong><a href="http://ips.py" target="_blank" rel="noopener">ips.py</a></strong>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python</span></span><br><span class="line"><span class="comment"># -*- coding: utf-8 -*-</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> socket</span><br><span class="line"><span class="keyword">from</span> socket <span class="keyword">import</span> error</span><br><span class="line"><span class="keyword">import</span> threading</span><br><span class="line"><span class="keyword">import</span> random</span><br><span class="line"><span class="keyword">import</span> time</span><br><span class="line"></span><br><span class="line">localtime = time.asctime(time.localtime(time.time()))</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ProxyServerTest</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, proxyip)</span>:</span></span><br><span class="line">        <span class="comment"># 本地socket服务</span></span><br><span class="line">        self.ser = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">        self.proxyip = proxyip</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            <span class="comment"># 本地服务IP和端口</span></span><br><span class="line">            self.ser.bind((<span class="string">'127.0.0.1'</span>, <span class="number">9999</span>))</span><br><span class="line">            <span class="comment"># 最大连接数</span></span><br><span class="line">            self.ser.listen(<span class="number">5</span>)</span><br><span class="line">        <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">            print(<span class="string">"[-]The local service : "</span> + str(e))</span><br><span class="line">            <span class="keyword">return</span> <span class="string">"[-]The local service : "</span> + str(e)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                <span class="comment"># 接收客户端数据</span></span><br><span class="line">                client, addr = self.ser.accept()</span><br><span class="line">                print(<span class="string">'[*]accept %s connect'</span> % (addr,))</span><br><span class="line">                data = client.recv(<span class="number">1024</span>)</span><br><span class="line">                <span class="keyword">if</span> <span class="keyword">not</span> data:</span><br><span class="line">                    <span class="keyword">break</span></span><br><span class="line">                print(<span class="string">'[*'</span> + localtime + <span class="string">']: Accept data...'</span>)</span><br><span class="line">            <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">                print(<span class="string">"[-]Local receiving client : "</span> + str(e))</span><br><span class="line">                <span class="keyword">return</span> <span class="string">"[-]Local receiving client : "</span> + str(e)</span><br><span class="line"></span><br><span class="line">            <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">                <span class="comment"># 目标代理服务器，将客户端接收数据转发给代理服务器</span></span><br><span class="line">                mbsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">                iplen = len(self.proxyip)</span><br><span class="line">                proxyip = self.proxyip[random.randint(<span class="number">0</span>, iplen - <span class="number">1</span>)]</span><br><span class="line">                print(<span class="string">"[!]Now proxy ip:"</span> + str(proxyip))</span><br><span class="line">                prip = proxyip[<span class="number">0</span>]</span><br><span class="line">                prpo = proxyip[<span class="number">1</span></span><br><span class="line">                <span class="keyword">try</span>:</span><br><span class="line">                    mbsocket.settimeout(<span class="number">3</span>)</span><br><span class="line">                    mbsocket.connect((prip, prpo))</span><br><span class="line">                <span class="keyword">except</span>:</span><br><span class="line">                    print(<span class="string">"[-]RE_Connect..."</span>)</span><br><span class="line">                    <span class="keyword">continue</span></span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line"></span><br><span class="line">            <span class="comment">#                   except :</span></span><br><span class="line">            <span class="comment">#                       print("[-]Connect failed,change proxy ip now...")</span></span><br><span class="line">            <span class="comment">#                      pass</span></span><br><span class="line"></span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                mbsocket.send(data)</span><br><span class="line">            <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">                print(<span class="string">"[-]Sent to the proxy server : "</span> + str(e))</span><br><span class="line">                <span class="keyword">return</span> <span class="string">"[-]Sent to the proxy server : "</span> + str(e)</span><br><span class="line">                               </span><br><span class="line">            <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">                <span class="keyword">try</span>:</span><br><span class="line">                    <span class="comment"># 从代理服务器接收数据，然后转发回客户端</span></span><br><span class="line">                    data_1 = mbsocket.recv(<span class="number">1024</span>)</span><br><span class="line">                    <span class="keyword">if</span> <span class="keyword">not</span> data_1:</span><br><span class="line">                        <span class="keyword">break</span></span><br><span class="line">                    print(<span class="string">'[*'</span> + localtime + <span class="string">']: Send data...'</span>)</span><br><span class="line">                    client.send(data_1)</span><br><span class="line">                <span class="keyword">except</span> socket.timeout <span class="keyword">as</span> e:</span><br><span class="line">                    print(proxyip)</span><br><span class="line">                    print(<span class="string">"[-]Back to the client : "</span> + str(e))</span><br><span class="line">                    <span class="keyword">continue</span></span><br><span class="line"></span><br><span class="line">            <span class="comment"># 关闭连接</span></span><br><span class="line"></span><br><span class="line">            client.close()</span><br><span class="line">            mbsocket.close()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">Loadips</span><span class="params">()</span>:</span></span><br><span class="line">    print(<span class="string">"[*]Loading proxy ips.."</span>)</span><br><span class="line">    ip_list = []</span><br><span class="line">    ip = [<span class="string">'ip'</span>, <span class="string">'port'</span>]</span><br><span class="line">    <span class="keyword">with</span> open(<span class="string">"ips.txt"</span>) <span class="keyword">as</span> ips:</span><br><span class="line">        lines = ips.readlines()</span><br><span class="line">                               </span><br><span class="line">    <span class="keyword">for</span> line <span class="keyword">in</span> lines:</span><br><span class="line">        ip[<span class="number">0</span>], ip[<span class="number">1</span>] = line.strip().split(<span class="string">":"</span>)</span><br><span class="line">        ip[<span class="number">1</span>] = eval(ip[<span class="number">1</span>])</span><br><span class="line">        nip = tuple(ip)</span><br><span class="line">        ip_list.append(nip)</span><br><span class="line">    <span class="keyword">return</span> ip_list</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></span><br><span class="line">    print(<span class="string">'''*Atuhor : V@1n3R.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">*Blog :http://www.Lz1y.cn</span></span><br><span class="line"><span class="string">*date: 2017.7.17</span></span><br><span class="line"><span class="string">*http://www.Lz1y.cn/wordpress/?p=643</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                         __     __    _       _____ ____    </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                         \ \   / /_ _/ |_ __ |___ /|  _ \   </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                          \ \ / / _` | | '_ \  |_ \| |_) |  </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                           \ V / (_| | | | | |___) |  _ &lt; _ </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                            \_/ \__,_|_|_| |_|____/|_| \_(_) </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    '''</span>)</span><br><span class="line"></span><br><span class="line">    ip_list = Loadips()</span><br><span class="line">    <span class="comment">#   ip_list = [('118.89.148.92',8088)]</span></span><br><span class="line">    <span class="comment">#   ip_list = tuple(ip_list)</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        pst = ProxyServerTest(ip_list)</span><br><span class="line">        <span class="comment"># 多线程</span></span><br><span class="line">        t = threading.Thread(target=pst.run, name=<span class="string">'LoopThread'</span>)</span><br><span class="line">        print(<span class="string">'[*]Waiting for connection...'</span>)</span><br><span class="line">        <span class="comment"># 关闭多线程</span></span><br><span class="line">        t.start()</span><br><span class="line">        t.join()</span><br><span class="line">    <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">        print(<span class="string">"[-]main : "</span> + str(e))</span><br><span class="line">        <span class="keyword">return</span> <span class="string">"[-]main : "</span> + str(e)</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">'__main__'</span>:</span><br><span class="line">    main()</span><br></pre></td></tr></table></figure>
+<h2 id="获取代理池">获取代理池</h2>
+<p>获取代理池使用了GIthub上的项目：<a href="https://github.com/jhao104/proxy_pool" target="_blank" rel="noopener">https://github.com/jhao104/proxy_pool</a> ，并利用REDIS存储获取到的代理地址</p>
+<h3 id="启动项目">启动项目</h3>
+<p>在<code>cli</code>目录下通过<code>ProxyPool.py</code>启动</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># 首先启动调度程序</span><br><span class="line">&gt;&gt;&gt;python proxyPool.py schedule</span><br><span class="line"></span><br><span class="line"># 然后启动webApi服务</span><br><span class="line">&gt;&gt;&gt;python proxyPool.py webserver</span><br></pre></td></tr></table></figure>
+<h3 id="Api">Api</h3>
+<p>启动过几分钟后就能看到抓取到的代理IP，可以直接到数据库中查看，也可以通过api访问http://127.0.0.1:5010 查看。</p>
+<table>
+<thead>
+<tr>
+<th>api</th>
+<th>method</th>
+<th>Description</th>
+<th>arg</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>/</td>
+<td>GET</td>
+<td>api介绍</td>
+<td>None</td>
+</tr>
+<tr>
+<td>/get</td>
+<td>GET</td>
+<td>随机获取一个代理</td>
+<td>None</td>
+</tr>
+<tr>
+<td>/get_all</td>
+<td>GET</td>
+<td>获取所有代理</td>
+<td>None</td>
+</tr>
+<tr>
+<td>/get_status</td>
+<td>GET</td>
+<td>查看代理数量</td>
+<td>None</td>
+</tr>
+<tr>
+<td>/delete</td>
+<td>GET</td>
+<td>删除代理</td>
+<td>proxy=host:ip</td>
+</tr>
+</tbody>
+</table>
+<h3 id="保存代理">保存代理</h3>
+<p>自己编写了个小脚本将<code>ProxyPool.py</code>获取到的代理保存在<code>ips.txt</code>中<br>
+<strong>get_proxy.py</strong>：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">import requests</span><br><span class="line"></span><br><span class="line">def get_proxy():</span><br><span class="line">    return requests.get(&quot;http:&#x2F;&#x2F;127.0.0.1:5010&#x2F;get_all&#x2F;&quot;).json()</span><br><span class="line"></span><br><span class="line">def delete_proxy(proxy):</span><br><span class="line">    requests.get(&quot;http:&#x2F;&#x2F;127.0.0.1:5010&#x2F;delete&#x2F;?proxy&#x3D;&#123;&#125;&quot;.format(proxy))</span><br><span class="line"></span><br><span class="line">res &#x3D; requests.get(&quot;http:&#x2F;&#x2F;127.0.0.1:5010&#x2F;get_status&quot;).json()</span><br><span class="line">count &#x3D; res.get(&quot;useful_proxy&quot;)</span><br><span class="line">print(&quot;目前代理池中共计：%s个代理.&quot; % count)</span><br><span class="line"></span><br><span class="line">f &#x3D; open(&quot;ips.txt&quot;, &quot;w&quot;)</span><br><span class="line">for i in range(count):</span><br><span class="line">    b &#x3D; get_proxy()[i][&quot;proxy&quot;]</span><br><span class="line">f.write(b + &quot;\n&quot;)</span><br><span class="line">f.close()</span><br></pre></td></tr></table></figure>
+<h2 id="SqlMap使用代理池">SqlMap使用代理池</h2>
+<blockquote>
+<p>sqlmap加上代理 “–proxy=http://127.0.0.1:9999” 即可使用</p>
+<p>使用之前建议先检测一下代理的有效性：<a href="http://h.jiguangdaili.com/check/" target="_blank" rel="noopener">http://h.jiguangdaili.com/check/</a></p>
+</blockquote>
+
+        </div>
+        
+<blockquote class="copyright">
+    <p><strong>Link to this article : </strong><a class="permalink" href="http://yoursite.com/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/">http://yoursite.com/2020/06/22/代理池/</a></p>
+    <p><strong>This article is available under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)</a> License</strong></p>
+</blockquote>
+
+
+    </article>
+    
+    <section id="comments">
+        
+    </section>
+
+
+    
+
+</main>
+
+
+<aside style="" id="sidebar" class="aside aside-fixture">
+    <div class="toc-sidebar">
+        <nav id="toc" class="article-toc">
+            <h3 class="toc-title">Catalogue</h3>
+            <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#本地代理转发"><span class="toc-number">1.</span> <span class="toc-text">本地代理转发</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#获取代理池"><span class="toc-number">2.</span> <span class="toc-text">获取代理池</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#启动项目"><span class="toc-number">2.1.</span> <span class="toc-text">启动项目</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Api"><span class="toc-number">2.2.</span> <span class="toc-text">Api</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#保存代理"><span class="toc-number">2.3.</span> <span class="toc-text">保存代理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#SqlMap使用代理池"><span class="toc-number">3.</span> <span class="toc-text">SqlMap使用代理池</span></a></li></ol>
+        </nav>
+    </div>
+</aside>
+
+
+
+
+
+        </section>
+        <footer class="hidden lg:block fixed bottom-0 left-0 sm:w-1/12 lg:w-1/6 bg-gray-100 z-40">
+    
+    <div class="footer-social-links">
+        
+            <a href="https://github.com/Dsysf" target="_blank" rel="noopener">
+                <i class="iconfont icon-github"></i>
+            </a>
+        
+            <a href="/atom.xml">
+                <i class="iconfont icon-rss"></i>
+            </a>
+        
+    </div>
+    
+    
+</footer>
+
+        <div id="mask" class="hidden mask fixed inset-0 bg-gray-900 opacity-75 z-40"></div>
+        <div id="search-view-container" class="hidden shadow-xl"></div>
+        
+<script src="/js/dom-event.min.js"></script>
+
+<script src="//cdn.jsdelivr.net/npm/yox@1.0.0-alpha.121/dist/standard/prod/yox.min.js"></script>
+
+
+<script src="/js/search.min.js"></script>
+
+
+
+    <script src="//cdn.jsdelivr.net/npm/lightgallery.js@1.1.3/dist/js/lightgallery.min.js"></script>
+    
+<script src="/js/light-gallery.min.js"></script>
+
+
+
+
+
+    </body>
+</html>
