@@ -280,6 +280,8 @@ linux下：修改my.cnf 在[mysqld]内加入secure_file_priv =<br>
     
     <section id="comments">
         
+            <div id="vcomments"></div>
+        
     </section>
 
 
@@ -328,6 +330,29 @@ linux下：修改my.cnf 在[mysqld]内加入secure_file_priv =<br>
 
 
 <script src="/js/search.min.js"></script>
+
+
+    <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+<script src="//cdn.jsdelivr.net/npm/valine"></script>
+<script type="text/javascript">
+var GUEST = ['nick', 'mail', 'link'];
+var meta = 'nick,mail,link';
+meta = meta.split(',').filter(function(item) {
+  return GUEST.indexOf(item) > -1;
+});
+new Valine({
+  el: '#vcomments',
+  verify: false,
+  notify: false,
+  appId: 'PFHsWavC4AlcYMLyEu7EqsWz-gzGzoHsz',
+  appKey: 'iyAzgXdeFAljOka4r1u7BwPW',
+  placeholder: '给我的文章加点评论吧~',
+  avatar: 'monsterid',
+  meta: meta,
+  pageSize: '10' || 10,
+  visitor: false
+});
+</script>
 
 
 
