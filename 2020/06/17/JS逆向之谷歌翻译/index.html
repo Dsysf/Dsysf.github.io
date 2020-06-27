@@ -3,12 +3,12 @@
     <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, maximum-scale=5, viewport-fit=cover">
-    <title>JS逆向系列之谷歌翻译 | Edsion blog</title>
+    <title>JS逆向系列之谷歌翻译 | Edsion's Blog</title>
     <meta name="description" content="一、逆向谷歌翻译 分析过程  首次分析  首先找到谷歌翻译的Ajax请求接口  以get方式发送的Ajax请求，多次尝试，发现请求参数中，tk和q，是不断变化的，其中q是待翻译的内容，tk是根据q进行js加密算法生成的，所以我们要分析tk的产生。  通过断点逆向tk的加密算法  加密算法应该在translate_m_zh-CN.js文件里  打个断点，请求翻译接口的URL时停止，发现在send(a">
 <meta property="og:type" content="article">
 <meta property="og:title" content="JS逆向系列之谷歌翻译">
 <meta property="og:url" content="http://yoursite.com/2020/06/17/JS%E9%80%86%E5%90%91%E4%B9%8B%E8%B0%B7%E6%AD%8C%E7%BF%BB%E8%AF%91/index.html">
-<meta property="og:site_name" content="Edsion blog">
+<meta property="og:site_name" content="Edsion&#39;s Blog">
 <meta property="og:description" content="一、逆向谷歌翻译 分析过程  首次分析  首先找到谷歌翻译的Ajax请求接口  以get方式发送的Ajax请求，多次尝试，发现请求参数中，tk和q，是不断变化的，其中q是待翻译的内容，tk是根据q进行js加密算法生成的，所以我们要分析tk的产生。  通过断点逆向tk的加密算法  加密算法应该在translate_m_zh-CN.js文件里  打个断点，请求翻译接口的URL时停止，发现在send(a">
 <meta property="og:image" content="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529141646.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529142909.png">
