@@ -871,56 +871,6 @@ Cadmus Computer Systems 表示Virtualbox虚拟机<br>
       </tags>
   </entry>
   <entry>
-    <title>request库使用</title>
-    <url>/2020/07/17/requests%E5%BA%93/</url>
-    <content><![CDATA[<h2 id="构造请求">构造请求</h2>
-<h3 id="请求头">请求头</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">headers=&#123;<span class="string">'Accept'</span>: <span class="string">'application/vnd.github.v3.text-match+json'</span>&#125;</span><br><span class="line">res = requests.get(url,headers)</span><br></pre></td></tr></table></figure>
-<h3 id="get请求">get请求</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">res = requests.get(url=<span class="string">'https://api.github.com/search/repositories'</span>)</span><br><span class="line">参数</span><br><span class="line"><span class="comment"># res = requests.get(url,params)</span></span><br><span class="line"><span class="comment"># params=&#123;'q':'requests+language:python'&#125;</span></span><br><span class="line"><span class="comment"># params=[('q', 'requests+language:python')]</span></span><br><span class="line"><span class="comment"># params=b'q=requests+language:python'</span></span><br></pre></td></tr></table></figure>
-<h3 id="其他请求方法">其他请求方法</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.post(<span class="string">'https://httpbin.org/post'</span>, data=&#123;<span class="string">'key'</span>:<span class="string">'value'</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.put(<span class="string">'https://httpbin.org/put'</span>, data=&#123;<span class="string">'key'</span>:<span class="string">'value'</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.delete(<span class="string">'https://httpbin.org/delete'</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.head(<span class="string">'https://httpbin.org/get'</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.patch(<span class="string">'https://httpbin.org/patch'</span>, data=&#123;<span class="string">'key'</span>:<span class="string">'value'</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.options(<span class="string">'https://httpbin.org/get'</span>)</span><br><span class="line">消息体</span><br><span class="line"><span class="comment">#  data=&#123;'key':'value'&#125;</span></span><br><span class="line"><span class="comment">#  data=[('key', 'value')&#125;</span></span><br><span class="line"><span class="comment">#  json=&#123;'key':'value'&#125;</span></span><br></pre></td></tr></table></figure>
-<h2 id="响应处理">响应处理</h2>
-<h3 id="响应状态码">响应状态码</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">status = res.status_code</span><br></pre></td></tr></table></figure>
-<h3 id="响应头信息（键不分大小写）">响应头信息（键不分大小写）</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">requests_header=res.headers[<span class="string">'content-type'</span>]</span><br></pre></td></tr></table></figure>
-<h3 id="响应内容">响应内容</h3>
-<h4 id="字节格式查看内容">字节格式查看内容</h4>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">data = res.content</span><br><span class="line"><span class="comment"># b'&#123;\n  "current_user_url": "https://api.github.com/user",\n  "cur</span></span><br></pre></td></tr></table></figure>
-<h4 id="字符串格式查看内容（序列化JSON）">字符串格式查看内容（序列化JSON）</h4>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">因为对 bytes 解码到 str 需要一个编码格式，所以如果你没有指定，请求将尝试根据响应头来猜测编码格式</span><br><span class="line">res.encoding = <span class="string">'utf-8'</span></span><br><span class="line"></span><br><span class="line">data=res.text</span><br><span class="line"><span class="comment"># &#123;"current_user_url":"https://api.github.com/user","cur</span></span><br></pre></td></tr></table></figure>
-<h4 id="字典形式内容（反序列化JSON）">字典形式内容（反序列化JSON）</h4>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">data=res.json()</span><br><span class="line"><span class="comment"># &#123;'current_user_url': 'https://api.github.com/user', 'curin</span></span><br><span class="line">提取内容</span><br><span class="line">repository = data[<span class="string">'items'</span>][<span class="number">0</span>]</span><br><span class="line">也可以使用 .text 获取 str 并使用json.loads() 对其进行反序列化</span><br><span class="line">json.loads(data)</span><br></pre></td></tr></table></figure>
-<h2 id="其他">其他</h2>
-<h3 id="检查请求">检查请求</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">requests 库会在将请求实际发送到目标服务器之前准备该请求。 请求准备包括像验证头信息和序列化JSON内容等</span><br><span class="line">response.request.headers[<span class="string">'Content-Type'</span>]</span><br><span class="line">response.request.url</span><br><span class="line">response.request.body</span><br></pre></td></tr></table></figure>
-<h3 id="身份验证">身份验证</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">使用auth 参数，rqeuests 将使用HTTP的基本访问认证方案来应用凭据</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">'https://api.github.com/user'</span>, auth=(<span class="string">'username'</span>, getpass()))</span><br><span class="line">成功返回&lt;Response [<span class="number">200</span>]&gt;，失败返回&lt;Response [<span class="number">401</span>]&gt;</span><br><span class="line"></span><br><span class="line">HTTPBasicAuth效果同上</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> requests.auth <span class="keyword">import</span> HTTPBasicAuth</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">'https://api.github.com/user'</span>, auth=HTTPBasicAuth(<span class="string">'username'</span>, getpass()))</span><br><span class="line"></span><br><span class="line">requests 也提供了其他身份验证方法，例如 HTTPDigestAuth 和 HTTPProxyAuth</span><br></pre></td></tr></table></figure>
-<h3 id="关闭SSL证书验证">关闭SSL证书验证</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">'https://api.github.com'</span>, verify=<span class="literal">False</span>)</span><br></pre></td></tr></table></figure>
-<h2 id="性能">性能</h2>
-<h3 id="超时">超时</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">'https://api.github.com'</span>, timeout=<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">还可以将元组传递给 timeout，第一个元素是连接超时（它允许客户端与服务器建立连接的时间），第二个元素是读取超时（一旦你的客户已建立连接而等待响应的时间）</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">'https://api.github.com'</span>, timeout=(<span class="number">2</span>, <span class="number">5</span>))</span><br><span class="line"></span><br><span class="line">超时异常</span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> requests.exceptions <span class="keyword">import</span> Timeout</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    response = requests.get(<span class="string">'https://api.github.com'</span>, timeout=<span class="number">1</span>)</span><br><span class="line"><span class="keyword">except</span> Timeout:</span><br><span class="line">    print(<span class="string">'The request timed out'</span>)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    print(<span class="string">'The request did not time out'</span>)</span><br></pre></td></tr></table></figure>
-<h3 id="Session对象">Session对象</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">Session 用于跨请求保留参数。 例如，如果要跨多个请求使用相同的身份验证,当你的应用程序想要再次连接到同一服务器时，它将重用池中的连接而不是建立新连接。</span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> requests.Session() <span class="keyword">as</span> session:</span><br><span class="line">    session.auth = (<span class="string">'username'</span>, getpass())</span><br><span class="line">    response = session.get(<span class="string">'https://api.github.com/user'</span>)</span><br></pre></td></tr></table></figure>
-<h3 id="最大重试">最大重试</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">通过 Transport Adapters，你可以为每个与之交互的服务定义一组配置。 例如，假设你希望所有对于https://api.github.com的请求在最终抛出 ConnectionError 之前重试三次。 你将构建一个 Transport Adapter，设置其 max_retries 参数，并将其装载到现有的 Session</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> requests.adapters <span class="keyword">import</span> HTTPAdapter</span><br><span class="line"><span class="keyword">from</span> requests.exceptions <span class="keyword">import</span> ConnectionError</span><br><span class="line"></span><br><span class="line">github_adapter = HTTPAdapter(max_retries=<span class="number">3</span>)</span><br><span class="line"></span><br><span class="line">session = requests.Session()</span><br><span class="line"></span><br><span class="line"><span class="comment"># Use `github_adapter` for all requests to endpoints that start with this URL</span></span><br><span class="line">session.mount(<span class="string">'https://api.github.com'</span>, github_adapter)</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    session.get(<span class="string">'https://api.github.com'</span>)</span><br><span class="line"><span class="keyword">except</span> ConnectionError <span class="keyword">as</span> ce:</span><br><span class="line">    print(ce)</span><br></pre></td></tr></table></figure>
-<h2 id="结尾">结尾</h2>
-<blockquote>
-<blockquote>
-<p>re库参考：<a href="https://juejin.im/post/5d8c630e51882511f444f65b" target="_blank" rel="noopener">https://juejin.im/post/5d8c630e51882511f444f65b</a></p>
-</blockquote>
-</blockquote>
-]]></content>
-      <categories>
-        <category>python</category>
-      </categories>
-      <tags>
-        <tag>python库</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>VulnHub渗透之DC-2</title>
     <url>/2020/07/08/VulnHub%E6%B8%97%E9%80%8F%E4%B9%8BDC-2/</url>
     <content><![CDATA[<h2 id="0×00-说明">0×00 说明</h2>
@@ -1008,6 +958,56 @@ Cadmus Computer Systems 表示Virtualbox虚拟机<br>
       </categories>
       <tags>
         <tag>VulnHub</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>request库使用</title>
+    <url>/2020/07/17/requests%E5%BA%93/</url>
+    <content><![CDATA[<h2 id="构造请求">构造请求</h2>
+<h3 id="请求头">请求头</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">headers=&#123;<span class="string">'Accept'</span>: <span class="string">'application/vnd.github.v3.text-match+json'</span>&#125;</span><br><span class="line">res = requests.get(url,headers)</span><br></pre></td></tr></table></figure>
+<h3 id="get请求">get请求</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">res = requests.get(url=<span class="string">'https://api.github.com/search/repositories'</span>)</span><br><span class="line">参数</span><br><span class="line"><span class="comment"># res = requests.get(url,params)</span></span><br><span class="line"><span class="comment"># params=&#123;'q':'requests+language:python'&#125;</span></span><br><span class="line"><span class="comment"># params=[('q', 'requests+language:python')]</span></span><br><span class="line"><span class="comment"># params=b'q=requests+language:python'</span></span><br></pre></td></tr></table></figure>
+<h3 id="其他请求方法">其他请求方法</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.post(<span class="string">'https://httpbin.org/post'</span>, data=&#123;<span class="string">'key'</span>:<span class="string">'value'</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.put(<span class="string">'https://httpbin.org/put'</span>, data=&#123;<span class="string">'key'</span>:<span class="string">'value'</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.delete(<span class="string">'https://httpbin.org/delete'</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.head(<span class="string">'https://httpbin.org/get'</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.patch(<span class="string">'https://httpbin.org/patch'</span>, data=&#123;<span class="string">'key'</span>:<span class="string">'value'</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.options(<span class="string">'https://httpbin.org/get'</span>)</span><br><span class="line">消息体</span><br><span class="line"><span class="comment">#  data=&#123;'key':'value'&#125;</span></span><br><span class="line"><span class="comment">#  data=[('key', 'value')&#125;</span></span><br><span class="line"><span class="comment">#  json=&#123;'key':'value'&#125;</span></span><br></pre></td></tr></table></figure>
+<h2 id="响应处理">响应处理</h2>
+<h3 id="响应状态码">响应状态码</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">status = res.status_code</span><br></pre></td></tr></table></figure>
+<h3 id="响应头信息（键不分大小写）">响应头信息（键不分大小写）</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">requests_header=res.headers[<span class="string">'content-type'</span>]</span><br></pre></td></tr></table></figure>
+<h3 id="响应内容">响应内容</h3>
+<h4 id="字节格式查看内容">字节格式查看内容</h4>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">data = res.content</span><br><span class="line"><span class="comment"># b'&#123;\n  "current_user_url": "https://api.github.com/user",\n  "cur</span></span><br></pre></td></tr></table></figure>
+<h4 id="字符串格式查看内容（序列化JSON）">字符串格式查看内容（序列化JSON）</h4>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">因为对 bytes 解码到 str 需要一个编码格式，所以如果你没有指定，请求将尝试根据响应头来猜测编码格式</span><br><span class="line">res.encoding = <span class="string">'utf-8'</span></span><br><span class="line"></span><br><span class="line">data=res.text</span><br><span class="line"><span class="comment"># &#123;"current_user_url":"https://api.github.com/user","cur</span></span><br></pre></td></tr></table></figure>
+<h4 id="字典形式内容（反序列化JSON）">字典形式内容（反序列化JSON）</h4>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">data=res.json()</span><br><span class="line"><span class="comment"># &#123;'current_user_url': 'https://api.github.com/user', 'curin</span></span><br><span class="line">提取内容</span><br><span class="line">repository = data[<span class="string">'items'</span>][<span class="number">0</span>]</span><br><span class="line">也可以使用 .text 获取 str 并使用json.loads() 对其进行反序列化</span><br><span class="line">json.loads(data)</span><br></pre></td></tr></table></figure>
+<h2 id="其他">其他</h2>
+<h3 id="检查请求">检查请求</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">requests 库会在将请求实际发送到目标服务器之前准备该请求。 请求准备包括像验证头信息和序列化JSON内容等</span><br><span class="line">response.request.headers[<span class="string">'Content-Type'</span>]</span><br><span class="line">response.request.url</span><br><span class="line">response.request.body</span><br></pre></td></tr></table></figure>
+<h3 id="身份验证">身份验证</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">使用auth 参数，rqeuests 将使用HTTP的基本访问认证方案来应用凭据</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">'https://api.github.com/user'</span>, auth=(<span class="string">'username'</span>, getpass()))</span><br><span class="line">成功返回&lt;Response [<span class="number">200</span>]&gt;，失败返回&lt;Response [<span class="number">401</span>]&gt;</span><br><span class="line"></span><br><span class="line">HTTPBasicAuth效果同上</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> requests.auth <span class="keyword">import</span> HTTPBasicAuth</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">'https://api.github.com/user'</span>, auth=HTTPBasicAuth(<span class="string">'username'</span>, getpass()))</span><br><span class="line"></span><br><span class="line">requests 也提供了其他身份验证方法，例如 HTTPDigestAuth 和 HTTPProxyAuth</span><br></pre></td></tr></table></figure>
+<h3 id="关闭SSL证书验证">关闭SSL证书验证</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">'https://api.github.com'</span>, verify=<span class="literal">False</span>)</span><br></pre></td></tr></table></figure>
+<h2 id="性能">性能</h2>
+<h3 id="超时">超时</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">'https://api.github.com'</span>, timeout=<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">还可以将元组传递给 timeout，第一个元素是连接超时（它允许客户端与服务器建立连接的时间），第二个元素是读取超时（一旦你的客户已建立连接而等待响应的时间）</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">'https://api.github.com'</span>, timeout=(<span class="number">2</span>, <span class="number">5</span>))</span><br><span class="line"></span><br><span class="line">超时异常</span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> requests.exceptions <span class="keyword">import</span> Timeout</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    response = requests.get(<span class="string">'https://api.github.com'</span>, timeout=<span class="number">1</span>)</span><br><span class="line"><span class="keyword">except</span> Timeout:</span><br><span class="line">    print(<span class="string">'The request timed out'</span>)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    print(<span class="string">'The request did not time out'</span>)</span><br></pre></td></tr></table></figure>
+<h3 id="Session对象">Session对象</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">Session 用于跨请求保留参数。 例如，如果要跨多个请求使用相同的身份验证,当你的应用程序想要再次连接到同一服务器时，它将重用池中的连接而不是建立新连接。</span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> requests.Session() <span class="keyword">as</span> session:</span><br><span class="line">    session.auth = (<span class="string">'username'</span>, getpass())</span><br><span class="line">    response = session.get(<span class="string">'https://api.github.com/user'</span>)</span><br></pre></td></tr></table></figure>
+<h3 id="最大重试">最大重试</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">通过 Transport Adapters，你可以为每个与之交互的服务定义一组配置。 例如，假设你希望所有对于https://api.github.com的请求在最终抛出 ConnectionError 之前重试三次。 你将构建一个 Transport Adapter，设置其 max_retries 参数，并将其装载到现有的 Session</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> requests.adapters <span class="keyword">import</span> HTTPAdapter</span><br><span class="line"><span class="keyword">from</span> requests.exceptions <span class="keyword">import</span> ConnectionError</span><br><span class="line"></span><br><span class="line">github_adapter = HTTPAdapter(max_retries=<span class="number">3</span>)</span><br><span class="line"></span><br><span class="line">session = requests.Session()</span><br><span class="line"></span><br><span class="line"><span class="comment"># Use `github_adapter` for all requests to endpoints that start with this URL</span></span><br><span class="line">session.mount(<span class="string">'https://api.github.com'</span>, github_adapter)</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    session.get(<span class="string">'https://api.github.com'</span>)</span><br><span class="line"><span class="keyword">except</span> ConnectionError <span class="keyword">as</span> ce:</span><br><span class="line">    print(ce)</span><br></pre></td></tr></table></figure>
+<h2 id="结尾">结尾</h2>
+<blockquote>
+<blockquote>
+<p>re库参考：<a href="https://juejin.im/post/5d8c630e51882511f444f65b" target="_blank" rel="noopener">https://juejin.im/post/5d8c630e51882511f444f65b</a></p>
+</blockquote>
+</blockquote>
+]]></content>
+      <categories>
+        <category>python</category>
+      </categories>
+      <tags>
+        <tag>python库</tag>
       </tags>
   </entry>
   <entry>
@@ -1146,7 +1146,7 @@ SSL证书搜索引擎：</p>
     <title>HTTP请求走私</title>
     <url>/2020/07/29/HTTP%E8%AF%B7%E6%B1%82%E8%B5%B0%E7%A7%81/</url>
     <content><![CDATA[<h2 id="产生原因">产生原因</h2>
-<p>**原因:**当网站使用两个服务器（一个前端，一个后端）来处理用户所提交的数据，而两个服务器之间对HTTP header的处理不一致，就可能产生HTTP走私问题。</p>
+<p><strong>原因</strong>:当网站使用两个服务器（一个前端，一个后端）来处理用户所提交的数据，而两个服务器之间对HTTP header的处理不一致，就可能产生HTTP走私问题。</p>
 <blockquote>
 <p>现在的Web应用程序经常在用户和最终的应用程序之间使用HTTP服务器链。用户将请求发送到前端服务器（有时称为负载平衡器或反向代理，也可能是WAF），并且该服务器将请求转发到一个或多个后端服务器。</p>
 </blockquote>
