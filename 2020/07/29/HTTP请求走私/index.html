@@ -33,7 +33,7 @@
 <meta property="og:image" content="https://raw.githubusercontent.com/Dsysf/images/master/20200724164644.png">
 <meta property="og:image" content="https://raw.githubusercontent.com/Dsysf/images/master/20200724173247.png">
 <meta property="article:published_time" content="2020-07-29T15:30:21.000Z">
-<meta property="article:modified_time" content="2020-07-29T15:58:23.258Z">
+<meta property="article:modified_time" content="2020-07-29T16:15:28.586Z">
 <meta property="article:author" content="Edsion Shen">
 <meta property="article:tag" content="技巧">
 <meta name="twitter:card" content="summary">
@@ -228,25 +228,25 @@
             </p>
         </header>
         <div class="marked-body article-body">
-            <h2 id="产生原因">产生原因</h2>
+            <h1 id="产生原因">产生原因</h1>
 <p><strong>原因</strong>:当网站使用两个服务器（一个前端，一个后端）来处理用户所提交的数据，而两个服务器之间对HTTP header的处理不一致，就可能产生HTTP走私问题。</p>
 <blockquote>
 <p>现在的Web应用程序经常在用户和最终的应用程序之间使用HTTP服务器链。用户将请求发送到前端服务器（有时称为负载平衡器或反向代理，也可能是WAF），并且该服务器将请求转发到一个或多个后端服务器。</p>
 </blockquote>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721194357.png" alt=""></p>
-<h2 id="前置知识">前置知识</h2>
-<h3 id="HTTP-1-1的特性">HTTP/1.1的特性</h3>
-<h4 id="Keep-Alive">Keep-Alive</h4>
+<h1 id="前置知识">前置知识</h1>
+<h2 id="HTTP-1-1的特性">HTTP/1.1的特性</h2>
+<h3 id="Keep-Alive">Keep-Alive</h3>
 <p>Keep-Alive（又称持久连接），在<code>HTTP/1.1</code>中，默认使用启用Keep-Alive，Keep-Alive功能使客户端到服务器端的连接持续有效，同一对客户/服务器之间的后续请求和响应可以通过这个连接发送。</p>
-<h4 id="支持pipeline">支持pipeline</h4>
+<h3 id="支持pipeline">支持pipeline</h3>
 <p><code>HTTP/1.1</code>允许在持久连接上可选地使用请求管道（意味pipeline是依赖于持久连接的，而不是独立的）。pipeline请求管道可以在响应到达之前，将多条请求放入队列，但对于pipeline的请求顺序和响应顺序是相对应的。</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721172714.png" alt=""></p>
-<h3 id="对于Keep-Alive模式，如何判断请求所得到的响应数据已经接收完成">对于Keep-Alive模式，如何判断请求所得到的响应数据已经接收完成</h3>
-<h4 id="font-color-red-1-Conent-Length-font"><font color="red">1. Conent-Length</font></h4>
+<h2 id="对于Keep-Alive模式，如何判断请求所得到的响应数据已经接收完成">对于Keep-Alive模式，如何判断请求所得到的响应数据已经接收完成</h2>
+<h3 id="font-color-red-Conent-Length-font"><font color="red">Conent-Length</font></h3>
 <p>Conent-Length表示实体内容长度，当客户端向服务器请求一个静态页面或者一张图片时，服务器可以很清楚的知道内容大小，然后通过Content-length消息首部字段告诉客户端 需要接收多少数据。</p>
-<h4 id="font-color-red-2-Transfer-Encoding-font"><font color="red">2. Transfer-Encoding</font></h4>
+<h3 id="font-color-red-Transfer-Encoding-font"><font color="red">Transfer-Encoding</font></h3>
 <p>分块编码，数据分解成一系列数据块，并以一个或多个块发送，这样服务器可以发送数据而不需要预先知道发送内容的总大小。</p>
-<h3 id="分块编码（Transfer-Encoding-chunked）">分块编码（Transfer-Encoding: chunked）</h3>
+<h2 id="分块编码（Transfer-Encoding-chunked）">分块编码（Transfer-Encoding: chunked）</h2>
 <ol>
 <li>在头部加入 Transfer-Encoding: chunked 之后，就代表这个报文采用了分块编码。这时，报文中的实体需要改为用一系列分块来传输。</li>
 <li>每个分块包含十六进制的长度值和数据，长度值独占一行，长度不包括它结尾的 CRLF(\r\n)，也不包括分块数据结尾的 CRLF(\r\n)。</li>
@@ -298,7 +298,7 @@
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721203309.png" alt=""></p>
 <h1 id="利用HTTP请求走私漏洞">利用HTTP请求走私漏洞</h1>
 <h2 id="Bypass前端服务器安全验证">Bypass前端服务器安全验证</h2>
-<p>**场景：**前端服务器对某些页面添加了访问限制，比如实验中对admin页面控制在只能是后端服务器才能访问，此时可以通过HTTP走私漏洞来绕过这个限制。</p>
+<p><strong>场景</strong>：前端服务器对某些页面添加了访问限制，比如实验中对admin页面控制在只能是后端服务器才能访问，此时可以通过HTTP走私漏洞来绕过这个限制。</p>
 <ul>
 <li>CL-TE</li>
 </ul>
@@ -316,7 +316,7 @@
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721223313.png" alt=""></p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721223504.png" alt=""></p>
 <h2 id="获取前端服务器对请求的重写情况">获取前端服务器对请求的重写情况</h2>
-<p>**场景：**前端服务器通常在请求添加到其他请求头之前，先对请求进行一些重写，然后再转发给后端服务器。一般是添加一些HTTP HEADER。可以通过HTTP走私请求来获取到这些重写内容。</p>
+<p><strong>场景</strong>：前端服务器通常在请求添加到其他请求头之前，先对请求进行一些重写，然后再转发给后端服务器。一般是添加一些HTTP HEADER。可以通过HTTP走私请求来获取到这些重写内容。</p>
 <p>但走私的前提需具备一些条件：</p>
 <ul>
 <li>存在一个POST请求，传入参数会储存并可以被查看</li>
@@ -337,11 +337,11 @@
 <p>参考上一个实验，这个实验也是通过获取HTTP HEADER来获取其他用户的Cookie。</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724164032.png" alt=""></p>
 <h2 id="HTTP-header导致的XSS">HTTP header导致的XSS</h2>
-<p>**场景：**通常情况下，HTTP HEADER导致的XSS是不好利用的，但是通过HTTP走私请求，我们能够控制HTTP HEADER，进而就可以利用这类HTTP头导致的XSS。</p>
+<p><strong>场景</strong>：通常情况下，HTTP HEADER导致的XSS是不好利用的，但是通过HTTP走私请求，我们能够控制HTTP HEADER，进而就可以利用这类HTTP头导致的XSS。</p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724164602.png" alt=""></p>
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724164644.png" alt=""></p>
 <h2 id="将重定向转变为任意重定向">将重定向转变为任意重定向</h2>
-<p>**场景：**许多应用程序执行现场重定向，并将主机名从请求的Host标头放入重定向URL。</p>
+<p><strong>场景</strong>：许多应用程序执行现场重定向，并将主机名从请求的Host标头放入重定向URL。</p>
 <p>示例：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">GET &#x2F;home HTTP&#x2F;1.1</span><br><span class="line">Host: normal-website.com</span><br><span class="line"></span><br><span class="line">HTTP&#x2F;1.1 301 Moved Permanently</span><br><span class="line">Location: https:&#x2F;&#x2F;normal-website.com&#x2F;home&#x2F;</span><br></pre></td></tr></table></figure>
 <p>通常，此行为被认为是无害的，但是可以在走私请求攻击中利用它来将其他用户重定向到外部域。例如：</p>
@@ -392,7 +392,7 @@
     <div class="toc-sidebar">
         <nav id="toc" class="article-toc">
             <h3 class="toc-title">Catalogue</h3>
-            <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#产生原因"><span class="toc-number">1.</span> <span class="toc-text">产生原因</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#前置知识"><span class="toc-number">2.</span> <span class="toc-text">前置知识</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#HTTP-1-1的特性"><span class="toc-number">2.1.</span> <span class="toc-text">HTTP&#x2F;1.1的特性</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Keep-Alive"><span class="toc-number">2.1.1.</span> <span class="toc-text">Keep-Alive</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#支持pipeline"><span class="toc-number">2.1.2.</span> <span class="toc-text">支持pipeline</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#对于Keep-Alive模式，如何判断请求所得到的响应数据已经接收完成"><span class="toc-number">2.2.</span> <span class="toc-text">对于Keep-Alive模式，如何判断请求所得到的响应数据已经接收完成</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#font-color-red-1-Conent-Length-font"><span class="toc-number">2.2.1.</span> <span class="toc-text">1. Conent-Length</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#font-color-red-2-Transfer-Encoding-font"><span class="toc-number">2.2.2.</span> <span class="toc-text">2. Transfer-Encoding</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#分块编码（Transfer-Encoding-chunked）"><span class="toc-number">2.3.</span> <span class="toc-text">分块编码（Transfer-Encoding: chunked）</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#几种走私类型"><span class="toc-number"></span> <span class="toc-text">几种走私类型</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#CL-TE"><span class="toc-number">1.</span> <span class="toc-text">CL-TE</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#TE-CL"><span class="toc-number">2.</span> <span class="toc-text">TE-CL</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#TE-TE"><span class="toc-number">3.</span> <span class="toc-text">TE-TE</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#利用HTTP请求走私漏洞"><span class="toc-number"></span> <span class="toc-text">利用HTTP请求走私漏洞</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Bypass前端服务器安全验证"><span class="toc-number">1.</span> <span class="toc-text">Bypass前端服务器安全验证</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#获取前端服务器对请求的重写情况"><span class="toc-number">2.</span> <span class="toc-text">获取前端服务器对请求的重写情况</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#获取其他用户的cookie"><span class="toc-number">3.</span> <span class="toc-text">获取其他用户的cookie</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#HTTP-header导致的XSS"><span class="toc-number">4.</span> <span class="toc-text">HTTP header导致的XSS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#将重定向转变为任意重定向"><span class="toc-number">5.</span> <span class="toc-text">将重定向转变为任意重定向</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#缓存投毒"><span class="toc-number">6.</span> <span class="toc-text">缓存投毒</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#缓存欺骗"><span class="toc-number">7.</span> <span class="toc-text">缓存欺骗</span></a></li></ol>
+            <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#产生原因"><span class="toc-number">1.</span> <span class="toc-text">产生原因</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#前置知识"><span class="toc-number">2.</span> <span class="toc-text">前置知识</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#HTTP-1-1的特性"><span class="toc-number">2.1.</span> <span class="toc-text">HTTP&#x2F;1.1的特性</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Keep-Alive"><span class="toc-number">2.1.1.</span> <span class="toc-text">Keep-Alive</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#支持pipeline"><span class="toc-number">2.1.2.</span> <span class="toc-text">支持pipeline</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#对于Keep-Alive模式，如何判断请求所得到的响应数据已经接收完成"><span class="toc-number">2.2.</span> <span class="toc-text">对于Keep-Alive模式，如何判断请求所得到的响应数据已经接收完成</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#font-color-red-Conent-Length-font"><span class="toc-number">2.2.1.</span> <span class="toc-text">Conent-Length</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#font-color-red-Transfer-Encoding-font"><span class="toc-number">2.2.2.</span> <span class="toc-text">Transfer-Encoding</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#分块编码（Transfer-Encoding-chunked）"><span class="toc-number">2.3.</span> <span class="toc-text">分块编码（Transfer-Encoding: chunked）</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#几种走私类型"><span class="toc-number">3.</span> <span class="toc-text">几种走私类型</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#CL-TE"><span class="toc-number">3.1.</span> <span class="toc-text">CL-TE</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#TE-CL"><span class="toc-number">3.2.</span> <span class="toc-text">TE-CL</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#TE-TE"><span class="toc-number">3.3.</span> <span class="toc-text">TE-TE</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#利用HTTP请求走私漏洞"><span class="toc-number">4.</span> <span class="toc-text">利用HTTP请求走私漏洞</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Bypass前端服务器安全验证"><span class="toc-number">4.1.</span> <span class="toc-text">Bypass前端服务器安全验证</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#获取前端服务器对请求的重写情况"><span class="toc-number">4.2.</span> <span class="toc-text">获取前端服务器对请求的重写情况</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#获取其他用户的cookie"><span class="toc-number">4.3.</span> <span class="toc-text">获取其他用户的cookie</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#HTTP-header导致的XSS"><span class="toc-number">4.4.</span> <span class="toc-text">HTTP header导致的XSS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#将重定向转变为任意重定向"><span class="toc-number">4.5.</span> <span class="toc-text">将重定向转变为任意重定向</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#缓存投毒"><span class="toc-number">4.6.</span> <span class="toc-text">缓存投毒</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#缓存欺骗"><span class="toc-number">4.7.</span> <span class="toc-text">缓存欺骗</span></a></li></ol></li></ol>
         </nav>
     </div>
 </aside>
