@@ -1,212 +1,173 @@
-<!DOCTYPE html>
-<html  lang="zh-Hans" >
-    <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, maximum-scale=5, viewport-fit=cover">
-    <title>SqlMap代理池 | Edsion's Blog</title>
-    <meta name="description" content="获取代理池 获取代理池使用了GIthub上的项目：https:&#x2F;&#x2F;github.com&#x2F;jhao104&#x2F;proxy_pool ，并利用REDIS存储获取到的代理地址 启动项目 在cli目录下通过ProxyPool.py启动 12345# 首先启动调度程序&gt;&gt;&gt;python proxyPool.py schedule# 然后启动webApi服务&gt;&gt;&gt;python">
+<!DOCTYPE html><html lang="zh-Hans" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SqlMap代理池 | Edsion's Blog</title><meta name="keywords" content="Sqlmap"><meta name="author" content="Edsion Shen"><meta name="copyright" content="Edsion Shen"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="获取代理池 获取代理池使用了GIthub上的项目：https:&#x2F;&#x2F;github.com&#x2F;jhao104&#x2F;proxy_pool ，并利用REDIS存储获取到的代理地址 启动项目 在cli目录下通过ProxyPool.py启动 12345# 首先启动调度程序&gt;&gt;&gt;python proxyPool.py schedule# 然后启动webApi服务&gt;&gt;&gt;python">
 <meta property="og:type" content="article">
 <meta property="og:title" content="SqlMap代理池">
 <meta property="og:url" content="http://yoursite.com/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/index.html">
 <meta property="og:site_name" content="Edsion&#39;s Blog">
 <meta property="og:description" content="获取代理池 获取代理池使用了GIthub上的项目：https:&#x2F;&#x2F;github.com&#x2F;jhao104&#x2F;proxy_pool ，并利用REDIS存储获取到的代理地址 启动项目 在cli目录下通过ProxyPool.py启动 12345# 首先启动调度程序&gt;&gt;&gt;python proxyPool.py schedule# 然后启动webApi服务&gt;&gt;&gt;python">
+<meta property="og:locale">
+<meta property="og:image" content="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg">
 <meta property="article:published_time" content="2020-06-22T07:16:21.000Z">
 <meta property="article:modified_time" content="2020-06-22T07:23:05.708Z">
 <meta property="article:author" content="Edsion Shen">
 <meta property="article:tag" content="Sqlmap">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://yoursite.com/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: 'Copy successfully',
+    error: 'Copy error',
+    noSupport: 'The browser does not support'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: 'Just',
+    min: 'minutes ago',
+    hour: 'hours ago',
+    day: 'days ago',
+    month: 'months ago'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
 
-    <link rel="alternate" type="application/atom+xml" href="/atom.xml">
-    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
 
-    
-<link rel="stylesheet" href="/css/common.min.css">
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
 
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
 
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
 
-    
-    
-    
-    
-        <link href="//cdn.jsdelivr.net/npm/lightgallery.js@1.1.3/dist/css/lightgallery.min.css" rel="stylesheet">
-    
-    
-    
-<link rel="stylesheet" href="/css/iconfont.min.css">
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2020-06-22 15:23:05'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
 
-    
-<meta name="generator" content="Hexo 4.2.1"></head>
-
-    <body>
-        <header class="header header-fixture">
-    <div class="profile-search-wrap flex sm:block">
-        
-        
-        <div class="profile sm:text-center md:px-1 lg:px-3 sm:pb-4 sm:pt-6">
-            <a id="avatar" role="link" href="https://github.com/Dsysf" class="inline-block lg:w-16 lg:h-16 w-8 h-8 m-2" target="_blank" rel="noopener" rel="noreferrer" >
-                <img src="/images/blue.svg" class="rounded-full" alt="avatar">
-            </a>
-            <h2 id="name" class="hidden lg:block">Edsion</h2>
-            <h3 id="title" class="hidden xl:block"></h3>
-            
-            <small id="location" class="hidden lg:block">
-                <i class="iconfont icon-map-icon"></i>
-                Place of exile, China
-            </small>
-            
-        </div>
-        
-        
-<div class="search flex-1 flex lg:inline-block sm:hidden lg:px-4 lg:mt-2 lg:mb-4 lg:w-full">
-    <form id="search-form" class="my-auto flex-1 lg:border lg:border-solid lg:border-gray-200">
-        <div class="input-group table bg-gray-100 lg:bg-white w-full">
-            <input id="search-input" type="text" placeholder="Search" class="inline-block w-full bg-gray-100 lg:bg-white">
-            <span class="table-cell">
-                <button name="search tigger button" disabled>
-                    <i class="iconfont icon-search m-2"></i>
-                </button>
-            </span>
-        </div>
-    </form>
-        
-<script id="search-teamplate" type="text/html" data-path="/content.json">
-    <div>
-        <div class="search-header bg-gray-400">
-            <input id="actual-search-input" model="keyword" ref="input" class="inline-block w-full h-10 px-2 py-1" placeholder="Search" type="text">
-        </div>
-        <div class="search-result bg-gray-200">
-            {{#each searchPosts}}
-            <a href="/{{ path }}" class="result-item block px-2 pb-3 mb-1 pt-1 hover:bg-indigo-100">
-                <i class="iconfont icon-file"></i>
-                <h1 class="result-title inline font-medium text-lg">{{ title }}</h1>
-                <p class="result-content text-gray-600 text-sm">{{{ text }}}</p>
-            </a>
-            {{/each}}
-        </div>
-    </div>
-</script>
-
-</div>
-
-
-        <button name="menu toogle button" id="menu-toggle-btn" class="block sm:hidden p-3" role="button" aria-expanded="false">
-            <i class="iconfont icon-hamburger"></i>
-        </button>
-    </div>
-    <nav id="menu-nav" class="hidden sm:flex flex-col">
-        
-        
-            <div class="menu-item menu-home" role="menuitem">
-                <a href="/.">
-                    <i class="iconfont icon-home" aria-hidden="true"></i>
-                    <span class="menu-title">Home</span>
-                </a>
-            </div>
-        
-        
-            <div class="menu-item menu-archives" role="menuitem">
-                <a href="/archives">
-                    <i class="iconfont icon-archive" aria-hidden="true"></i>
-                    <span class="menu-title">Archives</span>
-                </a>
-            </div>
-        
-        
-            <div class="menu-item menu-categories" role="menuitem">
-                <a href="/categories">
-                    <i class="iconfont icon-folder" aria-hidden="true"></i>
-                    <span class="menu-title">Categories</span>
-                </a>
-            </div>
-        
-        
-            <div class="menu-item menu-tags" role="menuitem">
-                <a href="/tags">
-                    <i class="iconfont icon-tag" aria-hidden="true"></i>
-                    <span class="menu-title">Tags</span>
-                </a>
-            </div>
-        
-        
-<div class="social-links flex sm:flex-col lg:hidden mt-5">
-    
-        <span class="social-item text-center">
-            <a href="https://github.com/Dsysf" target="_blank" rel="noopener">
-                <i class="iconfont social-icon icon-github"></i>
-                <span class="menu-title hidden lg:inline">menu.github</span>
-            </a>
-        </span>
-    
-        <span class="social-item text-center">
-            <a href="/atom.xml">
-                <i class="iconfont social-icon icon-rss"></i>
-                <span class="menu-title hidden lg:inline">menu.rss</span>
-            </a>
-        </span>
-    
-</div>
-
-
-    </nav>
-</header>
-
-        <section class="main-section">
-            
-    <main class="flex-1 px-4 py-12 md:px-5 lg:px-8 lg:py-4 relative min-h-screen">
-    
-
-    <article class="content article article-archives article-type-list" itemscope="">
-        <header class="article-header">
-            
-    
-        <h1 class="article-title text-lg" itemprop="name">
-            SqlMap代理池
-        </h1>
-    
-
-
-
-            <p class="article-meta mb-3 text-xs">
-                <span class="article-date">
-    <i class="iconfont icon-calendar-check"></i>
-	<a href="/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/" class="article-date">
-	  <time datetime="2020-06-22T07:16:21.000Z" itemprop="datePublished">Jun 22</time>
-	</a>
-</span>
-
-                
-    <span class="article-category">
-    <i class="iconfont icon-folder"></i>
-    <a class="article-category-link" href="/categories/%E5%B7%A5%E5%85%B7/">工具</a>
-  </span>
-
-
-                
-    <span class="article-tags">
-    <i class="iconfont icon-tag"></i>
-    <a class="article-tag-link" href="/tags/Sqlmap/" rel="tag">Sqlmap</a>
-  </span>
-
-
-                <span class="_partial/post-comment"><i class="icon icon-comment"></i>
-                    <a href="/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/#comments" class="article-comment-link">
-                        Comments
-                    </a>
-                </span>
-                
-    
-        <span class="post-wordcount" itemprop="wordCount">Word Count: 855(words)</span>
-    
-    
-        <span class="post-readcount" itemprop="timeRequired">Read Count: 4(minutes)</span>
-    
-
-
-            </p>
-        </header>
-        <div class="marked-body article-body">
-            <h2 id="获取代理池">获取代理池</h2>
-<p>获取代理池使用了GIthub上的项目：<a href="https://github.com/jhao104/proxy_pool" target="_blank" rel="noopener">https://github.com/jhao104/proxy_pool</a> ，并利用REDIS存储获取到的代理地址</p>
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.2.0"><link rel="alternate" href="/atom.xml" title="Edsion's Blog" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">13</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">Tags</div><div class="length-num">7</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">Categories</div><div class="length-num">4</div></a></div></div></div><hr/></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">Edsion's Blog</a></span><div id="menus"><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">SqlMap代理池</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">Created</span><time class="post-meta-date-created" datetime="2020-06-22T07:16:21.000Z" title="Created 2020-06-22 15:16:21">2020-06-22</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2020-06-22T07:23:05.708Z" title="Updated 2020-06-22 15:23:05">2020-06-22</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%B7%A5%E5%85%B7/">工具</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">Post View:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h2 id="获取代理池">获取代理池</h2>
+<p>获取代理池使用了GIthub上的项目：<a target="_blank" rel="noopener" href="https://github.com/jhao104/proxy_pool">https://github.com/jhao104/proxy_pool</a> ，并利用REDIS存储获取到的代理地址</p>
 <h3 id="启动项目">启动项目</h3>
 <p>在<code>cli</code>目录下通过<code>ProxyPool.py</code>启动</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># 首先启动调度程序</span><br><span class="line">&gt;&gt;&gt;python proxyPool.py schedule</span><br><span class="line"></span><br><span class="line"># 然后启动webApi服务</span><br><span class="line">&gt;&gt;&gt;python proxyPool.py webserver</span><br></pre></td></tr></table></figure>
@@ -260,104 +221,11 @@
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">import requests</span><br><span class="line"></span><br><span class="line">def get_proxy():</span><br><span class="line">    return requests.get(&quot;http:&#x2F;&#x2F;127.0.0.1:5010&#x2F;get_all&#x2F;&quot;).json()</span><br><span class="line"></span><br><span class="line">def delete_proxy(proxy):</span><br><span class="line">    requests.get(&quot;http:&#x2F;&#x2F;127.0.0.1:5010&#x2F;delete&#x2F;?proxy&#x3D;&#123;&#125;&quot;.format(proxy))</span><br><span class="line"></span><br><span class="line">res &#x3D; requests.get(&quot;http:&#x2F;&#x2F;127.0.0.1:5010&#x2F;get_status&quot;).json()</span><br><span class="line">count &#x3D; res.get(&quot;useful_proxy&quot;)</span><br><span class="line">print(&quot;目前代理池中共计：%s个代理.&quot; % count)</span><br><span class="line"></span><br><span class="line">f &#x3D; open(&quot;ips.txt&quot;, &quot;w&quot;)</span><br><span class="line">for i in range(count):</span><br><span class="line">    b &#x3D; get_proxy()[i][&quot;proxy&quot;]</span><br><span class="line">f.write(b + &quot;\n&quot;)</span><br><span class="line">f.close()</span><br></pre></td></tr></table></figure>
 <h2 id="本地代理转发">本地代理转发</h2>
 <p>借用前人的成果，实现的效果是启用本地<code>127.0.0.1:9999</code>服务，将<code>ips.txt</code>内的代理转发给本地客户端<br>
-<strong><a href="http://ips.py" target="_blank" rel="noopener">ips.py</a></strong>：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python</span></span><br><span class="line"><span class="comment"># -*- coding: utf-8 -*-</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> socket</span><br><span class="line"><span class="keyword">from</span> socket <span class="keyword">import</span> error</span><br><span class="line"><span class="keyword">import</span> threading</span><br><span class="line"><span class="keyword">import</span> random</span><br><span class="line"><span class="keyword">import</span> time</span><br><span class="line"></span><br><span class="line">localtime = time.asctime(time.localtime(time.time()))</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ProxyServerTest</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, proxyip)</span>:</span></span><br><span class="line">        <span class="comment"># 本地socket服务</span></span><br><span class="line">        self.ser = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">        self.proxyip = proxyip</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            <span class="comment"># 本地服务IP和端口</span></span><br><span class="line">            self.ser.bind((<span class="string">'127.0.0.1'</span>, <span class="number">9999</span>))</span><br><span class="line">            <span class="comment"># 最大连接数</span></span><br><span class="line">            self.ser.listen(<span class="number">5</span>)</span><br><span class="line">        <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">            print(<span class="string">"[-]The local service : "</span> + str(e))</span><br><span class="line">            <span class="keyword">return</span> <span class="string">"[-]The local service : "</span> + str(e)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                <span class="comment"># 接收客户端数据</span></span><br><span class="line">                client, addr = self.ser.accept()</span><br><span class="line">                print(<span class="string">'[*]accept %s connect'</span> % (addr,))</span><br><span class="line">                data = client.recv(<span class="number">1024</span>)</span><br><span class="line">                <span class="keyword">if</span> <span class="keyword">not</span> data:</span><br><span class="line">                    <span class="keyword">break</span></span><br><span class="line">                print(<span class="string">'[*'</span> + localtime + <span class="string">']: Accept data...'</span>)</span><br><span class="line">            <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">                print(<span class="string">"[-]Local receiving client : "</span> + str(e))</span><br><span class="line">                <span class="keyword">return</span> <span class="string">"[-]Local receiving client : "</span> + str(e)</span><br><span class="line"></span><br><span class="line">            <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">                <span class="comment"># 目标代理服务器，将客户端接收数据转发给代理服务器</span></span><br><span class="line">                mbsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">                iplen = len(self.proxyip)</span><br><span class="line">                proxyip = self.proxyip[random.randint(<span class="number">0</span>, iplen - <span class="number">1</span>)]</span><br><span class="line">                print(<span class="string">"[!]Now proxy ip:"</span> + str(proxyip))</span><br><span class="line">                prip = proxyip[<span class="number">0</span>]</span><br><span class="line">                prpo = proxyip[<span class="number">1</span></span><br><span class="line">                <span class="keyword">try</span>:</span><br><span class="line">                    mbsocket.settimeout(<span class="number">3</span>)</span><br><span class="line">                    mbsocket.connect((prip, prpo))</span><br><span class="line">                <span class="keyword">except</span>:</span><br><span class="line">                    print(<span class="string">"[-]RE_Connect..."</span>)</span><br><span class="line">                    <span class="keyword">continue</span></span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line"></span><br><span class="line">            <span class="comment">#                   except :</span></span><br><span class="line">            <span class="comment">#                       print("[-]Connect failed,change proxy ip now...")</span></span><br><span class="line">            <span class="comment">#                      pass</span></span><br><span class="line"></span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                mbsocket.send(data)</span><br><span class="line">            <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">                print(<span class="string">"[-]Sent to the proxy server : "</span> + str(e))</span><br><span class="line">                <span class="keyword">return</span> <span class="string">"[-]Sent to the proxy server : "</span> + str(e)</span><br><span class="line">                               </span><br><span class="line">            <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">                <span class="keyword">try</span>:</span><br><span class="line">                    <span class="comment"># 从代理服务器接收数据，然后转发回客户端</span></span><br><span class="line">                    data_1 = mbsocket.recv(<span class="number">1024</span>)</span><br><span class="line">                    <span class="keyword">if</span> <span class="keyword">not</span> data_1:</span><br><span class="line">                        <span class="keyword">break</span></span><br><span class="line">                    print(<span class="string">'[*'</span> + localtime + <span class="string">']: Send data...'</span>)</span><br><span class="line">                    client.send(data_1)</span><br><span class="line">                <span class="keyword">except</span> socket.timeout <span class="keyword">as</span> e:</span><br><span class="line">                    print(proxyip)</span><br><span class="line">                    print(<span class="string">"[-]Back to the client : "</span> + str(e))</span><br><span class="line">                    <span class="keyword">continue</span></span><br><span class="line"></span><br><span class="line">            <span class="comment"># 关闭连接</span></span><br><span class="line"></span><br><span class="line">            client.close()</span><br><span class="line">            mbsocket.close()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">Loadips</span><span class="params">()</span>:</span></span><br><span class="line">    print(<span class="string">"[*]Loading proxy ips.."</span>)</span><br><span class="line">    ip_list = []</span><br><span class="line">    ip = [<span class="string">'ip'</span>, <span class="string">'port'</span>]</span><br><span class="line">    <span class="keyword">with</span> open(<span class="string">"ips.txt"</span>) <span class="keyword">as</span> ips:</span><br><span class="line">        lines = ips.readlines()</span><br><span class="line">                               </span><br><span class="line">    <span class="keyword">for</span> line <span class="keyword">in</span> lines:</span><br><span class="line">        ip[<span class="number">0</span>], ip[<span class="number">1</span>] = line.strip().split(<span class="string">":"</span>)</span><br><span class="line">        ip[<span class="number">1</span>] = eval(ip[<span class="number">1</span>])</span><br><span class="line">        nip = tuple(ip)</span><br><span class="line">        ip_list.append(nip)</span><br><span class="line">    <span class="keyword">return</span> ip_list</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></span><br><span class="line">    print(<span class="string">'''*Atuhor : V@1n3R.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">*Blog :http://www.Lz1y.cn</span></span><br><span class="line"><span class="string">*date: 2017.7.17</span></span><br><span class="line"><span class="string">*http://www.Lz1y.cn/wordpress/?p=643</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                         __     __    _       _____ ____    </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                         \ \   / /_ _/ |_ __ |___ /|  _ \   </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                          \ \ / / _` | | '_ \  |_ \| |_) |  </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                           \ V / (_| | | | | |___) |  _ &lt; _ </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                            \_/ \__,_|_|_| |_|____/|_| \_(_) </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    '''</span>)</span><br><span class="line"></span><br><span class="line">    ip_list = Loadips()</span><br><span class="line">    <span class="comment">#   ip_list = [('118.89.148.92',8088)]</span></span><br><span class="line">    <span class="comment">#   ip_list = tuple(ip_list)</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        pst = ProxyServerTest(ip_list)</span><br><span class="line">        <span class="comment"># 多线程</span></span><br><span class="line">        t = threading.Thread(target=pst.run, name=<span class="string">'LoopThread'</span>)</span><br><span class="line">        print(<span class="string">'[*]Waiting for connection...'</span>)</span><br><span class="line">        <span class="comment"># 关闭多线程</span></span><br><span class="line">        t.start()</span><br><span class="line">        t.join()</span><br><span class="line">    <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">        print(<span class="string">"[-]main : "</span> + str(e))</span><br><span class="line">        <span class="keyword">return</span> <span class="string">"[-]main : "</span> + str(e)</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">'__main__'</span>:</span><br><span class="line">    main()</span><br></pre></td></tr></table></figure>
+<strong><a target="_blank" rel="noopener" href="http://ips.py">ips.py</a></strong>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python</span></span><br><span class="line"><span class="comment"># -*- coding: utf-8 -*-</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> socket</span><br><span class="line"><span class="keyword">from</span> socket <span class="keyword">import</span> error</span><br><span class="line"><span class="keyword">import</span> threading</span><br><span class="line"><span class="keyword">import</span> random</span><br><span class="line"><span class="keyword">import</span> time</span><br><span class="line"></span><br><span class="line">localtime = time.asctime(time.localtime(time.time()))</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ProxyServerTest</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, proxyip</span>):</span></span><br><span class="line">        <span class="comment"># 本地socket服务</span></span><br><span class="line">        self.ser = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">        self.proxyip = proxyip</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span>(<span class="params">self</span>):</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            <span class="comment"># 本地服务IP和端口</span></span><br><span class="line">            self.ser.bind((<span class="string">&#x27;127.0.0.1&#x27;</span>, <span class="number">9999</span>))</span><br><span class="line">            <span class="comment"># 最大连接数</span></span><br><span class="line">            self.ser.listen(<span class="number">5</span>)</span><br><span class="line">        <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">            print(<span class="string">&quot;[-]The local service : &quot;</span> + <span class="built_in">str</span>(e))</span><br><span class="line">            <span class="keyword">return</span> <span class="string">&quot;[-]The local service : &quot;</span> + <span class="built_in">str</span>(e)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                <span class="comment"># 接收客户端数据</span></span><br><span class="line">                client, addr = self.ser.accept()</span><br><span class="line">                print(<span class="string">&#x27;[*]accept %s connect&#x27;</span> % (addr,))</span><br><span class="line">                data = client.recv(<span class="number">1024</span>)</span><br><span class="line">                <span class="keyword">if</span> <span class="keyword">not</span> data:</span><br><span class="line">                    <span class="keyword">break</span></span><br><span class="line">                print(<span class="string">&#x27;[*&#x27;</span> + localtime + <span class="string">&#x27;]: Accept data...&#x27;</span>)</span><br><span class="line">            <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">                print(<span class="string">&quot;[-]Local receiving client : &quot;</span> + <span class="built_in">str</span>(e))</span><br><span class="line">                <span class="keyword">return</span> <span class="string">&quot;[-]Local receiving client : &quot;</span> + <span class="built_in">str</span>(e)</span><br><span class="line"></span><br><span class="line">            <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">                <span class="comment"># 目标代理服务器，将客户端接收数据转发给代理服务器</span></span><br><span class="line">                mbsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">                iplen = <span class="built_in">len</span>(self.proxyip)</span><br><span class="line">                proxyip = self.proxyip[random.randint(<span class="number">0</span>, iplen - <span class="number">1</span>)]</span><br><span class="line">                print(<span class="string">&quot;[!]Now proxy ip:&quot;</span> + <span class="built_in">str</span>(proxyip))</span><br><span class="line">                prip = proxyip[<span class="number">0</span>]</span><br><span class="line">                prpo = proxyip[<span class="number">1</span></span><br><span class="line">                <span class="keyword">try</span>:</span><br><span class="line">                    mbsocket.settimeout(<span class="number">3</span>)</span><br><span class="line">                    mbsocket.connect((prip, prpo))</span><br><span class="line">                <span class="keyword">except</span>:</span><br><span class="line">                    print(<span class="string">&quot;[-]RE_Connect...&quot;</span>)</span><br><span class="line">                    <span class="keyword">continue</span></span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line"></span><br><span class="line">            <span class="comment">#                   except :</span></span><br><span class="line">            <span class="comment">#                       print(&quot;[-]Connect failed,change proxy ip now...&quot;)</span></span><br><span class="line">            <span class="comment">#                      pass</span></span><br><span class="line"></span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                mbsocket.send(data)</span><br><span class="line">            <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">                print(<span class="string">&quot;[-]Sent to the proxy server : &quot;</span> + <span class="built_in">str</span>(e))</span><br><span class="line">                <span class="keyword">return</span> <span class="string">&quot;[-]Sent to the proxy server : &quot;</span> + <span class="built_in">str</span>(e)</span><br><span class="line">                               </span><br><span class="line">            <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">                <span class="keyword">try</span>:</span><br><span class="line">                    <span class="comment"># 从代理服务器接收数据，然后转发回客户端</span></span><br><span class="line">                    data_1 = mbsocket.recv(<span class="number">1024</span>)</span><br><span class="line">                    <span class="keyword">if</span> <span class="keyword">not</span> data_1:</span><br><span class="line">                        <span class="keyword">break</span></span><br><span class="line">                    print(<span class="string">&#x27;[*&#x27;</span> + localtime + <span class="string">&#x27;]: Send data...&#x27;</span>)</span><br><span class="line">                    client.send(data_1)</span><br><span class="line">                <span class="keyword">except</span> socket.timeout <span class="keyword">as</span> e:</span><br><span class="line">                    print(proxyip)</span><br><span class="line">                    print(<span class="string">&quot;[-]Back to the client : &quot;</span> + <span class="built_in">str</span>(e))</span><br><span class="line">                    <span class="keyword">continue</span></span><br><span class="line"></span><br><span class="line">            <span class="comment"># 关闭连接</span></span><br><span class="line"></span><br><span class="line">            client.close()</span><br><span class="line">            mbsocket.close()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">Loadips</span>():</span></span><br><span class="line">    print(<span class="string">&quot;[*]Loading proxy ips..&quot;</span>)</span><br><span class="line">    ip_list = []</span><br><span class="line">    ip = [<span class="string">&#x27;ip&#x27;</span>, <span class="string">&#x27;port&#x27;</span>]</span><br><span class="line">    <span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&quot;ips.txt&quot;</span>) <span class="keyword">as</span> ips:</span><br><span class="line">        lines = ips.readlines()</span><br><span class="line">                               </span><br><span class="line">    <span class="keyword">for</span> line <span class="keyword">in</span> lines:</span><br><span class="line">        ip[<span class="number">0</span>], ip[<span class="number">1</span>] = line.strip().split(<span class="string">&quot;:&quot;</span>)</span><br><span class="line">        ip[<span class="number">1</span>] = <span class="built_in">eval</span>(ip[<span class="number">1</span>])</span><br><span class="line">        nip = <span class="built_in">tuple</span>(ip)</span><br><span class="line">        ip_list.append(nip)</span><br><span class="line">    <span class="keyword">return</span> ip_list</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span>():</span></span><br><span class="line">    print(<span class="string">&#x27;&#x27;&#x27;*Atuhor : V@1n3R.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">*Blog :http://www.Lz1y.cn</span></span><br><span class="line"><span class="string">*date: 2017.7.17</span></span><br><span class="line"><span class="string">*http://www.Lz1y.cn/wordpress/?p=643</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                         __     __    _       _____ ____    </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                         \ \   / /_ _/ |_ __ |___ /|  _ \   </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                          \ \ / / _` | | &#x27;_ \  |_ \| |_) |  </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                           \ V / (_| | | | | |___) |  _ &lt; _ </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                            \_/ \__,_|_|_| |_|____/|_| \_(_) </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    &#x27;&#x27;&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    ip_list = Loadips()</span><br><span class="line">    <span class="comment">#   ip_list = [(&#x27;118.89.148.92&#x27;,8088)]</span></span><br><span class="line">    <span class="comment">#   ip_list = tuple(ip_list)</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        pst = ProxyServerTest(ip_list)</span><br><span class="line">        <span class="comment"># 多线程</span></span><br><span class="line">        t = threading.Thread(target=pst.run, name=<span class="string">&#x27;LoopThread&#x27;</span>)</span><br><span class="line">        print(<span class="string">&#x27;[*]Waiting for connection...&#x27;</span>)</span><br><span class="line">        <span class="comment"># 关闭多线程</span></span><br><span class="line">        t.start()</span><br><span class="line">        t.join()</span><br><span class="line">    <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">        print(<span class="string">&quot;[-]main : &quot;</span> + <span class="built_in">str</span>(e))</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;[-]main : &quot;</span> + <span class="built_in">str</span>(e)</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&#x27;__main__&#x27;</span>:</span><br><span class="line">    main()</span><br></pre></td></tr></table></figure>
 <h2 id="SqlMap使用代理池">SqlMap使用代理池</h2>
 <blockquote>
 <p>sqlmap加上代理 “–proxy=http://127.0.0.1:9999” 即可使用</p>
-<p>使用之前建议先检测一下代理的有效性：<a href="http://h.jiguangdaili.com/check/" target="_blank" rel="noopener">http://h.jiguangdaili.com/check/</a></p>
+<p>使用之前建议先检测一下代理的有效性：<a target="_blank" rel="noopener" href="http://h.jiguangdaili.com/check/">http://h.jiguangdaili.com/check/</a></p>
 </blockquote>
-
-        </div>
-        
-
-    </article>
-    
-    <section id="comments">
-        
-            <div id="vcomments"></div>
-        
-    </section>
-
-
-    
-
-</main>
-
-
-<aside style="" id="sidebar" class="aside aside-fixture">
-    <div class="toc-sidebar">
-        <nav id="toc" class="article-toc">
-            <h3 class="toc-title">Catalogue</h3>
-            <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#获取代理池"><span class="toc-number">1.</span> <span class="toc-text">获取代理池</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#启动项目"><span class="toc-number">1.1.</span> <span class="toc-text">启动项目</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Api"><span class="toc-number">1.2.</span> <span class="toc-text">Api</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#保存代理"><span class="toc-number">1.3.</span> <span class="toc-text">保存代理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#本地代理转发"><span class="toc-number">2.</span> <span class="toc-text">本地代理转发</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#SqlMap使用代理池"><span class="toc-number">3.</span> <span class="toc-text">SqlMap使用代理池</span></a></li></ol>
-        </nav>
-    </div>
-</aside>
-
-
-
-
-
-        </section>
-        <footer class="hidden lg:block fixed bottom-0 left-0 sm:w-1/12 lg:w-1/6 bg-gray-100 z-40">
-    
-    <div class="footer-social-links">
-        
-            <a href="https://github.com/Dsysf" target="_blank" rel="noopener">
-                <i class="iconfont icon-github"></i>
-            </a>
-        
-            <a href="/atom.xml">
-                <i class="iconfont icon-rss"></i>
-            </a>
-        
-    </div>
-    
-    
-</footer>
-
-        <div id="mask" class="hidden mask fixed inset-0 bg-gray-900 opacity-75 z-40"></div>
-        <div id="search-view-container" class="hidden shadow-xl"></div>
-        
-<script src="/js/dom-event.min.js"></script>
-
-<script src="//cdn.jsdelivr.net/npm/yox@1.0.0-alpha.121/dist/standard/prod/yox.min.js"></script>
-
-
-<script src="/js/search.min.js"></script>
-
-
-    <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
-<script src="//cdn.jsdelivr.net/npm/valine"></script>
-<script type="text/javascript">
-var GUEST = ['nick', 'mail', 'link'];
-var meta = 'nick,mail,link';
-meta = meta.split(',').filter(function(item) {
-  return GUEST.indexOf(item) > -1;
-});
-new Valine({
-  el: '#vcomments',
-  verify: false,
-  notify: false,
-  appId: 'PFHsWavC4AlcYMLyEu7EqsWz-gzGzoHsz',
-  appKey: 'iyAzgXdeFAljOka4r1u7BwPW',
-  placeholder: '给我的文章加点评论吧~',
-  avatar: 'monsterid',
-  meta: meta,
-  pageSize: '10' || 10,
-  visitor: false
-});
-</script>
-
-
-
-    <script src="//cdn.jsdelivr.net/npm/lightgallery.js@1.1.3/dist/js/lightgallery.min.js"></script>
-    
-<script src="/js/light-gallery.min.js"></script>
-
-
-
-
-
-    </body>
-</html>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">Author: </span><span class="post-copyright-info"><a href="mailto:undefined">Edsion Shen</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">Link: </span><span class="post-copyright-info"><a href="http://yoursite.com/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/">http://yoursite.com/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">Copyright Notice: </span><span class="post-copyright-info">All articles in this blog are licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> unless stating additionally.</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Sqlmap/">Sqlmap</a></div><div class="post_share"><div class="social-share" data-image="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2020/06/23/%E7%BB%95%E8%BF%87CDN/"><img class="prev-cover" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">Previous Post</div><div class="prev_info">绕过CDN寻找真实IP</div></div></a></div><div class="next-post pull-right"><a href="/2020/06/22/SqlMap%E6%80%BB%E7%BB%93/"><img class="next-cover" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">Next Post</div><div class="next_info">SqlMap总结</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> Related Articles</span></div><div class="relatedPosts-list"><div><a href="/2020/06/22/SqlMap总结/" title="SqlMap总结"><img class="cover" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-06-22</div><div class="title">SqlMap总结</div></div></a></div></div></div></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="/null" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">Edsion Shen</div><div class="author-info__description"></div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">13</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">Tags</div><div class="length-num">7</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">Categories</div><div class="length-num">4</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a></div></div><div class="card-widget card-announcement"><div class="card-content"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>Announcement</span></div><div class="announcement_content">This is my Blog</div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>Catalog</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%8E%B7%E5%8F%96%E4%BB%A3%E7%90%86%E6%B1%A0"><span class="toc-number">1.</span> <span class="toc-text">获取代理池</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%90%AF%E5%8A%A8%E9%A1%B9%E7%9B%AE"><span class="toc-number">1.1.</span> <span class="toc-text">启动项目</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Api"><span class="toc-number">1.2.</span> <span class="toc-text">Api</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BF%9D%E5%AD%98%E4%BB%A3%E7%90%86"><span class="toc-number">1.3.</span> <span class="toc-text">保存代理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9C%AC%E5%9C%B0%E4%BB%A3%E7%90%86%E8%BD%AC%E5%8F%91"><span class="toc-number">2.</span> <span class="toc-text">本地代理转发</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#SqlMap%E4%BD%BF%E7%94%A8%E4%BB%A3%E7%90%86%E6%B1%A0"><span class="toc-number">3.</span> <span class="toc-text">SqlMap使用代理池</span></a></li></ol></div></div></div><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>Recent Post</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2020/07/29/HTTP%E8%AF%B7%E6%B1%82%E8%B5%B0%E7%A7%81/" title="HTTP请求走私"><img src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="HTTP请求走私"/></a><div class="content"><a class="title" href="/2020/07/29/HTTP%E8%AF%B7%E6%B1%82%E8%B5%B0%E7%A7%81/" title="HTTP请求走私">HTTP请求走私</a><time datetime="2020-07-29T15:30:21.000Z" title="Created 2020-07-29 23:30:21">2020-07-29</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/07/17/requests%E5%BA%93/" title="request库使用"><img src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="request库使用"/></a><div class="content"><a class="title" href="/2020/07/17/requests%E5%BA%93/" title="request库使用">request库使用</a><time datetime="2020-07-17T06:30:12.000Z" title="Created 2020-07-17 14:30:12">2020-07-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/07/08/VulnHub%E6%B8%97%E9%80%8F%E4%B9%8BDC-2/" title="VulnHub渗透之DC-2"><img src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="VulnHub渗透之DC-2"/></a><div class="content"><a class="title" href="/2020/07/08/VulnHub%E6%B8%97%E9%80%8F%E4%B9%8BDC-2/" title="VulnHub渗透之DC-2">VulnHub渗透之DC-2</a><time datetime="2020-07-08T11:34:52.000Z" title="Created 2020-07-08 19:34:52">2020-07-08</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/07/04/DNSLog/" title="通过DNSLog获取无回显信息"><img src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="通过DNSLog获取无回显信息"/></a><div class="content"><a class="title" href="/2020/07/04/DNSLog/" title="通过DNSLog获取无回显信息">通过DNSLog获取无回显信息</a><time datetime="2020-07-04T13:32:36.000Z" title="Created 2020-07-04 21:32:36">2020-07-04</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/06/27/Nmap%E4%BD%BF%E7%94%A8/" title="NMAP的使用"><img src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/img/default.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="NMAP的使用"/></a><div class="content"><a class="title" href="/2020/06/27/Nmap%E4%BD%BF%E7%94%A8/" title="NMAP的使用">NMAP的使用</a><time datetime="2020-06-27T06:53:22.000Z" title="Created 2020-06-27 14:53:22">2020-06-27</time></div></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 By Edsion Shen</div><div class="framework-info"><span>Framework </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>Theme </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="Read Mode"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="Toggle Between Light And Dark Mode"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="Toggle between single-column and double-column"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="Setting"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="Table Of Contents"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="Back To Top"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></div></body></html>
