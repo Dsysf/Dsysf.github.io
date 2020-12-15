@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/link/index.html</loc>
+    
+    <lastmod>2020-12-15</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2020/07/29/HTTP%E8%AF%B7%E6%B1%82%E8%B5%B0%E7%A7%81/</loc>
     
     <lastmod>2020-07-29</lastmod>
@@ -30,13 +37,6 @@
   </url>
   
   <url>
-    <loc>http://yoursite.com/2020/06/23/%E7%BB%95%E8%BF%87CDN/</loc>
-    
-    <lastmod>2020-07-04</lastmod>
-    
-  </url>
-  
-  <url>
     <loc>http://yoursite.com/2020/06/27/Nmap%E4%BD%BF%E7%94%A8/</loc>
     
     <lastmod>2020-06-27</lastmod>
@@ -47,6 +47,13 @@
     <loc>http://yoursite.com/2020/06/27/NSE%E7%BC%96%E5%86%99/</loc>
     
     <lastmod>2020-06-27</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/06/23/%E7%BB%95%E8%BF%87CDN/</loc>
+    
+    <lastmod>2020-06-23</lastmod>
     
   </url>
   
@@ -72,13 +79,6 @@
   </url>
   
   <url>
-    <loc>http://yoursite.com/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/</loc>
-    
-    <lastmod>2020-06-17</lastmod>
-    
-  </url>
-  
-  <url>
     <loc>http://yoursite.com/2020/06/17/JS%E9%80%86%E5%90%91%E4%B9%8B%E8%B0%B7%E6%AD%8C%E7%BF%BB%E8%AF%91/</loc>
     
     <lastmod>2020-06-17</lastmod>
@@ -86,14 +86,14 @@
   </url>
   
   <url>
-    <loc>http://yoursite.com/about/index.html</loc>
+    <loc>http://yoursite.com/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/</loc>
     
-    <lastmod>2020-05-25</lastmod>
+    <lastmod>2020-06-17</lastmod>
     
   </url>
   
   <url>
-    <loc>http://yoursite.com/tags/index.html</loc>
+    <loc>http://yoursite.com/2020/05/25/VulnHub%E6%B8%97%E9%80%8F%E4%B9%8BDC-1/</loc>
     
     <lastmod>2020-05-25</lastmod>
     
@@ -102,14 +102,14 @@
   <url>
     <loc>http://yoursite.com/categories/index.html</loc>
     
-    <lastmod>2020-05-25</lastmod>
+    <lastmod>2018-01-04</lastmod>
     
   </url>
   
   <url>
-    <loc>http://yoursite.com/2020/05/25/VulnHub%E6%B8%97%E9%80%8F%E4%B9%8BDC-1/</loc>
+    <loc>http://yoursite.com/tags/index.html</loc>
     
-    <lastmod>2020-05-25</lastmod>
+    <lastmod>2018-01-04</lastmod>
     
   </url>
   
