@@ -1240,65 +1240,6 @@ payload如下：</p>
       </tags>
   </entry>
   <entry>
-    <title>绕过CDN寻找真实IP</title>
-    <url>/2020/06/23/%E7%BB%95%E8%BF%87CDN/</url>
-    <content><![CDATA[<blockquote>
-<p>目前很多站点出于用户体验和安全的角度，使用CDN加速，将域名解析到CDN，这时候就需要绕过CDN来查找真实IP。</p>
-</blockquote>
-<h2 id="一、DNS历史解析记录">一、DNS历史解析记录</h2>
-<p>查询域名的历史解析记录，找网站使用CDN前的解析记录，从而获取真实ip，相关查询的网站有：</p>
-<figure class="highlight html"><table><tr><td class="code"><pre><span class="line">iphistory：https://viewdns.info/iphistory/</span><br><span class="line">DNS查询：（https://dnsdb.io/zh-cn/）</span><br><span class="line">微步在线：（https://x.threatbook.cn/）</span><br><span class="line">域名查询：（https://site.ip138.com/）</span><br><span class="line">DNS历史查询：（https://securitytrails.com/）</span><br><span class="line">Netcraft：https://sitereport.netcraft.com/?url=github.com</span><br></pre></td></tr></table></figure>
-<h2 id="二、子域名">二、子域名</h2>
-<p>很多时候，一些重要的站点会做CDN，而一些子域名站点并没有加入CDN，而且跟主站在同一个C段内，这时候，就可以通过查找子域名来查找网站的真实IP。<br>
-常用的子域名查找方法和工具：</p>
-<ol>
-<li>搜索引擎查询：如Google、baidu、Bing等传统搜索引擎，site:baidu.com inurl:baidu.com，搜target.com|公司名字。</li>
-<li>在线查询网站：</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">http:&#x2F;&#x2F;tool.chinaz.com&#x2F;subdomain&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;i.links.cn&#x2F;subdomain&#x2F;    </span><br><span class="line">http:&#x2F;&#x2F;subdomain.chaxun.la&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;searchdns.netcraft.com&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;www.virustotal.com&#x2F;</span><br></pre></td></tr></table></figure>
-<ol start="3">
-<li>子域名爆破工具</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Layer子域名挖掘机</span><br><span class="line">wydomain：https:&#x2F;&#x2F;github.com&#x2F;ring04h&#x2F;wydomain    </span><br><span class="line">subDomainsBrute:https:&#x2F;&#x2F;github.com&#x2F;lijiejie&#x2F;</span><br><span class="line">Sublist3r:https:&#x2F;&#x2F;github.com&#x2F;aboul3la&#x2F;Sublist3r</span><br></pre></td></tr></table></figure>
-<h2 id="三、网站邮件头信息">三、网站邮件头信息</h2>
-<p>比如：邮箱注册，邮箱找回密码、RSS邮件订阅等功能场景，通过网站给自己发送邮件，从而让目标主动暴露他们的真实的IP，查看邮件头信息，获取到网站的真实IP。</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200623112316.png" alt=""></p>
-<h2 id="四、网络空间安全引擎搜索">四、网络空间安全引擎搜索</h2>
-<p>通过关键字或网站域名，就可以找出被收录的IP，很多时候获取到的就是网站的真实IP。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">钟馗之眼：https:&#x2F;&#x2F;www.zoomeye.org</span><br><span class="line">Shodan：https:&#x2F;&#x2F;www.shodan.io</span><br><span class="line">Fofa：https:&#x2F;&#x2F;fofa.so</span><br></pre></td></tr></table></figure>
-<h2 id="五、利用SSL证书">五、利用SSL证书</h2>
-<p>证书颁发机构(CA)必须将他们发布的每个SSL/TLS证书发布到公共日志中，SSL/TLS证书通常包含域名、子域名和电子邮件地址。因此SSL/TLS证书成为了攻击者的切入点。<br>
-SSL证书搜索引擎：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;censys.io&#x2F;ipv4?q&#x3D;github.com</span><br></pre></td></tr></table></figure>
-<h2 id="六、国外主机解析域名">六、国外主机解析域名</h2>
-<p>大部分 CDN 厂商因为各种原因只做了国内的线路，而针对国外的线路可能几乎没有，此时我们使用国外的DNS查询，很可能获取到真实IP。<br>
-国外多PING测试工具：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;asm.ca.com&#x2F;zh_cn&#x2F;ping.php</span><br><span class="line">http:&#x2F;&#x2F;host-tracker.com&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;www.webpagetest.org&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;dnscheck.pingdom.com&#x2F;</span><br></pre></td></tr></table></figure>
-<h2 id="七、全网扫描">七、全网扫描</h2>
-<p>通过Zmap、masscan等工具对整个互联网发起扫描，针对扫描结果进行关键字查找，获取网站真实IP。</p>
-<ol>
-<li>ZMap号称是最快的互联网扫描工具，能够在45分钟扫遍全网。</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;zmap&#x2F;zmap</span><br></pre></td></tr></table></figure>
-<ol start="2">
-<li>Masscan号称是最快的互联网端口扫描器，最快可以在六分钟内扫遍互联网。</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;robertdavidgraham&#x2F;masscan</span><br></pre></td></tr></table></figure>
-<h2 id="八、配置不当导致绕过">八、配置不当导致绕过</h2>
-<p>在配置CDN的时候，需要指定域名、端口等信息，有时候小小的配置细节就容易导致CDN防护被绕过。</p>
-<ul>
-<li>案例1：为了方便用户访问，<a href="http://xn--www-ot9d021dl8ca199e.test.com">我们常常将www.test.com</a> 和 <a href="http://test.com">test.com</a> 解析到同一个站点，<a href="http://xn--CDNwww-5e8i318auw2h9jblx9h.test.com">而CDN只配置了www.test.com</a>，<a href="http://xn--test-pr9lp7quqa868a.com">通过访问test.com</a>，就可以绕过 CDN 了。</li>
-<li>案例2：站点同时支持http和https访问，CDN只配置 https协议，那么这时访问http就可以轻易绕过。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>渗透</category>
-      </categories>
-      <tags>
-        <tag>技巧</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>SqlMap代理池</title>
     <url>/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/</url>
     <content><![CDATA[<h2 id="获取代理池">获取代理池</h2>
@@ -1369,6 +1310,65 @@ SSL证书搜索引擎：</p>
       </categories>
       <tags>
         <tag>Sqlmap</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>绕过CDN寻找真实IP</title>
+    <url>/2020/06/23/%E7%BB%95%E8%BF%87CDN/</url>
+    <content><![CDATA[<blockquote>
+<p>目前很多站点出于用户体验和安全的角度，使用CDN加速，将域名解析到CDN，这时候就需要绕过CDN来查找真实IP。</p>
+</blockquote>
+<h2 id="一、DNS历史解析记录">一、DNS历史解析记录</h2>
+<p>查询域名的历史解析记录，找网站使用CDN前的解析记录，从而获取真实ip，相关查询的网站有：</p>
+<figure class="highlight html"><table><tr><td class="code"><pre><span class="line">iphistory：https://viewdns.info/iphistory/</span><br><span class="line">DNS查询：（https://dnsdb.io/zh-cn/）</span><br><span class="line">微步在线：（https://x.threatbook.cn/）</span><br><span class="line">域名查询：（https://site.ip138.com/）</span><br><span class="line">DNS历史查询：（https://securitytrails.com/）</span><br><span class="line">Netcraft：https://sitereport.netcraft.com/?url=github.com</span><br></pre></td></tr></table></figure>
+<h2 id="二、子域名">二、子域名</h2>
+<p>很多时候，一些重要的站点会做CDN，而一些子域名站点并没有加入CDN，而且跟主站在同一个C段内，这时候，就可以通过查找子域名来查找网站的真实IP。<br>
+常用的子域名查找方法和工具：</p>
+<ol>
+<li>搜索引擎查询：如Google、baidu、Bing等传统搜索引擎，site:baidu.com inurl:baidu.com，搜target.com|公司名字。</li>
+<li>在线查询网站：</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">http:&#x2F;&#x2F;tool.chinaz.com&#x2F;subdomain&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;i.links.cn&#x2F;subdomain&#x2F;    </span><br><span class="line">http:&#x2F;&#x2F;subdomain.chaxun.la&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;searchdns.netcraft.com&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;www.virustotal.com&#x2F;</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li>子域名爆破工具</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Layer子域名挖掘机</span><br><span class="line">wydomain：https:&#x2F;&#x2F;github.com&#x2F;ring04h&#x2F;wydomain    </span><br><span class="line">subDomainsBrute:https:&#x2F;&#x2F;github.com&#x2F;lijiejie&#x2F;</span><br><span class="line">Sublist3r:https:&#x2F;&#x2F;github.com&#x2F;aboul3la&#x2F;Sublist3r</span><br></pre></td></tr></table></figure>
+<h2 id="三、网站邮件头信息">三、网站邮件头信息</h2>
+<p>比如：邮箱注册，邮箱找回密码、RSS邮件订阅等功能场景，通过网站给自己发送邮件，从而让目标主动暴露他们的真实的IP，查看邮件头信息，获取到网站的真实IP。</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200623112316.png" alt=""></p>
+<h2 id="四、网络空间安全引擎搜索">四、网络空间安全引擎搜索</h2>
+<p>通过关键字或网站域名，就可以找出被收录的IP，很多时候获取到的就是网站的真实IP。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">钟馗之眼：https:&#x2F;&#x2F;www.zoomeye.org</span><br><span class="line">Shodan：https:&#x2F;&#x2F;www.shodan.io</span><br><span class="line">Fofa：https:&#x2F;&#x2F;fofa.so</span><br></pre></td></tr></table></figure>
+<h2 id="五、利用SSL证书">五、利用SSL证书</h2>
+<p>证书颁发机构(CA)必须将他们发布的每个SSL/TLS证书发布到公共日志中，SSL/TLS证书通常包含域名、子域名和电子邮件地址。因此SSL/TLS证书成为了攻击者的切入点。<br>
+SSL证书搜索引擎：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;censys.io&#x2F;ipv4?q&#x3D;github.com</span><br></pre></td></tr></table></figure>
+<h2 id="六、国外主机解析域名">六、国外主机解析域名</h2>
+<p>大部分 CDN 厂商因为各种原因只做了国内的线路，而针对国外的线路可能几乎没有，此时我们使用国外的DNS查询，很可能获取到真实IP。<br>
+国外多PING测试工具：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;asm.ca.com&#x2F;zh_cn&#x2F;ping.php</span><br><span class="line">http:&#x2F;&#x2F;host-tracker.com&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;www.webpagetest.org&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;dnscheck.pingdom.com&#x2F;</span><br></pre></td></tr></table></figure>
+<h2 id="七、全网扫描">七、全网扫描</h2>
+<p>通过Zmap、masscan等工具对整个互联网发起扫描，针对扫描结果进行关键字查找，获取网站真实IP。</p>
+<ol>
+<li>ZMap号称是最快的互联网扫描工具，能够在45分钟扫遍全网。</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;zmap&#x2F;zmap</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>Masscan号称是最快的互联网端口扫描器，最快可以在六分钟内扫遍互联网。</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;robertdavidgraham&#x2F;masscan</span><br></pre></td></tr></table></figure>
+<h2 id="八、配置不当导致绕过">八、配置不当导致绕过</h2>
+<p>在配置CDN的时候，需要指定域名、端口等信息，有时候小小的配置细节就容易导致CDN防护被绕过。</p>
+<ul>
+<li>案例1：为了方便用户访问，<a href="http://xn--www-ot9d021dl8ca199e.test.com">我们常常将www.test.com</a> 和 <a href="http://test.com">test.com</a> 解析到同一个站点，<a href="http://xn--CDNwww-5e8i318auw2h9jblx9h.test.com">而CDN只配置了www.test.com</a>，<a href="http://xn--test-pr9lp7quqa868a.com">通过访问test.com</a>，就可以绕过 CDN 了。</li>
+<li>案例2：站点同时支持http和https访问，CDN只配置 https协议，那么这时访问http就可以轻易绕过。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>渗透</category>
+      </categories>
+      <tags>
+        <tag>技巧</tag>
       </tags>
   </entry>
 </search>
