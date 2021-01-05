@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>http://yoursite.com/2020/10/23/bluecms1.6%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/</loc>
+    <lastmod>2020-10-23</lastmod>
+  </url>
+  <url>
     <loc>http://yoursite.com/2020/10/21/fiyocms_2.0.6.1%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/</loc>
     <lastmod>2020-10-21</lastmod>
   </url>
@@ -45,11 +49,11 @@
     <lastmod>2020-06-17</lastmod>
   </url>
   <url>
-    <loc>http://yoursite.com/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/</loc>
+    <loc>http://yoursite.com/2020/06/17/JS%E9%80%86%E5%90%91%E4%B9%8B%E8%B0%B7%E6%AD%8C%E7%BF%BB%E8%AF%91/</loc>
     <lastmod>2020-06-17</lastmod>
   </url>
   <url>
-    <loc>http://yoursite.com/2020/06/17/JS%E9%80%86%E5%90%91%E4%B9%8B%E8%B0%B7%E6%AD%8C%E7%BF%BB%E8%AF%91/</loc>
+    <loc>http://yoursite.com/2020/06/17/JS%E9%80%86%E5%90%91%E4%B8%80/</loc>
     <lastmod>2020-06-17</lastmod>
   </url>
   <url>
